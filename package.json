@@ -1,0 +1,24 @@
+{
+  "name": "gold.ernoxin.com",
+  "version": "1.0.0",
+  "description": "داشبورد قیمت طلا و سکه برای cPanel",
+  "private": true,
+  "main": "vite.config.js",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1",
+    "vite": "^8.0.11"
+  }
+}

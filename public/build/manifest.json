@@ -1,0 +1,44 @@
+{
+  "_charts-wg6i9tHi.js": {
+    "file": "assets/charts-wg6i9tHi.js",
+    "name": "charts",
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js"
+    ]
+  },
+  "_icons-BFFTWycA.js": {
+    "file": "assets/icons-BFFTWycA.js",
+    "name": "icons",
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_charts-wg6i9tHi.js"
+    ]
+  },
+  "_react-C_ewFP9Y.js": {
+    "file": "assets/react-C_ewFP9Y.js",
+    "name": "react",
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_charts-wg6i9tHi.js"
+    ]
+  },
+  "_rolldown-runtime-S-ySWqyJ.js": {
+    "file": "assets/rolldown-runtime-S-ySWqyJ.js",
+    "name": "rolldown-runtime"
+  },
+  "resources/js/App.jsx": {
+    "file": "assets/App-CbkoddbS.js",
+    "name": "App",
+    "src": "resources/js/App.jsx",
+    "isEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_charts-wg6i9tHi.js",
+      "_icons-BFFTWycA.js",
+      "_react-C_ewFP9Y.js"
+    ],
+    "css": [
+      "assets/App-Co2rVuuB.css"
+    ]
+  }
+}

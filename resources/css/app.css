@@ -1,0 +1,88 @@
+@font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+:root{color-scheme:dark;--bg:#080b10;--panel:#111821;--panel2:#17212d;--text:#f8fafc;--muted:#9aa7b4;--line:#263241;--gold:#d9a441;--green:#33d69f;--red:#ff647c;--blue:#62a8ff;--shadow:0 24px 70px rgba(0,0,0,.28)}
+:root[data-theme=light]{color-scheme:light;--bg:#f7f7f4;--panel:#ffffff;--panel2:#f2f4f7;--text:#17202a;--muted:#687584;--line:#dfe3e8;--shadow:0 22px 56px rgba(30,44,62,.1)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Vazirmatn,Tahoma,sans-serif;background:linear-gradient(180deg,rgba(217,164,65,.1),transparent 340px),var(--bg);color:var(--text);direction:rtl;letter-spacing:0}
+button,input{font:inherit}
+button{cursor:pointer}
+.shell{width:min(1220px,100%);margin:auto;padding:16px}
+.topbar,.brand,.actions,.stats,.layout,.chartHeader,.priceLine,.range,.search,.marketItem,.badge,.analyticsGrid{display:flex;align-items:center}
+.topbar{justify-content:space-between;gap:16px;margin-bottom:16px}
+.brand{gap:12px;min-width:0}
+.logo,.itemIcon{display:grid;place-items:center;background:linear-gradient(145deg,#f4d27a,#b7761e);color:#17100a;border-radius:14px;flex:0 0 auto}
+.logo{width:48px;height:48px}
+.brand h1{font-size:20px;margin:0;white-space:nowrap}
+.brand p,.hero p{margin:4px 0 0;color:var(--muted)}
+.actions{gap:10px}
+.iconButton{width:43px;height:43px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);transition:.2s}
+.iconButton:hover{border-color:var(--gold);transform:translateY(-1px)}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero{display:grid;grid-template-columns:1.35fr .9fr;gap:20px;align-items:end;padding:26px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,rgba(217,164,65,.18),rgba(98,168,255,.08)),var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.eyebrow{color:var(--gold);font-size:13px;overflow-wrap:anywhere}
+.hero h2{font-size:clamp(28px,5vw,54px);line-height:1.22;margin:12px 0}
+.stats{gap:10px;justify-content:flex-end}
+.metric{min-width:104px;padding:15px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.045)}
+.metric strong{display:block;font-size:26px;direction:ltr;text-align:right}
+.metric span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.metric.compact{min-width:0;padding:12px;background:var(--panel2)}
+.metric.compact strong{font-size:18px}
+.metric.up strong{color:var(--green)}
+.metric.down strong{color:var(--red)}
+.notice{margin-top:14px;border:1px solid rgba(255,100,124,.35);border-radius:14px;background:rgba(255,100,124,.1);color:var(--red);padding:12px 14px}
+.layout{align-items:stretch;gap:16px;margin-top:16px}
+.marketPanel{width:360px;flex:0 0 360px;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:14px}
+.panelTitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.panelTitle strong{font-size:16px}
+.panelTitle small{color:var(--muted);font-size:12px;text-align:left}
+.search{gap:8px;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:var(--panel2)}
+.search input{width:100%;height:44px;border:0;outline:0;background:transparent;color:var(--text)}
+.itemList{display:grid;gap:10px;margin-top:12px}
+.marketItem{width:100%;gap:10px;text-align:right;border:1px solid var(--line);border-radius:14px;padding:12px;background:transparent;color:var(--text);transition:.2s;min-height:72px}
+.marketItem:hover,.marketItem.active{border-color:rgba(217,164,65,.72);background:rgba(217,164,65,.09)}
+.itemIcon{width:42px;height:42px;border-radius:12px}
+.itemMain{display:grid;gap:3px;flex:1;min-width:0}
+.itemMain b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.itemMain small{color:var(--muted);direction:ltr;text-align:right}
+.badge{gap:4px;font-size:12px;border-radius:999px;padding:6px 8px;background:rgba(51,214,159,.12);color:var(--green);white-space:nowrap}
+.badge.down,.down{color:var(--red);background:rgba(255,100,124,.12)}
+.up{color:var(--green)}
+.empty,.chartEmpty{color:var(--muted);border:1px dashed var(--line);border-radius:14px;padding:18px;text-align:center}
+.chartPanel{min-width:0;flex:1;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:18px}
+.chartHeader{justify-content:space-between;gap:14px}
+.chartHeader span{color:var(--gold);font-size:13px}
+.chartHeader h3{font-size:24px;margin:4px 0 0}
+.range{gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.range button{border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--muted);padding:9px 12px;transition:.2s;white-space:nowrap}
+.range .active{background:var(--gold);border-color:var(--gold);color:#1b1308}
+.priceLine{justify-content:space-between;gap:12px;margin:18px 0}
+.priceLine strong{font-size:36px;direction:ltr;text-align:right}
+.priceLine span{display:flex;gap:6px;align-items:center;border-radius:999px;padding:8px 12px;white-space:nowrap}
+.analyticsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.chartWrap{height:430px;min-height:320px}
+.chartEmpty{height:100%;display:grid;place-content:center;gap:10px}
+.recharts-cartesian-grid line{stroke:var(--line)}
+.recharts-text{fill:var(--muted);font-family:Vazirmatn}
+.tooltip{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:10px 12px;box-shadow:var(--shadow)}
+.tooltip span{display:block;color:var(--muted);font-size:12px}
+.tooltip strong{direction:ltr;display:block}
+@media (max-width:860px){
+  .shell{padding:12px}
+  .topbar{align-items:flex-start}
+  .brand p{display:none}
+  .brand h1{font-size:17px}
+  .logo{width:42px;height:42px}
+  .hero{grid-template-columns:1fr;padding:20px;border-radius:18px}
+  .hero h2{font-size:31px}
+  .stats{justify-content:stretch;overflow:auto;padding-bottom:2px}
+  .metric{min-width:92px}
+  .layout{display:grid}
+  .marketPanel{width:auto;flex:auto;order:2}
+  .chartPanel{order:1;padding:14px}
+  .chartHeader,.priceLine{align-items:flex-start;flex-direction:column}
+  .range{justify-content:flex-start}
+  .analyticsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .chartWrap{height:330px}
+  .priceLine strong{font-size:29px}
+  .range button{padding:8px 10px}
+}
