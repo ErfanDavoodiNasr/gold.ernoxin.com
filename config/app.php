@@ -3,7 +3,7 @@
 return [
     'name' => env('APP_NAME', 'سامانه قیمت طلا'),
     'env' => env('APP_ENV', 'production'),
-    'debug' => (bool) env('APP_DEBUG', false),
+    'debug' => (bool)env('APP_DEBUG', false),
     'url' => env('APP_URL', 'http://localhost'),
     'asset_url' => env('ASSET_URL', null),
     'timezone' => 'Asia/Tehran',
@@ -33,7 +33,6 @@ return [
     ],
     'aliases' => [
         'Artisan' => Illuminate\Support\Facades\Artisan::class,
-        'Cache' => Illuminate\Support\Facades\Cache::class,
         'Config' => Illuminate\Support\Facades\Config::class,
         'DB' => Illuminate\Support\Facades\DB::class,
         'Log' => Illuminate\Support\Facades\Log::class,

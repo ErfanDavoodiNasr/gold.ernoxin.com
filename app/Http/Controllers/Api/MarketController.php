@@ -6,66 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\FetchLog;
 use App\Models\MarketItem;
 use App\Models\PricePoint;
+use App\Services\AutoPriceFetcher;
 use App\Services\PriceIngestor;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class MarketController extends Controller
 {
-    public function summary()
+    public function summary(AutoPriceFetcher $autoPriceFetcher)
     {
-        $payload = Cache::remember('api.summary', config('gold.cache_seconds'), function () {
-            $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
-            return [
-                'items' => $items->map(fn ($item) => $this->itemResource($item)),
-                'lastFetch' => FetchLog::latest('finished_at')->first(),
-                'config' => [
-                    'sourceName' => config('gold.source_name'),
-                    'sourceUrl' => config('gold.source_url'),
-                    'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
-                    'chartAvailableRanges' => config('gold.chart_available_ranges'),
-                    'historyMaxDays' => config('gold.history_max_days'),
-                    'chartMaxPoints' => config('gold.chart_max_points'),
-                    'themeDefault' => config('gold.theme_default'),
-                    'themeAccent' => config('gold.theme_accent'),
-                    'features' => config('gold.features'),
-                ],
-            ];
-        });
-        return response()->json($payload);
-    }
+        $autoPriceFetcher->fetchIfDue();
 
-    public function history(Request $request, MarketItem $item)
-    {
-        $days = min((int) config('gold.history_max_days', 365), max(1, (int) $request->query('days', config('gold.chart_default_range_days'))));
-        $points = PricePoint::where('market_item_id', $item->id)
-            ->where('fetched_at', '>=', now()->subDays($days))
-            ->orderBy('fetched_at')
-            ->get();
-        $analytics = $this->analytics($points);
-        $points = $this->samplePoints($points, (int) config('gold.chart_max_points', 600));
+        $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
+
         return response()->json([
-            'item' => $this->itemResource($item->load('latestPrice')),
-            'analytics' => $analytics,
-            'points' => $points->map(fn ($p) => [
-                'time' => optional($p->fetched_at)->toIso8601String(),
-                'current' => $p->current_value,
-                'high' => $p->high_value,
-                'low' => $p->low_value,
-                'change' => $p->change_value,
-                'percent' => $p->change_percent,
-                'direction' => $p->direction,
-            ]),
+            'items' => $items->map(fn($item) => $this->itemResource($item)),
+            'lastFetch' => FetchLog::latest('finished_at')->first(),
+            'config' => [
+                'sourceName' => config('gold.source_name'),
+                'sourceUrl' => config('gold.source_url'),
+                'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
+                'chartAvailableRanges' => config('gold.chart_available_ranges'),
+                'historyMaxDays' => config('gold.history_max_days'),
+                'chartMaxPoints' => config('gold.chart_max_points'),
+                'themeDefault' => config('gold.theme_default'),
+                'themeAccent' => config('gold.theme_accent'),
+                'features' => config('gold.features'),
+            ],
         ]);
-    }
-
-    public function fetch(PriceIngestor $ingestor)
-    {
-        if (!config('gold.features.manual_fetch_api')) {
-            return response()->json(['message' => 'دریافت دستی از API غیرفعال است.'], 403);
-        }
-        $result = $ingestor->fetchAndStore();
-        return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
     }
 
     private function itemResource(MarketItem $item): array
@@ -86,6 +53,50 @@ class MarketController extends Controller
         ];
     }
 
+    public function history(Request $request, MarketItem $item)
+    {
+        $days = min((int)config('gold.history_max_days', 365), max(1, (int)$request->query('days', config('gold.chart_default_range_days'))));
+        $points = PricePoint::where('market_item_id', $item->id)
+            ->where('fetched_at', '>=', now()->subDays($days))
+            ->orderBy('fetched_at')
+            ->get();
+        $analytics = $this->analytics($points);
+        $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
+        return response()->json([
+            'item' => $this->itemResource($item->load('latestPrice')),
+            'analytics' => $analytics,
+            'points' => $points->map(fn($p) => [
+                'time' => optional($p->fetched_at)->toIso8601String(),
+                'current' => $p->current_value,
+                'high' => $p->high_value,
+                'low' => $p->low_value,
+                'change' => $p->change_value,
+                'percent' => $p->change_percent,
+                'direction' => $p->direction,
+            ]),
+        ]);
+    }
+
+    private function analytics($points): array
+    {
+        $values = $points->pluck('current_value')->filter(fn($value) => $value !== null)->values();
+        if ($values->isEmpty()) {
+            return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
+        }
+
+        $first = (float)$values->first();
+        $last = (float)$values->last();
+        $change = $last - $first;
+
+        return [
+            'min' => (float)$values->min(),
+            'max' => (float)$values->max(),
+            'avg' => round((float)$values->avg(), 4),
+            'change' => $change,
+            'changePercent' => $first == 0.0 ? null : round(($change / $first) * 100, 4),
+        ];
+    }
+
     private function samplePoints($points, int $maxPoints)
     {
         $maxPoints = max(20, $maxPoints);
@@ -94,30 +105,19 @@ class MarketController extends Controller
         }
 
         $lastIndex = $points->count() - 1;
-        $stride = (int) ceil($points->count() / $maxPoints);
+        $stride = (int)ceil($points->count() / $maxPoints);
 
         return $points
-            ->filter(fn ($point, $index) => $index % $stride === 0 || $index === $lastIndex)
+            ->filter(fn($point, $index) => $index % $stride === 0 || $index === $lastIndex)
             ->values();
     }
 
-    private function analytics($points): array
+    public function fetch(PriceIngestor $ingestor)
     {
-        $values = $points->pluck('current_value')->filter(fn ($value) => $value !== null)->values();
-        if ($values->isEmpty()) {
-            return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
+        if (!config('gold.features.manual_fetch_api')) {
+            return response()->json(['message' => 'دریافت دستی از API غیرفعال است.'], 403);
         }
-
-        $first = (float) $values->first();
-        $last = (float) $values->last();
-        $change = $last - $first;
-
-        return [
-            'min' => (float) $values->min(),
-            'max' => (float) $values->max(),
-            'avg' => round((float) $values->avg(), 4),
-            'change' => $change,
-            'changePercent' => $first == 0.0 ? null : round(($change / $first) * 100, 4),
-        ];
+        $result = $ingestor->fetchAndStore();
+        return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
     }
 }

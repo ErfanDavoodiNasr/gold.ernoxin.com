@@ -17,6 +17,17 @@ return [
             'strict' => true,
             'engine' => null,
         ],
+        'pgsql' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'doc'),
+            'username' => env('DB_USERNAME', 'crate'),
+            'password' => env('DB_PASSWORD', ''),
+            'prefix' => '',
+            'schema' => env('DB_SCHEMA', 'doc'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
     ],
     'migrations' => 'migrations',
 ];

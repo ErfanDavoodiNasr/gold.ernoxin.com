@@ -6,16 +6,6 @@ class PersianNumber
 {
     private const MAP = ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9', '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9'];
 
-    public static function clean(?string $text): string
-    {
-        return trim(preg_replace('/\s+/u', ' ', $text ?? ''));
-    }
-
-    public static function digits(?string $text): string
-    {
-        return strtr($text ?? '', self::MAP);
-    }
-
     public static function label(?string $text): string
     {
         $value = self::digits($text);
@@ -23,14 +13,14 @@ class PersianNumber
         return self::clean($value);
     }
 
-    public static function numeric(?string $text): ?float
+    public static function digits(?string $text): string
     {
-        $token = self::numericToken($text);
-        if ($token === null) {
-            return null;
-        }
-        $standard = self::standardize($token);
-        return $standard === null ? null : (float) $standard;
+        return strtr($text ?? '', self::MAP);
+    }
+
+    public static function clean(?string $text): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $text ?? ''));
     }
 
     public static function currencyAndValue(?string $text): array
@@ -42,8 +32,53 @@ class PersianNumber
         }
         $token = $m[0][0];
         $start = $m[0][1];
-        $currency = self::clean(substr($normalized, 0, $start).substr($normalized, $start + strlen($token)));
+        $currency = self::clean(substr($normalized, 0, $start) . substr($normalized, $start + strlen($token)));
         return [self::numeric($token), in_array($currency, ['', '-', '—', '–', '―'], true) ? null : $currency];
+    }
+
+    public static function numeric(?string $text): ?float
+    {
+        $token = self::numericToken($text);
+        if ($token === null) {
+            return null;
+        }
+        $standard = self::standardize($token);
+        return $standard === null ? null : (float)$standard;
+    }
+
+    private static function numericToken(?string $text): ?string
+    {
+        $normalized = str_replace(['−', '–'], '-', self::digits(self::clean($text)));
+        return preg_match('/[-+]?\d[\d,\.٫٬]*/u', $normalized, $m) ? $m[0] : null;
+    }
+
+    private static function standardize(string $token): ?string
+    {
+        $token = preg_replace('/[^0-9,\.\-+]/', '', str_replace(['٬', '٫'], [',', '.'], self::digits($token)));
+        if ($token === '' || in_array($token, ['-', '+', '.', ','], true)) {
+            return null;
+        }
+        $sign = '';
+        if (in_array($token[0], ['-', '+'], true)) {
+            $sign = $token[0];
+            $token = substr($token, 1);
+        }
+        $separators = substr_count($token, '.') + substr_count($token, ',');
+        if ($separators === 0) {
+            $digits = preg_replace('/\D/', '', $token);
+            return $digits === '' ? null : $sign . $digits;
+        }
+        if ($separators === 1) {
+            $sep = strpos($token, '.') !== false ? '.' : ',';
+            [$left, $right] = explode($sep, $token, 2);
+            $left = preg_replace('/\D/', '', $left);
+            $right = preg_replace('/\D/', '', $right);
+            return $right !== '' && strlen($right) <= 2 ? $sign . ($left ?: '0') . '.' . $right : $sign . $left . $right;
+        }
+        $last = max(strrpos($token, '.'), strrpos($token, ','));
+        $left = preg_replace('/\D/', '', substr($token, 0, $last));
+        $right = preg_replace('/\D/', '', substr($token, $last + 1));
+        return $right !== '' && strlen($right) <= 2 && $left !== '' ? $sign . $left . '.' . $right : $sign . preg_replace('/\D/', '', $token);
     }
 
     public static function change(?string $rawText, string $directionHint = 'none'): array
@@ -67,40 +102,5 @@ class PersianNumber
             $value = $direction === 'desc' ? -abs($value) : abs($value);
         }
         return ['value' => $value, 'percent' => $percent, 'direction' => $direction, 'raw' => $raw];
-    }
-
-    private static function numericToken(?string $text): ?string
-    {
-        $normalized = str_replace(['−', '–'], '-', self::digits(self::clean($text)));
-        return preg_match('/[-+]?\d[\d,\.٫٬]*/u', $normalized, $m) ? $m[0] : null;
-    }
-
-    private static function standardize(string $token): ?string
-    {
-        $token = preg_replace('/[^0-9,\.\-+]/', '', str_replace(['٬', '٫'], [',', '.'], self::digits($token)));
-        if ($token === '' || in_array($token, ['-', '+', '.', ','], true)) {
-            return null;
-        }
-        $sign = '';
-        if (in_array($token[0], ['-', '+'], true)) {
-            $sign = $token[0];
-            $token = substr($token, 1);
-        }
-        $separators = substr_count($token, '.') + substr_count($token, ',');
-        if ($separators === 0) {
-            $digits = preg_replace('/\D/', '', $token);
-            return $digits === '' ? null : $sign.$digits;
-        }
-        if ($separators === 1) {
-            $sep = strpos($token, '.') !== false ? '.' : ',';
-            [$left, $right] = explode($sep, $token, 2);
-            $left = preg_replace('/\D/', '', $left);
-            $right = preg_replace('/\D/', '', $right);
-            return $right !== '' && strlen($right) <= 2 ? $sign.($left ?: '0').'.'.$right : $sign.$left.$right;
-        }
-        $last = max(strrpos($token, '.'), strrpos($token, ','));
-        $left = preg_replace('/\D/', '', substr($token, 0, $last));
-        $right = preg_replace('/\D/', '', substr($token, $last + 1));
-        return $right !== '' && strlen($right) <= 2 && $left !== '' ? $sign.$left.'.'.$right : $sign.preg_replace('/\D/', '', $token);
     }
 }

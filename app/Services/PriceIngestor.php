@@ -5,9 +5,8 @@ namespace App\Services;
 use App\Models\FetchLog;
 use App\Models\MarketItem;
 use App\Models\PricePoint;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PriceIngestor
@@ -18,7 +17,7 @@ class PriceIngestor
 
     public function fetchAndStore(): array
     {
-        $reference = (string) Str::uuid();
+        $reference = (string)Str::uuid();
         $log = FetchLog::create([
             'source' => config('gold.source_name', 'estjt'),
             'status' => 'running',
@@ -27,9 +26,8 @@ class PriceIngestor
         ]);
         try {
             $payload = $this->scraper->fetch();
-            $count = DB::transaction(fn () => $this->store($payload));
+            $count = DB::transaction(fn() => $this->store($payload));
             $log->update(['status' => 'success', 'items_count' => $count, 'finished_at' => now()]);
-            Cache::forget('api.summary');
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'message' => $e->getMessage(), 'finished_at' => now()]);

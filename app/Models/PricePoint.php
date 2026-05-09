@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PricePoint extends Model
 {
@@ -29,6 +30,25 @@ class PricePoint extends Model
         'change_value' => 'float',
         'change_percent' => 'float',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function (self $pricePoint) {
+            if (config('database.default') === 'pgsql' && !$pricePoint->getKey()) {
+                $pricePoint->id = (string)Str::uuid();
+            }
+        });
+    }
+
+    public function getIncrementing()
+    {
+        return config('database.default') !== 'pgsql';
+    }
+
+    public function getKeyType()
+    {
+        return config('database.default') === 'pgsql' ? 'string' : 'int';
+    }
 
     public function item()
     {

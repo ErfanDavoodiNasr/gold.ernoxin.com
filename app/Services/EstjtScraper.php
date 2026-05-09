@@ -32,31 +32,45 @@ class EstjtScraper
                 'Referer' => config('gold.http_headers.referer'),
             ],
         ]);
-        $attempts = max(1, (int) config('gold.retry_count', 2) + 1);
+        $attempts = max(1, (int)config('gold.retry_count', 2) + 1);
         for ($i = 1; $i <= $attempts; $i++) {
             try {
                 $response = $client->get($this->sourceUrl());
                 $status = $response->getStatusCode();
-                $html = (string) $response->getBody();
+                $html = (string)$response->getBody();
                 if ($status >= 400 || trim($html) === '' || $this->looksBlocked($html)) {
                     throw new RuntimeException('منبع قیمت‌ها در دسترس نیست یا درخواست را مسدود کرده است.');
                 }
                 return $html;
             } catch (\Throwable $e) {
                 if ($i === $attempts) {
-                    throw new RuntimeException('ارتباط با منبع برقرار نشد: '.$e->getMessage(), 0, $e);
+                    throw new RuntimeException('ارتباط با منبع برقرار نشد: ' . $e->getMessage(), 0, $e);
                 }
-                usleep(max(1, (int) config('gold.retry_backoff_milliseconds', 300)) * 1000 * $i);
+                usleep(max(1, (int)config('gold.retry_backoff_milliseconds', 300)) * 1000 * $i);
             }
         }
         throw new RuntimeException('دریافت داده ناموفق بود.');
+    }
+
+    private function sourceUrl(): string
+    {
+        return (string)config('gold.source_url', 'https://www.estjt.ir/price/');
+    }
+
+    private function looksBlocked(string $html): bool
+    {
+        $body = strtolower($html);
+        foreach ((array)config('gold.blocked_page_patterns', []) as $pattern) {
+            if (str_contains($body, $pattern)) return true;
+        }
+        return false;
     }
 
     public function parse(string $html, string $fetchedAt): array
     {
         libxml_use_internal_errors(true);
         $dom = new DOMDocument();
-        $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
         $xpath = new DOMXPath($dom);
         $tables = iterator_to_array($xpath->query('//table'));
         if (!$tables) {
@@ -114,6 +128,29 @@ class EstjtScraper
         return [$gold, $coin];
     }
 
+    private function knownGoldTypes(): array
+    {
+        return config('gold.known_items.gold') ?: self::GOLD_TYPES;
+    }
+
+    private function knownCoinTypes(): array
+    {
+        return config('gold.known_items.coin') ?: self::COIN_TYPES;
+    }
+
+    private function orderedRows(array $rows, array $knownTypes, string $fallbackCategory): array
+    {
+        $ordered = [];
+        foreach ($knownTypes as $type) {
+            $key = PersianNumber::label($type);
+            if (isset($rows[$key])) {
+                $ordered[] = $rows[$key];
+                unset($rows[$key]);
+            }
+        }
+        return array_merge($ordered, array_values($rows));
+    }
+
     private function extractRows(DOMElement $table, DOMXPath $xpath, bool $gold): array
     {
         $rows = [];
@@ -141,19 +178,6 @@ class EstjtScraper
         return $rows;
     }
 
-    private function orderedRows(array $rows, array $knownTypes, string $fallbackCategory): array
-    {
-        $ordered = [];
-        foreach ($knownTypes as $type) {
-            $key = PersianNumber::label($type);
-            if (isset($rows[$key])) {
-                $ordered[] = $rows[$key];
-                unset($rows[$key]);
-            }
-        }
-        return array_merge($ordered, array_values($rows));
-    }
-
     private function direction(DOMElement $cell): string
     {
         foreach ([$cell, ...iterator_to_array($cell->getElementsByTagName('*'))] as $element) {
@@ -163,29 +187,5 @@ class EstjtScraper
         }
         $raw = PersianNumber::clean($cell->textContent);
         return str_starts_with($raw, '-') ? 'desc' : (str_starts_with($raw, '+') ? 'asc' : 'none');
-    }
-
-    private function looksBlocked(string $html): bool
-    {
-        $body = strtolower($html);
-        foreach ((array) config('gold.blocked_page_patterns', []) as $pattern) {
-            if (str_contains($body, $pattern)) return true;
-        }
-        return false;
-    }
-
-    private function sourceUrl(): string
-    {
-        return (string) config('gold.source_url', 'https://www.estjt.ir/price/');
-    }
-
-    private function knownGoldTypes(): array
-    {
-        return config('gold.known_items.gold') ?: self::GOLD_TYPES;
-    }
-
-    private function knownCoinTypes(): array
-    {
-        return config('gold.known_items.coin') ?: self::COIN_TYPES;
     }
 }
