@@ -87,7 +87,12 @@ class EstjtScraper
         }
 
         return [
-            'source' => ['name' => config('gold.source_name'), 'url' => $this->sourceUrl(), 'fetchedAt' => $fetchedAt],
+            'source' => [
+                'key' => config('gold.source_key'),
+                'name' => config('gold.source_name'),
+                'url' => $this->sourceUrl(),
+                'fetchedAt' => $fetchedAt,
+            ],
             'gold' => $goldRows,
             'coin' => $coinRows,
         ];

@@ -19,7 +19,7 @@ class PriceIngestor
     {
         $reference = (string)Str::uuid();
         $log = FetchLog::create([
-            'source' => config('gold.source_name', 'estjt'),
+            'source' => config('gold.source_key', 'estjt'),
             'status' => 'running',
             'reference_id' => $reference,
             'started_at' => now(),
@@ -39,7 +39,7 @@ class PriceIngestor
     public function store(array $payload): int
     {
         $count = 0;
-        $source = $payload['source']['name'] ?? config('gold.source_name', 'estjt');
+        $source = $payload['source']['key'] ?? config('gold.source_key', 'estjt');
         $fetchedAt = isset($payload['source']['fetchedAt']) ? Carbon::parse($payload['source']['fetchedAt']) : now();
         foreach (['gold', 'coin'] as $group) {
             foreach (($payload[$group] ?? []) as $row) {
