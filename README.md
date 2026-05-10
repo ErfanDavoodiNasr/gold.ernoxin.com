@@ -19,7 +19,8 @@
 - ساخت خودکار جدول‌های دیتابیس در اولین اجرا
 - آماده‌سازی خودکار مسیرهای موردنیاز Laravel مثل `storage/` و `bootstrap/cache/`
 - تولید خودکار `APP_KEY` در اولین اجرا، اگر در `.env` خالی باشد
-- قابل اجرا روی cPanel بدون نیاز به SSH، Cron، Composer، npm یا اجرای دستور دستی
+- قابل اجرا روی cPanel بدون نیاز به SSH، Composer، npm یا اجرای دستور دستی
+- دریافت خودکار قیمت‌ها از طریق Cron/Laravel Scheduler، مستقل از حضور کاربر در سایت
 
 ## تکنولوژی‌ها
 
@@ -138,7 +139,28 @@ ESTJT_TIMEOUT_CONNECT=3
 ESTJT_TIMEOUT_READ=8
 ESTJT_RETRY_COUNT=2
 ESTJT_RETRY_BACKOFF_MS=300
+ESTJT_AUTO_FETCH=true
+ESTJT_FETCH_LOCK_SECONDS=120
+MARKET_SUMMARY_CACHE_SECONDS=20
 ```
+
+## اجرای دریافت خودکار در پس‌زمینه
+
+برای اینکه قیمت‌ها حتی وقتی هیچ کاربری داخل سایت نیست به‌روزرسانی شوند، باید Cron هاست هر دقیقه Laravel Scheduler را اجرا کند:
+
+```bash
+* * * * * cd /home/USER/public_html && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
+```
+
+در بعضی cPanelها مسیر PHP متفاوت است. اگر دستور بالا کار نکرد، مسیر PHP هاست را جایگزین `/usr/local/bin/php` کنید.
+
+اگر Cron فقط با URL قابل تنظیم است، می‌توانید یک Cron command مستقیم برای همین Artisan command بسازید:
+
+```bash
+*/5 * * * * cd /home/USER/public_html && /usr/local/bin/php artisan gold:fetch-prices >> /dev/null 2>&1
+```
+
+خود برنامه جلوی اجرای همزمان چند fetch را می‌گیرد و فاصله `ESTJT_FETCH_INTERVAL_MINUTES` را رعایت می‌کند.
 
 ## تنظیمات نمودار
 

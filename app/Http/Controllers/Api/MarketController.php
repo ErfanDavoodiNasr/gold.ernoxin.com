@@ -6,19 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\FetchLog;
 use App\Models\MarketItem;
 use App\Models\PricePoint;
-use App\Services\AutoPriceFetcher;
 use App\Services\PriceIngestor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class MarketController extends Controller
 {
-    public function summary(AutoPriceFetcher $autoPriceFetcher)
+    public function summary()
     {
-        $autoPriceFetcher->fetchIfDue();
+        $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
-        $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
+        return response()->json(Cache::remember('gold:market-summary', $ttl, function () {
+            $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
 
-        return response()->json([
+            return [
             'items' => $items->map(fn($item) => $this->itemResource($item)),
             'lastFetch' => FetchLog::latest('finished_at')->first(),
             'config' => [
@@ -32,7 +33,8 @@ class MarketController extends Controller
                 'themeAccent' => config('gold.theme_accent'),
                 'features' => config('gold.features'),
             ],
-        ]);
+            ];
+        }));
     }
 
     private function itemResource(MarketItem $item): array
@@ -57,6 +59,7 @@ class MarketController extends Controller
     {
         $days = min((int)config('gold.history_max_days', 365), max(1, (int)$request->query('days', config('gold.chart_default_range_days'))));
         $points = PricePoint::where('market_item_id', $item->id)
+            ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
             ->where('fetched_at', '>=', now()->subDays($days))
             ->orderBy('fetched_at')
             ->get();
@@ -117,7 +120,22 @@ class MarketController extends Controller
         if (!config('gold.features.manual_fetch_api')) {
             return response()->json(['message' => 'دریافت دستی از API غیرفعال است.'], 403);
         }
-        $result = $ingestor->fetchAndStore();
+        $token = (string)config('gold.manual_fetch_token');
+        $provided = (string)request()->bearerToken();
+        if ($token === '' || $provided === '' || !hash_equals($token, $provided)) {
+            return response()->json(['message' => 'دسترسی غیرمجاز است.'], 401);
+        }
+        $lock = Cache::lock('gold:price-fetch', max(60, (int)config('gold.fetch_lock_seconds', 120)));
+        if (!$lock->get()) {
+            return response()->json(['message' => 'دریافت دیگری در حال اجراست.'], 409);
+        }
+
+        try {
+            $result = $ingestor->fetchAndStore();
+        } finally {
+            optional($lock)->release();
+        }
+
         return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
     }
 }

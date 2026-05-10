@@ -12,6 +12,9 @@ class Kernel extends ConsoleKernel
 
     protected function schedule($schedule)
     {
-        //
+        $schedule->command('gold:fetch-prices')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 }

@@ -5,6 +5,8 @@ return [
     'source_name' => env('ESTJT_SOURCE_NAME') ?: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
     'source_url' => env('ESTJT_SOURCE_URL', 'https://www.estjt.ir/price/'),
     'fetch_interval_minutes' => (int)env('ESTJT_FETCH_INTERVAL_MINUTES', 5),
+    'fetch_lock_seconds' => (int)env('ESTJT_FETCH_LOCK_SECONDS', 120),
+    'summary_cache_seconds' => (int)env('MARKET_SUMMARY_CACHE_SECONDS', 20),
     'timeout_connect' => (int)env('ESTJT_TIMEOUT_CONNECT', 3),
     'timeout_read' => (int)env('ESTJT_TIMEOUT_READ', 8),
     'retry_count' => (int)env('ESTJT_RETRY_COUNT', 2),
@@ -28,10 +30,11 @@ return [
         'coin' => ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'],
     ],
     'features' => [
-        'auto_fetch' => true,
+        'auto_fetch' => filter_var(env('ESTJT_AUTO_FETCH', true), FILTER_VALIDATE_BOOLEAN),
         'dark_mode' => true,
-        'manual_fetch_api' => false,
+        'manual_fetch_api' => filter_var(env('MANUAL_FETCH_API', false), FILTER_VALIDATE_BOOLEAN),
     ],
+    'manual_fetch_token' => env('MANUAL_FETCH_TOKEN'),
     'hosting' => [
         'auto_migrate' => true,
         'ensure_writable_paths' => true,
