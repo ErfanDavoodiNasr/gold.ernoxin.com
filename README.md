@@ -131,6 +131,7 @@ https://www.estjt.ir/price/
 
 ```env
 ESTJT_SOURCE_URL=https://www.estjt.ir/price/
+ESTJT_SOURCE_KEY=estjt
 ESTJT_SOURCE_NAME="اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران"
 ESTJT_FETCH_INTERVAL_MINUTES=1
 ESTJT_TIMEOUT_CONNECT=3
