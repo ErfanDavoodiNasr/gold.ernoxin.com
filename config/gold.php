@@ -1,7 +1,8 @@
 <?php
 
 return [
-    'source_name' => env('ESTJT_SOURCE_NAME', 'estjt'),
+    'source_key' => env('ESTJT_SOURCE_KEY') ?: 'estjt',
+    'source_name' => env('ESTJT_SOURCE_NAME') ?: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
     'source_url' => env('ESTJT_SOURCE_URL', 'https://www.estjt.ir/price/'),
     'fetch_interval_minutes' => (int)env('ESTJT_FETCH_INTERVAL_MINUTES', 5),
     'timeout_connect' => (int)env('ESTJT_TIMEOUT_CONNECT', 3),
@@ -27,7 +28,7 @@ return [
         'coin' => ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'],
     ],
     'features' => [
-        'auto_fetch' => false,
+        'auto_fetch' => true,
         'dark_mode' => true,
         'manual_fetch_api' => false,
     ],
@@ -35,6 +36,6 @@ return [
         'auto_migrate' => true,
         'ensure_writable_paths' => true,
     ],
-    'theme_default' => env('THEME_DEFAULT', 'dark'),
-    'theme_accent' => env('THEME_ACCENT', '#d9a441'),
+    'theme_default' => env('THEME_DEFAULT') ?: 'dark',
+    'theme_accent' => env('THEME_ACCENT') ?: '#d9a441',
 ];
