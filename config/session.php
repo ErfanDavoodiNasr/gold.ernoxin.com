@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'driver' => env('SESSION_DRIVER', 'file'),
+    'driver' => 'file',
     'lifetime' => 120,
     'expire_on_close' => false,
     'encrypt' => false,

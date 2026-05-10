@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    'default' => 'sync',
     'connections' => [
         'sync' => [
             'driver' => 'sync',

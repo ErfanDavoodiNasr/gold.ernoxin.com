@@ -27,13 +27,13 @@ return [
         'coin' => ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'],
     ],
     'features' => [
-        'auto_fetch' => (bool)env('FEATURE_AUTO_FETCH', true),
-        'dark_mode' => (bool)env('FEATURE_DARK_MODE', true),
-        'manual_fetch_api' => (bool)env('FEATURE_MANUAL_FETCH_API', false),
+        'auto_fetch' => false,
+        'dark_mode' => true,
+        'manual_fetch_api' => false,
     ],
     'hosting' => [
-        'auto_migrate' => (bool)env('HOSTING_AUTO_MIGRATE', true),
-        'ensure_writable_paths' => (bool)env('HOSTING_ENSURE_WRITABLE_PATHS', true),
+        'auto_migrate' => true,
+        'ensure_writable_paths' => true,
     ],
     'theme_default' => env('THEME_DEFAULT', 'dark'),
     'theme_accent' => env('THEME_ACCENT', '#d9a441'),
