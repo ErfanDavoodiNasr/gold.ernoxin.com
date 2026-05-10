@@ -2,28 +2,112 @@
 
 # سامانه قیمت طلا و سکه
 
-اپلیکیشن Laravel + React برای نمایش قیمت طلا و سکه با ذخیره تاریخچه در MySQL. منبع داده‌ها `https://www.estjt.ir/price/`
-است.
+سامانه قیمت طلا و سکه یک داشبورد فارسی برای نمایش، ذخیره و بررسی قیمت‌های بازار طلا و سکه است. این برنامه قیمت‌ها را از
+منبع مشخص و رسمی دریافت می‌کند، داده‌ها را در MySQL نگه می‌دارد و امکان مشاهده آخرین وضعیت بازار و تاریخچه قیمت‌ها را
+فراهم می‌کند.
 
-## امکانات اصلی
+این پروژه با Laravel، React و MySQL ساخته شده و برای اجرا روی هاست‌های اشتراکی و cPanel آماده‌سازی شده است.
 
-- دریافت خودکار قیمت‌ها بدون نیاز به Cron روی هاست
-- ساخت و به‌روزرسانی خودکار جدول‌های دیتابیس با migration
-- مناسب برای cPanel بدون SSH/Terminal
-- داشبورد فارسی، راست‌به‌چپ، موبایل‌محور
-- خروجی آماده آپلود همراه با `vendor/` و `public/build/`
+## امکانات
 
-## تنظیمات مهم
+- نمایش آخرین قیمت طلا و سکه
+- ذخیره تاریخچه قیمت‌ها در دیتابیس
+- نمودار تغییرات قیمت در بازه‌های زمانی مختلف
+- داشبورد فارسی، راست‌به‌چپ و مناسب موبایل
+- پشتیبانی از حالت تاریک
+- API داخلی برای دریافت خلاصه بازار و تاریخچه هر آیتم
+- ساخت خودکار جدول‌های دیتابیس در اولین اجرا
+- آماده‌سازی خودکار مسیرهای موردنیاز Laravel مثل `storage/` و `bootstrap/cache/`
+- تولید خودکار `APP_KEY` در اولین اجرا، اگر در `.env` خالی باشد
+- قابل اجرا روی cPanel بدون نیاز به SSH، Cron، Composer، npm یا اجرای دستور دستی
 
-فایل `.env` را از روی `.env.example` بسازید. توضیح کامل هر گزینه داخل `.env.example` نوشته شده است.
+## تکنولوژی‌ها
 
-مقادیر مهم برای production:
+- Laravel `8`
+- React
+- Vite
+- MySQL
+- PHP `8.2`
+
+## نیازمندی‌ها
+
+نسخه PHP باید روی `8.2` تنظیم شود. این پروژه برای نسخه‌های بالاتر از `8.2` در نظر گرفته نشده است.
+
+افزونه‌های PHP موردنیاز:
+
+```text
+dom
+pdo
+pdo_mysql
+mbstring
+openssl
+tokenizer
+xml
+ctype
+json
+fileinfo
+curl
+```
+
+## نصب روی cPanel
+
+### 1. دانلود نسخه آماده
+
+### 2. ساخت دیتابیس
+
+در cPanel یک دیتابیس MySQL و یک user بسازید و user را به دیتابیس متصل کنید.
+
+سپس اطلاعات دیتابیس را در فایل `.env` قرار دهید:
 
 ```env
+DB_DATABASE=نام_دیتابیس
+DB_USERNAME=نام_کاربر
+DB_PASSWORD=رمز_عبور
+```
+
+### 3. آپلود فایل‌ها
+
+کل پروژه را بدون تغییر ساختار پوشه‌ها داخل `public_html` آپلود کنید.
+
+فایل‌ها و پوشه‌های اصلی که باید روی هاست وجود داشته باشند:
+
+```text
+.env
+.htaccess
+index.php
+app/
+bootstrap/
+config/
+database/
+public/
+resources/
+routes/
+storage/
+vendor/
+```
+
+فایل `.htaccess` ریشه پروژه درخواست‌ها را به پوشه `public` هدایت می‌کند و جلوی دسترسی مستقیم به فایل‌های حساس مثل
+`.env`، `vendor/` و `storage/` را می‌گیرد.
+
+### 4. اجرای سایت
+
+بعد از آپلود، دامنه را باز کنید. برنامه در اولین اجرا این موارد را خودکار انجام می‌دهد:
+
+- ساخت `APP_KEY` در صورت خالی بودن
+- ساخت جدول‌های دیتابیس
+- آماده‌سازی مسیرهای قابل‌نوشتن
+- بارگذاری داشبورد
+
+## تنظیمات اصلی
+
+تنظیمات پروژه در فایل `.env` قرار دارد. مهم‌ترین گزینه‌ها:
+
+```env
+APP_NAME="سامانه قیمت طلا"
 APP_ENV=production
-APP_DEBUG=false
 APP_KEY=
-APP_URL=https://gold.ernoxin.com
+APP_DEBUG=false
+APP_URL=https://your-domain.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -31,111 +115,38 @@ DB_PORT=3306
 DB_DATABASE=gold_prices
 DB_USERNAME=gold_user
 DB_PASSWORD=
-
-FEATURE_AUTO_FETCH=true
-FEATURE_MANUAL_FETCH_API=false
-HOSTING_AUTO_MIGRATE=true
-HOSTING_ENSURE_WRITABLE_PATHS=true
 ```
 
-`APP_KEY` اجباری است. روی سیستم خودت بساز:
+اگر `APP_KEY` خالی باشد، برنامه خودش آن را تولید و در `.env` ذخیره می‌کند. بعد از نصب، مقدار `APP_KEY` را تغییر ندهید.
 
-```bash
-php artisan key:generate
+## تنظیمات منبع قیمت
+
+منبع پیش‌فرض قیمت‌ها:
+
+```text
+https://www.estjt.ir/price/
 ```
 
-بعد از production مقدار `APP_KEY` را تغییر نده.
-
-## آموزش دیپلوی روی cPanel
-
-### 1. آماده‌سازی روی سیستم خودت
-
-روی هاست command اجرا نمی‌کنی. این دستورها فقط روی سیستم خودت اجرا می‌شوند:
-
-```bash
-npm ci
-npm run build
-composer install --no-dev --optimize-autoloader
-```
-
-این commandها را برای نسخه upload نهایی اجرا نکن:
-
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-دلیل: مخصوصا `config:cache` ممکن است `.env` سیستم خودت را cache کند و روی هاست تنظیمات اشتباه استفاده شود.
-
-### 2. ساخت دیتابیس در cPanel
-
-در cPanel یک دیتابیس MySQL و یک user بساز. سپس اطلاعات آن را داخل `.env` وارد کن:
+گزینه‌های مرتبط در `.env`:
 
 ```env
-DB_DATABASE=...
-DB_USERNAME=...
-DB_PASSWORD=...
+ESTJT_SOURCE_URL=https://www.estjt.ir/price/
+ESTJT_SOURCE_NAME="اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران"
+ESTJT_FETCH_INTERVAL_MINUTES=1
+ESTJT_TIMEOUT_CONNECT=3
+ESTJT_TIMEOUT_READ=8
+ESTJT_RETRY_COUNT=2
+ESTJT_RETRY_BACKOFF_MS=300
 ```
 
-اگر `HOSTING_AUTO_MIGRATE=true` باشد، لازم نیست روی هاست migration اجرا کنی. اولین بازدید سایت خودش جدول‌ها را می‌سازد.
-در نسخه‌های بعد هم اگر migration جدید اضافه شود، خودش اعمال می‌شود.
+## تنظیمات نمودار
 
-اگر خواستی migration خودکار را خاموش کنی، فایل زیر را در phpMyAdmin import کن:
-
-```text
-database/schema/mysql.sql
+```env
+CHART_DEFAULT_RANGE_DAYS=7
+CHART_AVAILABLE_RANGES=1,7,30,90,180,365
+CHART_MAX_POINTS=600
+HISTORY_MAX_DAYS=365
 ```
-
-### 3. آپلود فایل‌ها
-
-کل پروژه را روی هاست upload کن. این موارد حتما باید همراه پروژه باشند:
-
-- `vendor/`
-- `composer.lock`
-- `public/build/`
-- `public/fonts/`
-- `.env`
-
-### 4. تنظیم Document Root
-
-بهترین حالت: Document Root دامنه را روی پوشه `public` بگذار.
-
-اگر cPanel اجازه تغییر Document Root نداد:
-
-- محتوای پوشه `public` را داخل `public_html` بگذار.
-- مسیرهای `../vendor` و `../bootstrap` در `index.php` را مطابق محل واقعی پروژه تنظیم کن.
-
-### 5. اولین تست
-
-بعد از آپلود، سایت را باز کن. برنامه باید این کارها را خودش انجام دهد:
-
-- ساخت پوشه‌های runtime مثل `storage/framework` و `storage/logs`
-- اتصال به دیتابیس
-- ساخت جدول‌ها در دیتابیس اگر خالی باشد
-- اعمال migrationهای جدید اگر وجود داشته باشند
-- دریافت قیمت‌ها هنگام درخواست API، اگر زمان دریافت قبلی گذشته باشد
-
-برنامه هنگام اولین درخواست، مسیرهای runtime را خودش می‌سازد و دسترسی نوشتن لازم را برای این مسیرها تنظیم می‌کند:
-
-```text
-storage/
-bootstrap/cache/
-```
-
-اگر مالکیت فایل‌ها در هاست اجازه تغییر permission از داخل PHP را ندهد، باید مالکیت فایل‌ها در همان هاست اصلاح شود؛ در
-حالت عادی نیازی به تنظیم دستی File Manager نیست.
-
-## دریافت خودکار قیمت
-
-Cron لازم نیست. وقتی frontend این API را صدا می‌زند:
-
-```text
-GET /api/market/summary
-```
-
-برنامه بررسی می‌کند آخرین دریافت موفق قدیمی‌تر از `ESTJT_FETCH_INTERVAL_MINUTES` هست یا نه. اگر قدیمی باشد، همان request
-قیمت‌های جدید را ذخیره می‌کند و بعد پاسخ API را برمی‌گرداند.
 
 ## API
 
@@ -145,19 +156,34 @@ GET  /api/market/items/{id}/history?days=7
 POST /api/market/fetch
 ```
 
-`POST /api/market/fetch` فقط وقتی فعال است که:
+در حالت پیش‌فرض، API دریافت دستی قیمت غیرفعال است.
 
-```env
-FEATURE_MANUAL_FETCH_API=true
+## مسیرهای مهم
+
+```text
+app/                 کدهای اصلی Laravel
+config/              تنظیمات برنامه
+database/migrations/ ساختار جدول‌های دیتابیس
+public/              فایل ورودی وب و assetهای عمومی
+public/build/        خروجی آماده frontend
+resources/           فایل‌های React و Blade
+routes/              مسیرهای web و API
+storage/             فایل‌های runtime، cache و log
 ```
 
-برای production مقدار پیشنهادی `false` است.
+## خطایابی
 
-## نکات نگهداری
+اگر سایت خطای 500 نمایش داد، فایل log را بررسی کنید:
 
-- برای تغییر جدول‌ها، migration جدید بساز و همراه پروژه upload کن.
-- migration قدیمی را بعد از اجرا تغییر نده.
-- اگر `HOSTING_AUTO_MIGRATE=true` باشد، migration جدید روی هاست خودکار اجرا می‌شود.
-- فایل‌های build و `vendor/` باید در پروژه باقی بمانند چون هاست command ندارد.
+```text
+storage/logs/laravel.log
+```
+
+اگر خطا مربوط به permission بود، دسترسی نوشتن این مسیرها را در File Manager هاست بررسی کنید:
+
+```text
+storage/
+bootstrap/cache/
+```
 
 </div>
