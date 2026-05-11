@@ -146,19 +146,51 @@ MARKET_SUMMARY_CACHE_SECONDS=20
 
 ## اجرای دریافت خودکار در پس‌زمینه
 
-برای اینکه قیمت‌ها حتی وقتی هیچ کاربری داخل سایت نیست به‌روزرسانی شوند، باید Cron هاست هر دقیقه Laravel Scheduler را اجرا کند:
+برای اینکه قیمت‌ها حتی وقتی هیچ کاربری داخل سایت نیست به‌روزرسانی شوند، باید Cron هاست command دریافت قیمت را اجرا کند.
+در cPanel زمان‌بندی را داخل فیلدهای جداگانه وارد کنید و داخل فیلد `Command` فقط دستور را بنویسید.
 
-```bash
-* * * * * cd /home/USER/public_html && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
+پیشنهاد اصلی:
+
+```text
+Minute:  *
+Hour:    *
+Day:     *
+Month:   *
+Weekday: *
+Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
+```
+
+اگر هاست اجازه اجرای هر دقیقه را نمی‌دهد، اجرای هر پنج دقیقه هم قابل استفاده است:
+
+```text
+Minute:  */5
+Hour:    *
+Day:     *
+Month:   *
+Weekday: *
+Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
+```
+
+در این نوع cPanel از `cd`، `&&`، `;` و `>/dev/null 2>&1` داخل Command استفاده نکنید، چون بعضی هاست‌ها آن‌ها را به عنوان
+command chaining رد می‌کنند.
+همچنین اگر هاست `proc_open` را غیرفعال کرده باشد، از `artisan schedule:run` استفاده نکنید و همین command مستقیم
+`gold:fetch-prices` را در Cron قرار دهید.
+
+مسیر `/home/USER/gold/artisan` را با مسیر واقعی پروژه روی هاست جایگزین کنید. برای مثال:
+
+```text
+/usr/local/bin/php /home/iouanode/gold/artisan gold:fetch-prices
 ```
 
 در بعضی cPanelها مسیر PHP متفاوت است. اگر دستور بالا کار نکرد، مسیر PHP هاست را جایگزین `/usr/local/bin/php` کنید.
 
-اگر Cron فقط با URL قابل تنظیم است، می‌توانید یک Cron command مستقیم برای همین Artisan command بسازید:
+نحوه کار زمان‌بندی:
 
-```bash
-*/5 * * * * cd /home/USER/public_html && /usr/local/bin/php artisan gold:fetch-prices >> /dev/null 2>&1
-```
+- Cron command دریافت قیمت را بیدار می‌کند.
+- command `gold:fetch-prices` هر بار بررسی می‌کند آیا زمان دریافت قیمت رسیده یا نه.
+- مقدار `ESTJT_FETCH_INTERVAL_MINUTES` در `.env` تعیین می‌کند خود برنامه چند دقیقه یک‌بار واقعا از منبع قیمت بگیرد.
+- اگر Cron هر دقیقه باشد و `ESTJT_FETCH_INTERVAL_MINUTES=5` باشد، برنامه هر دقیقه بررسی می‌کند ولی فقط هر پنج دقیقه fetch واقعی انجام می‌دهد.
+- اگر Cron هر پنج دقیقه باشد و `ESTJT_FETCH_INTERVAL_MINUTES=1` باشد، fetch واقعی حداکثر هر پنج دقیقه انجام می‌شود، چون Cron زودتر برنامه را بیدار نمی‌کند.
 
 خود برنامه جلوی اجرای همزمان چند fetch را می‌گیرد و فاصله `ESTJT_FETCH_INTERVAL_MINUTES` را رعایت می‌کند.
 

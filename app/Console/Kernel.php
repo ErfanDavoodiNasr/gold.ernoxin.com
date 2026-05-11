@@ -14,7 +14,6 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('gold:fetch-prices')
             ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
+            ->withoutOverlapping();
     }
 }
