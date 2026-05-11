@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
@@ -18,6 +18,7 @@ import '../css/app.css';
 const defaultConfig = {
     chartDefaultRangeDays: 7,
     chartAvailableRanges: [1, 7, 30, 90],
+    autoRefreshSeconds: 60,
     themeDefault: 'dark',
     themeAccent: '#d9a441',
     sourceName: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
@@ -60,6 +61,15 @@ function categoryLabel(category) {
     return category === 'coin' ? 'سکه' : 'طلا';
 }
 
+async function fetchHistory(itemId, days, signal) {
+    const res = await fetch(`/api/market/items/${itemId}/history?days=${days}`, {
+        headers: {Accept: 'application/json'},
+        signal,
+    });
+    if (!res.ok) throw new Error('history_failed');
+    return res.json();
+}
+
 function App() {
     const [config, setConfig] = useState(defaultConfig);
     const [theme, setTheme] = useState(localStorage.getItem('theme') || defaultConfig.themeDefault);
@@ -72,6 +82,10 @@ function App() {
     const [status, setStatus] = useState('loading');
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(null);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const historyCache = useRef(new Map());
+    const refreshTimer = useRef(null);
+    const lastFetchKey = useRef(null);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -79,8 +93,10 @@ function App() {
         localStorage.setItem('theme', theme);
     }, [theme, config.themeAccent]);
 
-    async function loadSummary() {
-        setStatus('loading');
+    const loadSummary = useCallback(async ({silent = false} = {}) => {
+        if (!silent) {
+            setStatus('loading');
+        }
         setError('');
         try {
             const res = await fetch('/api/market/summary', {headers: {Accept: 'application/json'}});
@@ -91,41 +107,101 @@ function App() {
             setTheme((current) => current || nextConfig.themeDefault);
             setRange((current) => current || nextConfig.chartDefaultRangeDays);
             setItems(data.items || []);
+            const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
+            if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
+                historyCache.current.clear();
+            }
+            lastFetchKey.current = nextFetchKey;
             setLastFetch(data.lastFetch || null);
             setSelectedId((current) => current || data.items?.[0]?.id || null);
             setStatus('ready');
         } catch {
             setError('ارتباط با API برقرار نشد. تنظیمات سرور، دیتابیس و route ها را بررسی کنید.');
             setStatus('error');
-            setItems([]);
-            setHistory([]);
+            if (!silent) {
+                setItems([]);
+                setHistory([]);
+            }
         }
-    }
+    }, []);
 
     useEffect(() => {
         loadSummary();
-    }, []);
+    }, [loadSummary]);
+
+    useEffect(() => {
+        const refresh = () => {
+            if (document.visibilityState === 'visible') {
+                loadSummary({silent: true});
+            }
+        };
+        const schedule = () => {
+            window.clearInterval(refreshTimer.current);
+            if (document.visibilityState === 'visible') {
+                refreshTimer.current = window.setInterval(refresh, Math.max(15, config.autoRefreshSeconds || 60) * 1000);
+            }
+        };
+
+        schedule();
+        document.addEventListener('visibilitychange', schedule);
+        return () => {
+            window.clearInterval(refreshTimer.current);
+            document.removeEventListener('visibilitychange', schedule);
+        };
+    }, [config.autoRefreshSeconds, loadSummary]);
 
     const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
 
     useEffect(() => {
         if (!selected) return;
-        setHistory([]);
-        setAnalytics(null);
-        fetch(`/api/market/items/${selected.id}/history?days=${range}`, {headers: {Accept: 'application/json'}})
-            .then((r) => {
-                if (!r.ok) throw new Error('history_failed');
-                return r.json();
-            })
+        const cacheKey = `${selected.id}:${range}`;
+        const cached = historyCache.current.get(cacheKey);
+        const controller = new AbortController();
+
+        if (cached) {
+            setHistory(cached.points || []);
+            setAnalytics(cached.analytics || null);
+            setHistoryLoading(false);
+        } else {
+            setHistoryLoading(true);
+        }
+
+        fetchHistory(selected.id, range, controller.signal)
             .then((data) => {
+                historyCache.current.set(cacheKey, data);
                 setHistory(data.points || []);
                 setAnalytics(data.analytics || null);
+                setHistoryLoading(false);
             })
             .catch(() => {
-                setHistory([]);
-                setAnalytics(null);
+                if (!controller.signal.aborted) {
+                    setHistoryLoading(false);
+                    if (!cached) {
+                        setHistory([]);
+                        setAnalytics(null);
+                    }
+                }
             });
+
+        return () => controller.abort();
     }, [selected?.id, range]);
+
+    useEffect(() => {
+        if (items.length === 0) return;
+        const controller = new AbortController();
+        const queue = items
+            .filter((item) => item.id !== selected?.id)
+            .slice(0, 8)
+            .filter((item) => !historyCache.current.has(`${item.id}:${range}`));
+
+        queue.forEach((item) => {
+            fetchHistory(item.id, range, controller.signal)
+                .then((data) => historyCache.current.set(`${item.id}:${range}`, data))
+                .catch(() => {});
+        });
+
+        return () => controller.abort();
+    }, [items, selected?.id, range]);
 
     const filtered = useMemo(() => items.filter((item) => item.name.includes(query)), [items, query]);
     const gainers = items.filter((item) => item.direction === 'asc').length;
@@ -141,7 +217,7 @@ function App() {
                     <div><h1>سکه و طلای ارنوکسین</h1><p>پایش قیمت طلا و سکه با داده‌های {config.sourceName}</p></div>
                 </div>
                 <div className="actions">
-                    <button className="iconButton" onClick={loadSummary} title="به‌روزرسانی" aria-label="به‌روزرسانی">
+                    <button className="iconButton" onClick={() => loadSummary()} title="به‌روزرسانی" aria-label="به‌روزرسانی">
                         <RefreshCw size={19} className={status === 'loading' ? 'spin' : ''}/>
                     </button>
                     <button className="iconButton" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -209,7 +285,7 @@ function App() {
                                 tone={analytics?.changePercent < 0 ? 'down' : 'up'}/>
                     </div>
 
-                    <div className="chartWrap">
+                    <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
                         {history.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={history} margin={{top: 12, right: 10, left: 0, bottom: 0}}>

@@ -29,6 +29,7 @@ class MarketController extends Controller
                 'chartAvailableRanges' => config('gold.chart_available_ranges'),
                 'historyMaxDays' => config('gold.history_max_days'),
                 'chartMaxPoints' => config('gold.chart_max_points'),
+                'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
                 'themeDefault' => config('gold.theme_default'),
                 'themeAccent' => config('gold.theme_accent'),
                 'features' => config('gold.features'),
