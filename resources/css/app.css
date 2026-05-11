@@ -23,13 +23,13 @@
 
 :root[data-theme=light] {
     color-scheme: light;
-    --bg: #f7f7f4;
-    --panel: #ffffff;
-    --panel2: #f2f4f7;
+    --bg: #e9edf1;
+    --panel: #f8faf9;
+    --panel2: #edf1f4;
     --text: #17202a;
-    --muted: #687584;
-    --line: #dfe3e8;
-    --shadow: 0 22px 56px rgba(30, 44, 62, .1)
+    --muted: #536170;
+    --line: #c9d1da;
+    --shadow: 0 18px 44px rgba(33, 46, 61, .12)
 }
 
 * {
@@ -43,6 +43,10 @@ body {
     color: var(--text);
     direction: rtl;
     letter-spacing: 0
+}
+
+:root[data-theme=light] body {
+    background: linear-gradient(180deg, rgba(170, 119, 31, .14), rgba(47, 74, 102, .06) 330px, transparent 560px), var(--bg)
 }
 
 button, input {
@@ -167,6 +171,10 @@ button {
     background: rgba(255, 255, 255, .045)
 }
 
+:root[data-theme=light] .metric {
+    background: rgba(36, 54, 72, .045)
+}
+
 .metric strong {
     display: block;
     font-size: 26px;
@@ -280,6 +288,10 @@ button {
 .marketItem:hover, .marketItem.active {
     border-color: rgba(217, 164, 65, .72);
     background: rgba(217, 164, 65, .09)
+}
+
+:root[data-theme=light] .marketItem:hover, :root[data-theme=light] .marketItem.active {
+    background: rgba(170, 119, 31, .12)
 }
 
 .itemIcon {
@@ -410,7 +422,37 @@ button {
 
 .chartWrap {
     height: 430px;
-    min-height: 320px
+    min-height: 320px;
+    position: relative
+}
+
+.chartWrap.loading::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 96px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--gold);
+    animation: chartLoading 1.05s ease-in-out infinite
+}
+
+@keyframes chartLoading {
+    0% {
+        transform: translateX(0);
+        opacity: .35
+    }
+
+    50% {
+        transform: translateX(-140px);
+        opacity: 1
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: .35
+    }
 }
 
 .chartEmpty {
