@@ -45,6 +45,26 @@ body {
     letter-spacing: 0
 }
 
+.seoFallback {
+    width: min(1040px, 100%);
+    margin: auto;
+    padding: 20px;
+    color: var(--text)
+}
+
+.seoFallback table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    background: var(--panel)
+}
+
+.seoFallback th, .seoFallback td {
+    border: 1px solid var(--line);
+    padding: 10px;
+    text-align: right
+}
+
 :root[data-theme=light] body {
     background: linear-gradient(180deg, rgba(170, 119, 31, .14), rgba(47, 74, 102, .06) 330px, transparent 560px), var(--bg)
 }
@@ -93,10 +113,12 @@ button {
     height: 48px
 }
 
-.brand h1 {
+.brandTitle {
+    display: block;
     font-size: 20px;
     margin: 0;
-    white-space: nowrap
+    white-space: nowrap;
+    font-weight: 800
 }
 
 .brand p, .hero p {
@@ -152,7 +174,7 @@ button {
     overflow-wrap: anywhere
 }
 
-.hero h2 {
+.hero h1 {
     font-size: clamp(28px, 5vw, 54px);
     line-height: 1.22;
     margin: 12px 0
@@ -241,6 +263,11 @@ button {
 
 .panelTitle strong {
     font-size: 16px
+}
+
+.panelTitle h2 {
+    font-size: 16px;
+    margin: 0
 }
 
 .panelTitle small {
@@ -365,7 +392,7 @@ button {
     font-size: 13px
 }
 
-.chartHeader h3 {
+.chartHeader h2 {
     font-size: 24px;
     margin: 4px 0 0
 }
@@ -503,7 +530,7 @@ button {
         display: none
     }
 
-    .brand h1 {
+    .brandTitle {
         font-size: 17px
     }
 
@@ -518,7 +545,7 @@ button {
         border-radius: 18px
     }
 
-    .hero h2 {
+    .hero h1 {
         font-size: 31px
     }
 

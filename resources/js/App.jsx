@@ -61,6 +61,17 @@ function categoryLabel(category) {
     return category === 'coin' ? 'سکه' : 'طلا';
 }
 
+function setMeta(name, content) {
+    if (!content) return;
+    let tag = document.querySelector(`meta[name="${name}"]`);
+    if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', content);
+}
+
 async function fetchHistory(itemId, days, signal) {
     const res = await fetch(`/api/market/items/${itemId}/history?days=${days}`, {
         headers: {Accept: 'application/json'},
@@ -197,7 +208,8 @@ function App() {
         queue.forEach((item) => {
             fetchHistory(item.id, range, controller.signal)
                 .then((data) => historyCache.current.set(`${item.id}:${range}`, data))
-                .catch(() => {});
+                .catch(() => {
+                });
         });
 
         return () => controller.abort();
@@ -209,15 +221,26 @@ function App() {
     const ranges = config.chartAvailableRanges?.length ? config.chartAvailableRanges : defaultConfig.chartAvailableRanges;
     const fetchNotice = fetchStatusMessage(lastFetch, items.length);
 
+    useEffect(() => {
+        if (items.length === 0) return;
+        const primaryGold = items.find((item) => item.name.includes('۱۸') || item.name.includes('18')) || items.find((item) => item.category === 'gold');
+        const primaryCoin = items.find((item) => item.category === 'coin');
+        const description = `قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: ${formatNumber(primaryGold?.current)} ریال، سکه: ${formatNumber(primaryCoin?.current)} ریال. مشاهده تغییرات زنده و نمودار تاریخی.`;
+        document.title = 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';
+        setMeta('description', description);
+    }, [items]);
+
     return (
         <main className="shell">
             <header className="topbar">
                 <div className="brand">
                     <span className="logo"><Coins size={25}/></span>
-                    <div><h1>سکه و طلای ارنوکسین</h1><p>پایش قیمت طلا و سکه با داده‌های {config.sourceName}</p></div>
+                    <div><strong className="brandTitle">سکه و طلای ارنوکسین</strong><p>پایش قیمت طلا و سکه با
+                        داده‌های {config.sourceName}</p></div>
                 </div>
                 <div className="actions">
-                    <button className="iconButton" onClick={() => loadSummary()} title="به‌روزرسانی" aria-label="به‌روزرسانی">
+                    <button className="iconButton" onClick={() => loadSummary()} title="به‌روزرسانی"
+                            aria-label="به‌روزرسانی">
                         <RefreshCw size={19} className={status === 'loading' ? 'spin' : ''}/>
                     </button>
                     <button className="iconButton" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -230,8 +253,8 @@ function App() {
             <section className="hero">
                 <div>
                     <span className="eyebrow">منبع رسمی: {config.sourceUrl}</span>
-                    <h2>داشبورد تحلیلی قیمت طلا و سکه</h2>
-                    <p>این سامانه برای بررسی روند، تغییرات تاریخی و مقایسه سریع بازار طلا و سکه طراحی شده است.</p>
+                    <h1>قیمت طلا امروز و قیمت لحظه‌ای سکه</h1>
+                    <p>آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه تغییرات.</p>
                 </div>
                 <div className="stats">
                     <Metric value={items.length} label="نماد فعال"/>
@@ -246,7 +269,7 @@ function App() {
             <section className="layout">
                 <aside className="marketPanel">
                     <div className="panelTitle">
-                        <strong>بازارها</strong>
+                        <h2>بازارهای طلا و سکه</h2>
                         <small>آخرین دریافت: {formatDate(lastFetch?.finished_at || lastFetch?.finishedAt)}</small>
                     </div>
                     <div className="search"><Search size={18}/><input value={query}
@@ -263,7 +286,7 @@ function App() {
                 <section className="chartPanel">
                     <div className="chartHeader">
                         <div><span>{selected ? categoryLabel(selected.category) : 'بازار'}</span>
-                            <h3>{selected?.name || 'داده‌ای انتخاب نشده است'}</h3></div>
+                            <h2>{selected?.name ? `نمودار قیمت ${selected.name}` : 'نمودار قیمت طلا و سکه'}</h2></div>
                         <div className="range">{ranges.map((d) => <button key={d}
                                                                           className={range === d ? 'active' : ''}
                                                                           onClick={() => setRange(d)}>{formatNumber(d)} روز</button>)}</div>
