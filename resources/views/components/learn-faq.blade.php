@@ -1,9 +1,9 @@
 <section class="panel" id="faq">
     <h2>پرسش‌های متداول</h2>
     @foreach($faqs as $faq)
-        <div class="faqItem">
-            <h3>{{ $faq['question'] }}</h3>
+        <details class="faqItem">
+            <summary>{{ $faq['question'] }}</summary>
             <p>{{ $faq['answer'] }}</p>
-        </div>
+        </details>
     @endforeach
 </section>

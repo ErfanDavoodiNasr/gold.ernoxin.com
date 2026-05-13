@@ -6,20 +6,22 @@
     <main class="contentGrid">
         <article>
             <header class="hero">
-                <span class="eyebrow">مقاله آموزشی طلا و سکه</span>
+                <span class="eyebrow">{{ $page['category'] ?? 'مقاله آموزشی طلا و سکه' }}</span>
                 <h1>{{ $page['h1'] }}</h1>
                 <p class="lead">{{ $page['intro'] }}</p>
                 <div class="meta">
                     <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
-                    <span class="pill">{{ config('learn.disclaimer') }}</span>
+                    @if(!empty($page['reading_time']))
+                        <span class="pill">زمان مطالعه: {{ $page['reading_time'] }}</span>
+                    @endif
                 </div>
             </header>
 
-            <x-learn-summary :summary="$page['summary']" />
+            @php($tocItems = collect($page['sections'])->pluck('heading')->values())
 
             <section class="answerBox">
-                <strong>تعریف کوتاه</strong>
-                <p>{{ $page['short_answer'] ?? $page['intro'] }}</p>
+                <strong>پاسخ سریع</strong>
+                <p>{{ $page['quick_summary'] ?? $page['short_answer'] ?? $page['intro'] }}</p>
             </section>
 
             @if(!empty($page['takeaways']))
@@ -33,10 +35,23 @@
                 </section>
             @endif
 
+            <x-learn-summary :summary="$page['summary']" />
+
             <div class="disclaimer">{{ config('learn.disclaimer') }}</div>
 
-            @foreach($page['sections'] as $section)
-                <section class="section">
+            @if(!empty($page['important_notes']))
+                <section class="panel">
+                    <h2>نکات مهم قبل از ادامه</h2>
+                    <ul>
+                        @foreach($page['important_notes'] as $note)
+                            <li>{{ $note }}</li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+
+            @foreach($page['sections'] as $index => $section)
+                <section class="section" id="section-{{ $index + 1 }}">
                     <h2>{{ $section['heading'] }}</h2>
                     @if(!empty($section['answer']))
                         <div class="answerBox">
@@ -70,9 +85,27 @@
                 </section>
             @endforeach
 
+            @if(!empty($page['practical_example']))
+                <section class="noteBox">
+                    <h2>مثال کاربردی</h2>
+                    <p>{{ $page['practical_example'] }}</p>
+                </section>
+            @endif
+
+            @if(!empty($page['common_mistakes']))
+                <section>
+                    <h2>اشتباهات رایج</h2>
+                    <div class="mistakeGrid">
+                        @foreach($page['common_mistakes'] as $mistake)
+                            <div class="mistakeItem">{{ $mistake }}</div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             @if(!empty($page['glossary']))
                 <section>
-                    <h2>واژه‌نامه کوتاه</h2>
+                    <h2>اصطلاحات رایج بازار</h2>
                     <div class="glossary">
                         @foreach($page['glossary'] as $term => $definition)
                             <div class="term">
@@ -85,12 +118,19 @@
             @endif
 
             <section>
-                <h2>لینک‌های مرتبط با قیمت‌های به‌روز</h2>
-                <p>این مقاله عدد قیمت روز را ذخیره نمی‌کند. برای داده‌های وابسته به بازار، لینک‌های زیر را بررسی کنید.</p>
+                <h2>برای بررسی قیمت‌های به‌روز</h2>
+                <p>برای عددهای زنده و نمودارها، از صفحه‌های قیمت استفاده کنید. مقاله‌های آموزشی عمداً قیمت ثابت داخل متن نگه نمی‌دارند.</p>
                 <x-learn-links :links="$page['market_links']" />
             </section>
 
             <x-learn-faq :faqs="$page['faqs']" />
+
+            @if(!empty($page['conclusion']))
+                <section class="section">
+                    <h2>جمع‌بندی</h2>
+                    <p>{{ $page['conclusion'] }}</p>
+                </section>
+            @endif
 
             <section class="panel">
                 <h2>نویسنده و منابع</h2>
@@ -104,6 +144,17 @@
         </article>
 
         <aside>
+            <div class="panel tocPanel">
+                <h2>فهرست مقاله</h2>
+                <div class="sideList">
+                    <a href="#top">شروع مقاله</a>
+                    @foreach($tocItems as $index => $heading)
+                        <a href="#section-{{ $index + 1 }}">{{ $heading }}</a>
+                    @endforeach
+                    <a href="#faq">پرسش‌های متداول</a>
+                </div>
+            </div>
+
             <div class="panel">
                 <h2>مطالب مرتبط</h2>
                 <div class="sideList">
@@ -115,26 +166,6 @@
                     <a href="/price/">قیمت طلا امروز و قیمت لحظه‌ای سکه</a>
                 </div>
             </div>
-
-            <div class="panel" style="margin-top:14px">
-                <h2>موارد نیازمند بازبینی تخصصی</h2>
-                <ul class="note">
-                    @foreach($page['expert_review_notes'] as $note)
-                        <li>{{ $note }}</li>
-                    @endforeach
-                </ul>
-            </div>
-
-            @if(!empty($page['quality_score']))
-                <div class="panel" style="margin-top:14px">
-                    <h2>امتیاز کیفیت محتوا</h2>
-                    <div class="scoreGrid">
-                        @foreach($page['quality_score'] as $label => $score)
-                            <span>{{ $label }}: {{ $score }}/۱۰</span>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </aside>
     </main>
 @endsection

@@ -13,7 +13,7 @@ class LearnPageController extends Controller
 
     public function index(): Response
     {
-        $pages = config('learn.pages', []);
+        $pages = $this->pages();
         $title = 'آموزش طلا و سکه';
         $description = 'مجموعه مقاله‌های آموزشی فارسی درباره طلا و سکه با تمرکز بر اطلاعات ثابت، داده‌های وابسته به قیمت روز و موارد نیازمند بررسی منبع رسمی.';
 
@@ -31,20 +31,12 @@ class LearnPageController extends Controller
 
     public function show(string $slug): Response
     {
-        $pages = config('learn.pages', []);
+        $pages = $this->pages();
         abort_unless(isset($pages[$slug]), 404);
 
         $page = $pages[$slug];
         $page['slug'] = $slug;
         $page['url'] = url("/learn/{$slug}");
-        $page['quality_score'] = $page['quality_score'] ?? [
-            'شفافیت factual' => 8,
-            'کیفیت SEO' => 8,
-            'استخراج AI' => 8,
-            'خوانایی' => 8,
-            'لینک‌سازی داخلی' => 8,
-            'کاربردی بودن' => 8,
-        ];
         $page['keywords'] = $page['keywords'] ?? [$page['title'], 'طلا', 'سکه', 'قیمت طلا'];
 
         return response()->view('learn.show', [
@@ -58,5 +50,16 @@ class LearnPageController extends Controller
                 'jsonLd' => $this->schema->article($page),
             ],
         ]);
+    }
+
+    private function pages(): array
+    {
+        $extras = config('learn_extras', []);
+        $defaults = $extras['defaults'] ?? [];
+        unset($extras['defaults']);
+
+        return collect(config('learn.pages', []))
+            ->map(fn($page, $slug) => array_merge($defaults, $page, $extras[$slug] ?? []))
+            ->all();
     }
 }

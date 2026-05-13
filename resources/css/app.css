@@ -517,6 +517,129 @@ button {
     display: block
 }
 
+.homeLearn {
+    margin-top: 18px;
+    padding-top: 8px;
+    padding-bottom: 28px
+}
+
+.homeLearnHeader {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px
+}
+
+.homeLearnHeader h2, .learnPanel h2 {
+    margin: 8px 0 0;
+    font-size: 25px;
+    line-height: 1.45
+}
+
+.homeLearnHeader p {
+    color: var(--muted);
+    max-width: 760px;
+    margin: 8px 0 0;
+    line-height: 1.9
+}
+
+.learnCta {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 11px 14px;
+    text-decoration: none
+}
+
+.articleGrid {
+    display: grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap: 12px
+}
+
+.articleCard, .learnPanel {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 16px
+}
+
+.articleCard span {
+    color: var(--gold);
+    font-size: 12px
+}
+
+.articleCard h3 {
+    margin: 8px 0;
+    font-size: 18px;
+    line-height: 1.6
+}
+
+.articleCard h3 a {
+    color: var(--text);
+    text-decoration: none
+}
+
+.articleCard p {
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.85;
+    font-size: 14px
+}
+
+.articleMeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px
+}
+
+.articleMeta small {
+    color: var(--muted)
+}
+
+.articleMeta a, .compactLinks a, .faqPreview a {
+    color: var(--blue);
+    text-decoration: none
+}
+
+.learnSplit {
+    display: grid;
+    grid-template-columns:1fr 1fr;
+    gap: 12px;
+    margin-top: 12px
+}
+
+.compactLinks, .faqPreview {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px
+}
+
+.compactLinks a, .faqPreview a {
+    border: 1px solid var(--line);
+    background: var(--panel2);
+    border-radius: 12px;
+    padding: 11px 12px
+}
+
+.compactLinks strong, .compactLinks small {
+    display: block
+}
+
+.compactLinks strong {
+    color: var(--text);
+    margin-bottom: 3px
+}
+
+.compactLinks small {
+    color: var(--muted)
+}
+
 @media (max-width: 860px) {
     .shell {
         padding: 12px
@@ -597,5 +720,18 @@ button {
 
     .range button {
         padding: 8px 10px
+    }
+
+    .homeLearnHeader, .learnSplit {
+        display: grid
+    }
+
+    .articleGrid {
+        grid-template-columns:1fr
+    }
+
+    .learnCta {
+        width: 100%;
+        text-align: center
     }
 }

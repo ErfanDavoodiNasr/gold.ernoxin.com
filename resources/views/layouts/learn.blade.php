@@ -25,10 +25,11 @@
         @font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
         :root{color-scheme:light;--bg:#f5f7f8;--surface:#fff;--surface-soft:#eef3f5;--text:#182027;--muted:#5c6873;--line:#d7e0e5;--accent:#a87520;--accent-soft:#fff4dc;--blue:#2368a2;--green:#267d5a;--red:#a24646;--shadow:0 18px 50px rgba(24,32,39,.08)}
         *{box-sizing:border-box}
-        body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.9;letter-spacing:0}
+        html{scroll-behavior:smooth}
+        body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.95;letter-spacing:0}
         a{color:var(--blue);text-decoration:none}
         a:hover{text-decoration:underline}
-        .learnShell{width:min(1080px,100%);margin:auto;padding:22px}
+        .learnShell{width:min(1120px,100%);margin:auto;padding:22px}
         .learnTop{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
         .brand{color:var(--text);font-weight:850;font-size:18px}
         .nav{display:flex;gap:10px;flex-wrap:wrap}
@@ -42,9 +43,9 @@
         .lead{font-size:18px;color:#2f3b45;max-width:850px}
         .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font-size:14px}
         .pill{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px}
-        .contentGrid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:28px;align-items:start;margin-top:26px}
+        .contentGrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start;margin-top:26px}
         article{min-width:0}
-        .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:18px}
+        .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:20px}
         .summaryGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
         .summaryBox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px}
         .summaryBox.fixed h3{color:var(--green)}
@@ -58,6 +59,8 @@
         .disclaimer{border:1px solid #e0c281;background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:#5f4217}
         .answerBox{border-right:4px solid var(--accent);background:var(--surface);border-radius:8px;padding:16px;margin:20px 0;box-shadow:var(--shadow)}
         .answerBox strong{display:block;margin-bottom:6px}
+        .noteBox{border:1px solid #d8c08b;background:#fffaf0;border-radius:8px;padding:20px;margin:28px 0}
+        .noteBox h2{margin-top:0}
         .dataTable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:14px 0;display:table}
         .dataTable th,.dataTable td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
         .dataTable th{background:var(--surface-soft)}
@@ -66,23 +69,30 @@
         .term strong{display:block;color:var(--accent);margin-bottom:4px}
         .sourceList{font-size:14px;color:var(--muted)}
         .sourceList a{color:var(--blue)}
-        .scoreGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
-        .scoreGrid span{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px;font-size:13px}
+        .mistakeGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 4px}
+        .mistakeItem{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:14px}
         .faqItem{border-top:1px solid var(--line);padding:16px 0}
         .faqItem:first-child{border-top:0}
+        .faqItem summary{cursor:pointer;font-weight:800;list-style:none}
+        .faqItem summary::-webkit-details-marker{display:none}
+        .faqItem summary:after{content:'+';float:left;color:var(--accent);font-size:20px;line-height:1}
+        .faqItem[open] summary:after{content:'−'}
+        .faqItem p{margin-top:10px}
         aside{position:sticky;top:16px}
         .sideList{display:grid;gap:10px}
         .sideList a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;color:var(--text)}
+        .tocPanel{margin-bottom:14px}
+        .tocPanel .sideList a{font-size:14px;color:var(--muted)}
         .note{font-size:14px;color:var(--muted)}
         .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
         .card{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:18px}
         .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:8px}
         .breadcrumb a{color:var(--muted)}
         footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:14px}
-        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards{grid-template-columns:1fr}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}}
+        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid{grid-template-columns:1fr}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
     </style>
 </head>
-<body>
+<body id="top">
 <div class="learnShell">
     <header class="learnTop">
         <a class="brand" href="/price/">سکه و طلای ارنوکسین</a>
