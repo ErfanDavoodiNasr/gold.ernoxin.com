@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LearnSchema;
 use Illuminate\Http\Response;
 
 class LearnPageController extends Controller
 {
+    public function __construct(private LearnSchema $schema)
+    {
+    }
+
     public function index(): Response
     {
         $pages = config('learn.pages', []);
@@ -18,7 +23,8 @@ class LearnPageController extends Controller
                 'title' => $title,
                 'description' => $description,
                 'canonical' => url('/learn'),
-                'jsonLd' => $this->indexJsonLd($pages, $title, $description),
+                'ogImage' => url(config('learn.default_og_image')),
+                'jsonLd' => $this->schema->index($pages, $title, $description),
             ],
         ]);
     }
@@ -31,6 +37,15 @@ class LearnPageController extends Controller
         $page = $pages[$slug];
         $page['slug'] = $slug;
         $page['url'] = url("/learn/{$slug}");
+        $page['quality_score'] = $page['quality_score'] ?? [
+            'شفافیت factual' => 8,
+            'کیفیت SEO' => 8,
+            'استخراج AI' => 8,
+            'خوانایی' => 8,
+            'لینک‌سازی داخلی' => 8,
+            'کاربردی بودن' => 8,
+        ];
+        $page['keywords'] = $page['keywords'] ?? [$page['title'], 'طلا', 'سکه', 'قیمت طلا'];
 
         return response()->view('learn.show', [
             'page' => $page,
@@ -39,101 +54,9 @@ class LearnPageController extends Controller
                 'title' => $page['title'],
                 'description' => $page['meta_description'],
                 'canonical' => $page['url'],
-                'jsonLd' => $this->articleJsonLd($page),
+                'ogImage' => $page['og_image'] ?? url(config('learn.default_og_image')),
+                'jsonLd' => $this->schema->article($page),
             ],
         ]);
-    }
-
-    private function indexJsonLd(array $pages, string $title, string $description): array
-    {
-        return [
-            '@context' => 'https://schema.org',
-            '@graph' => [
-                [
-                    '@type' => 'CollectionPage',
-                    '@id' => url('/learn#webpage'),
-                    'url' => url('/learn'),
-                    'name' => $title,
-                    'description' => $description,
-                    'inLanguage' => 'fa-IR',
-                    'isPartOf' => [
-                        '@type' => 'WebSite',
-                        'name' => 'Ernoxin Gold',
-                        'url' => url('/'),
-                    ],
-                    'hasPart' => collect($pages)->map(fn($page, $slug) => [
-                        '@type' => 'Article',
-                        'name' => $page['title'],
-                        'url' => url("/learn/{$slug}"),
-                    ])->values()->all(),
-                ],
-                $this->breadcrumbJsonLd([
-                    ['name' => 'خانه', 'url' => url('/')],
-                    ['name' => 'آموزش', 'url' => url('/learn')],
-                ]),
-            ],
-        ];
-    }
-
-    private function articleJsonLd(array $page): array
-    {
-        return [
-            '@context' => 'https://schema.org',
-            '@graph' => [
-                [
-                    '@type' => 'Article',
-                    '@id' => $page['url'] . '#article',
-                    'mainEntityOfPage' => [
-                        '@type' => 'WebPage',
-                        '@id' => $page['url'] . '#webpage',
-                    ],
-                    'headline' => $page['title'],
-                    'description' => $page['meta_description'],
-                    'inLanguage' => 'fa-IR',
-                    'dateModified' => config('learn.reviewed_at_iso'),
-                    'datePublished' => config('learn.reviewed_at_iso'),
-                    'author' => [
-                        '@type' => 'Organization',
-                        'name' => 'Ernoxin',
-                        'url' => url('/'),
-                    ],
-                    'publisher' => [
-                        '@type' => 'Organization',
-                        'name' => 'Ernoxin',
-                        'url' => url('/'),
-                    ],
-                ],
-                [
-                    '@type' => 'FAQPage',
-                    '@id' => $page['url'] . '#faq',
-                    'mainEntity' => collect($page['faqs'])->map(fn($faq) => [
-                        '@type' => 'Question',
-                        'name' => $faq['question'],
-                        'acceptedAnswer' => [
-                            '@type' => 'Answer',
-                            'text' => $faq['answer'],
-                        ],
-                    ])->all(),
-                ],
-                $this->breadcrumbJsonLd([
-                    ['name' => 'خانه', 'url' => url('/')],
-                    ['name' => 'آموزش', 'url' => url('/learn')],
-                    ['name' => $page['title'], 'url' => $page['url']],
-                ]),
-            ],
-        ];
-    }
-
-    private function breadcrumbJsonLd(array $items): array
-    {
-        return [
-            '@type' => 'BreadcrumbList',
-            'itemListElement' => collect($items)->map(fn($item, $index) => [
-                '@type' => 'ListItem',
-                'position' => $index + 1,
-                'name' => $item['name'],
-                'item' => $item['url'],
-            ])->all(),
-        ];
     }
 }

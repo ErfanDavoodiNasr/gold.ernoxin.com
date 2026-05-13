@@ -12,6 +12,10 @@
     <meta property="og:title" content="{{ $seo['title'] }}">
     <meta property="og:description" content="{{ $seo['description'] }}">
     <meta property="og:url" content="{{ $seo['canonical'] }}">
+    @if(!empty($seo['ogImage']))
+    <meta property="og:image" content="{{ $seo['ogImage'] }}">
+    <meta name="twitter:image" content="{{ $seo['ogImage'] }}">
+    @endif
     <meta name="twitter:card" content="summary">
     <title>{{ $seo['title'] }}</title>
     @if(!empty($seo['jsonLd']))
@@ -52,6 +56,18 @@
         .links{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
         .links a{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px 11px}
         .disclaimer{border:1px solid #e0c281;background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:#5f4217}
+        .answerBox{border-right:4px solid var(--accent);background:var(--surface);border-radius:8px;padding:16px;margin:20px 0;box-shadow:var(--shadow)}
+        .answerBox strong{display:block;margin-bottom:6px}
+        .dataTable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:14px 0;display:table}
+        .dataTable th,.dataTable td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
+        .dataTable th{background:var(--surface-soft)}
+        .glossary{display:grid;gap:10px;margin:12px 0}
+        .term{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px}
+        .term strong{display:block;color:var(--accent);margin-bottom:4px}
+        .sourceList{font-size:14px;color:var(--muted)}
+        .sourceList a{color:var(--blue)}
+        .scoreGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+        .scoreGrid span{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px;font-size:13px}
         .faqItem{border-top:1px solid var(--line);padding:16px 0}
         .faqItem:first-child{border-top:0}
         aside{position:sticky;top:16px}

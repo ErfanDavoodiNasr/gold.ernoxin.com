@@ -14,6 +14,27 @@
             </div>
         </section>
 
+        @if(!empty(config('learn.clusters')))
+            <section>
+                <h2>نقشه موضوعی محتوا</h2>
+                <div class="cards">
+                    @foreach(config('learn.clusters') as $cluster)
+                        <div class="card">
+                            <h3>{{ $cluster['name'] }}</h3>
+                            <p>{{ $cluster['description'] }}</p>
+                            <div class="links">
+                                @foreach($cluster['pages'] as $slug)
+                                    @if(isset($pages[$slug]))
+                                        <a href="/learn/{{ $slug }}">{{ $pages[$slug]['title'] }}</a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section class="cards" aria-label="صفحه‌های آموزشی">
             @foreach($pages as $slug => $page)
                 <article class="card">
