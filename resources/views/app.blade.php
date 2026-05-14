@@ -17,6 +17,13 @@
     <meta property="og:url" content="{{ $seo['canonical'] ?? url('/price/') }}">
     <meta name="twitter:card" content="summary">
     <title>{{ $seo['title'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه' }}</title>
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
     @if(!empty($seo['jsonLd']))
     <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}</script>
     @endif
@@ -39,7 +46,7 @@
             <thead>
             <tr>
                 <th>نام بازار</th>
-                <th>قیمت فعلی (ریال)</th>
+                <th>قیمت فعلی</th>
                 <th>تغییر</th>
                 <th>آخرین به‌روزرسانی</th>
             </tr>

@@ -1,25 +1,15 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
-import {
-    ArrowDown,
-    ArrowUp,
-    BarChart3,
-    Coins,
-    Moon,
-    RefreshCw,
-    Search,
-    Sun,
-    TrendingUp,
-    WalletCards
-} from 'lucide-react';
+import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
 import '../css/app.css';
 
 const defaultConfig = {
-    chartDefaultRangeDays: 7,
-    chartAvailableRanges: [1, 7, 30, 90],
+    chartDefaultRange: '1d',
+    chartDefaultRangeDays: 1,
+    chartAvailableRanges: ['1h', '2h', '6h', '12h', '1d', '7d', '30d', '90d'],
     autoRefreshSeconds: 60,
-    themeDefault: 'dark',
+    themeDefault: 'system',
     themeAccent: '#d9a441',
     sourceName: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
     sourceUrl: 'https://www.estjt.ir/price/',
@@ -28,6 +18,42 @@ const defaultConfig = {
 function formatNumber(value, options = {}) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
     return new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2, ...options}).format(value);
+}
+
+function resolveSystemTheme() {
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getInitialTheme() {
+    return localStorage.getItem('theme') || resolveSystemTheme();
+}
+
+function isUsdItem(item) {
+    return item?.name?.includes('انس') || String(item?.currency || '').toUpperCase() === 'USD';
+}
+
+function displayValue(value, item) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+    return isUsdItem(item) ? Number(value) : Number(value) / 10;
+}
+
+function formatPrice(value, item, options = {}) {
+    const nextValue = displayValue(value, item);
+    if (nextValue === null) return '—';
+    const unit = isUsdItem(item) ? 'دلار' : 'تومان';
+    return `${formatNumber(nextValue, options)} ${unit}`;
+}
+
+function rangeKey(range) {
+    if (typeof range === 'number') return `${range}d`;
+    const value = String(range || '').trim().toLowerCase();
+    return /^\d+[hd]$/.test(value) ? value : `${parseInt(value || '1', 10) || 1}d`;
+}
+
+function rangeLabel(range) {
+    const key = rangeKey(range);
+    const amount = parseInt(key, 10);
+    return key.endsWith('h') ? `${formatNumber(amount)} ساعت` : `${formatNumber(amount)} روز`;
 }
 
 function formatDate(value) {
@@ -72,8 +98,8 @@ function setMeta(name, content) {
     tag.setAttribute('content', content);
 }
 
-async function fetchHistory(itemId, days, signal) {
-    const res = await fetch(`/api/market/items/${itemId}/history?days=${days}`, {
+async function fetchHistory(itemId, range, signal) {
+    const res = await fetch(`/api/market/items/${itemId}/history?range=${encodeURIComponent(rangeKey(range))}`, {
         headers: {Accept: 'application/json'},
         signal,
     });
@@ -83,13 +109,13 @@ async function fetchHistory(itemId, days, signal) {
 
 function App() {
     const [config, setConfig] = useState(defaultConfig);
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || defaultConfig.themeDefault);
+    const [theme, setTheme] = useState(getInitialTheme);
     const [items, setItems] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [history, setHistory] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [query, setQuery] = useState('');
-    const [range, setRange] = useState(defaultConfig.chartDefaultRangeDays);
+    const [range, setRange] = useState(null);
     const [status, setStatus] = useState('loading');
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(null);
@@ -104,6 +130,18 @@ function App() {
         localStorage.setItem('theme', theme);
     }, [theme, config.themeAccent]);
 
+    useEffect(() => {
+        document.body.classList.add('appReady');
+    }, []);
+
+    useEffect(() => {
+        if (localStorage.getItem('theme') || !window.matchMedia) return undefined;
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const syncTheme = () => setTheme(resolveSystemTheme());
+        media.addEventListener?.('change', syncTheme);
+        return () => media.removeEventListener?.('change', syncTheme);
+    }, []);
+
     const loadSummary = useCallback(async ({silent = false} = {}) => {
         if (!silent) {
             setStatus('loading');
@@ -114,9 +152,10 @@ function App() {
             if (!res.ok) throw new Error('summary_failed');
             const data = await res.json();
             const nextConfig = {...defaultConfig, ...(data.config || {})};
+            nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange || nextConfig.chartDefaultRangeDays);
+            nextConfig.chartAvailableRanges = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
             setConfig(nextConfig);
-            setTheme((current) => current || nextConfig.themeDefault);
-            setRange((current) => current || nextConfig.chartDefaultRangeDays);
+            setRange((current) => current || nextConfig.chartDefaultRange);
             setItems(data.items || []);
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
@@ -164,7 +203,7 @@ function App() {
     const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
 
     useEffect(() => {
-        if (!selected) return;
+        if (!selected || !range) return;
         const cacheKey = `${selected.id}:${range}`;
         const cached = historyCache.current.get(cacheKey);
         const controller = new AbortController();
@@ -198,7 +237,7 @@ function App() {
     }, [selected?.id, range]);
 
     useEffect(() => {
-        if (items.length === 0) return;
+        if (items.length === 0 || !range) return;
         const controller = new AbortController();
         const queue = items
             .filter((item) => item.id !== selected?.id)
@@ -219,13 +258,14 @@ function App() {
     const gainers = items.filter((item) => item.direction === 'asc').length;
     const losers = items.filter((item) => item.direction === 'desc').length;
     const ranges = config.chartAvailableRanges?.length ? config.chartAvailableRanges : defaultConfig.chartAvailableRanges;
+    const activeRange = range || config.chartDefaultRange || defaultConfig.chartDefaultRange;
     const fetchNotice = fetchStatusMessage(lastFetch, items.length);
 
     useEffect(() => {
         if (items.length === 0) return;
         const primaryGold = items.find((item) => item.name.includes('۱۸') || item.name.includes('18')) || items.find((item) => item.category === 'gold');
         const primaryCoin = items.find((item) => item.category === 'coin');
-        const description = `قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: ${formatNumber(primaryGold?.current)} ریال، سکه: ${formatNumber(primaryCoin?.current)} ریال. مشاهده تغییرات زنده و نمودار تاریخی.`;
+        const description = `قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: ${formatPrice(primaryGold?.current, primaryGold)}، سکه: ${formatPrice(primaryCoin?.current, primaryCoin)}. مشاهده تغییرات زنده و نمودار تاریخی.`;
         document.title = 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';
         setMeta('description', description);
     }, [items]);
@@ -239,10 +279,6 @@ function App() {
                         داده‌های {config.sourceName}</p></div>
                 </div>
                 <div className="actions">
-                    <button className="iconButton" onClick={() => loadSummary()} title="به‌روزرسانی"
-                            aria-label="به‌روزرسانی">
-                        <RefreshCw size={19} className={status === 'loading' ? 'spin' : ''}/>
-                    </button>
                     <button className="iconButton" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                             title="تغییر پوسته" aria-label="تغییر پوسته">
                         {theme === 'dark' ? <Sun size={19}/> : <Moon size={19}/>}
@@ -252,7 +288,8 @@ function App() {
 
             <section className="hero">
                 <div>
-                    <span className="eyebrow">منبع رسمی: {config.sourceUrl}</span>
+                    <a className="eyebrow sourceLink" href={config.sourceUrl} target="_blank" rel="noopener noreferrer">منبع
+                        رسمی: estjt.ir</a>
                     <h1>قیمت طلا امروز و قیمت لحظه‌ای سکه</h1>
                     <p>آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه تغییرات.</p>
                 </div>
@@ -287,23 +324,23 @@ function App() {
                     <div className="chartHeader">
                         <div><span>{selected ? categoryLabel(selected.category) : 'بازار'}</span>
                             <h2>{selected?.name ? `نمودار قیمت ${selected.name}` : 'نمودار قیمت طلا و سکه'}</h2></div>
-                        <div className="range">{ranges.map((d) => <button key={d}
-                                                                          className={range === d ? 'active' : ''}
-                                                                          onClick={() => setRange(d)}>{formatNumber(d)} روز</button>)}</div>
+                        <div className="range">{ranges.map((nextRange) => <button key={nextRange}
+                                                                                  className={rangeKey(activeRange) === rangeKey(nextRange) ? 'active' : ''}
+                                                                                  onClick={() => setRange(rangeKey(nextRange))}>{rangeLabel(nextRange)}</button>)}</div>
                     </div>
 
                     <div className="priceLine">
-                        <strong>{formatNumber(selected?.current)}</strong>
+                        <strong>{formatPrice(selected?.current, selected)}</strong>
                         <span className={selected?.direction === 'desc' ? 'down' : 'up'}>
               {selected?.direction === 'desc' ? <ArrowDown size={16}/> : <ArrowUp size={16}/>}
-                            {formatNumber(selected?.change)} ({formatNumber(selected?.percent)}٪)
+                            {formatPrice(selected?.change, selected)} ({formatNumber(selected?.percent)}٪)
             </span>
                     </div>
 
                     <div className="analyticsGrid">
-                        <Metric value={analytics?.min} label="کمترین بازه" compact/>
-                        <Metric value={analytics?.max} label="بیشترین بازه" compact/>
-                        <Metric value={analytics?.avg} label="میانگین" compact/>
+                        <Metric value={analytics?.min} item={selected} label="کمترین بازه" compact price/>
+                        <Metric value={analytics?.max} item={selected} label="بیشترین بازه" compact price/>
+                        <Metric value={analytics?.avg} item={selected} label="میانگین" compact price/>
                         <Metric value={analytics?.changePercent} label="بازده بازه ٪" compact
                                 tone={analytics?.changePercent < 0 ? 'down' : 'up'}/>
                     </div>
@@ -321,8 +358,9 @@ function App() {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false}/>
                                     <XAxis dataKey="time" hide/>
                                     <YAxis orientation="right" width={82}
-                                           tickFormatter={(v) => formatNumber(v / 1_000_000)}/>
-                                    <Tooltip content={<ChartTooltip/>}/>
+                                           domain={['dataMin', 'dataMax']}
+                                           tickFormatter={(v) => formatNumber(displayValue(v, selected), {notation: 'compact'})}/>
+                                    <Tooltip content={<ChartTooltip item={selected}/>}/>
                                     <Area type="monotone" dataKey="current" stroke="var(--gold)" strokeWidth={3}
                                           fill="url(#goldGradient)" isAnimationActive/>
                                 </AreaChart>
@@ -338,9 +376,9 @@ function App() {
     );
 }
 
-function Metric({value, label, compact = false, tone = ''}) {
+function Metric({value, label, compact = false, tone = '', item = null, price = false}) {
     return <div className={`metric ${compact ? 'compact' : ''} ${tone}`}>
-        <strong>{formatNumber(value)}</strong><span>{label}</span></div>;
+        <strong>{price ? formatPrice(value, item) : formatNumber(value)}</strong><span>{label}</span></div>;
 }
 
 function MarketItem({item, active, onClick}) {
@@ -348,16 +386,17 @@ function MarketItem({item, active, onClick}) {
     return (
         <button className={`marketItem ${active ? 'active' : ''}`} onClick={onClick}>
             <span className="itemIcon">{item.category === 'coin' ? <Coins size={20}/> : <BarChart3 size={20}/>}</span>
-            <span className="itemMain"><b>{item.name}</b><small>{formatNumber(item.current)}</small></span>
+            <span className="itemMain"><b>{item.name}</b><small>{formatPrice(item.current, item)}</small></span>
             <span className={positive ? 'badge up' : 'badge down'}>{positive ? <TrendingUp size={14}/> :
                 <ArrowDown size={14}/>}{formatNumber(item.percent)}٪</span>
         </button>
     );
 }
 
-function ChartTooltip({active, payload, label}) {
+function ChartTooltip({active, payload, label, item}) {
     if (!active || !payload?.length) return null;
-    return <div className="tooltip"><span>{formatDate(label)}</span><strong>{formatNumber(payload[0].value)}</strong>
+    return <div className="tooltip">
+        <span>{formatDate(label)}</span><strong>{formatPrice(payload[0].value, item)}</strong>
     </div>;
 }
 

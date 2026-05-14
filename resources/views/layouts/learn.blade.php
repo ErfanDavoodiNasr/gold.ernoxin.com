@@ -18,12 +18,20 @@
     @endif
     <meta name="twitter:card" content="summary">
     <title>{{ $seo['title'] }}</title>
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
     @if(!empty($seo['jsonLd']))
     <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}</script>
     @endif
     <style>
         @font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
         :root{color-scheme:light;--bg:#f5f7f8;--surface:#fff;--surface-soft:#eef3f5;--text:#182027;--muted:#5c6873;--line:#d7e0e5;--accent:#a87520;--accent-soft:#fff4dc;--blue:#2368a2;--green:#267d5a;--red:#a24646;--shadow:0 18px 50px rgba(24,32,39,.08)}
+        :root[data-theme=dark]{color-scheme:dark;--bg:#080b10;--surface:#111821;--surface-soft:#17212d;--text:#f8fafc;--muted:#9aa7b4;--line:#263241;--accent:#d9a441;--accent-soft:#20190d;--blue:#62a8ff;--green:#33d69f;--red:#ff647c;--shadow:0 24px 70px rgba(0,0,0,.28)}
         *{box-sizing:border-box}
         html{scroll-behavior:smooth}
         body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.95;letter-spacing:0}
@@ -40,7 +48,7 @@
         h2{font-size:24px;line-height:1.55;margin:34px 0 12px}
         h3{font-size:18px;margin:0 0 8px}
         p{margin:0 0 14px}
-        .lead{font-size:18px;color:#2f3b45;max-width:850px}
+        .lead{font-size:18px;color:var(--muted);max-width:850px}
         .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font-size:14px}
         .pill{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px}
         .contentGrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start;margin-top:26px}
@@ -56,10 +64,10 @@
         .section{border-top:1px solid var(--line);padding-top:2px}
         .links{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
         .links a{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px 11px}
-        .disclaimer{border:1px solid #e0c281;background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:#5f4217}
+        .disclaimer{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:var(--text)}
         .answerBox{border-right:4px solid var(--accent);background:var(--surface);border-radius:8px;padding:16px;margin:20px 0;box-shadow:var(--shadow)}
         .answerBox strong{display:block;margin-bottom:6px}
-        .noteBox{border:1px solid #d8c08b;background:#fffaf0;border-radius:8px;padding:20px;margin:28px 0}
+        .noteBox{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:20px;margin:28px 0}
         .noteBox h2{margin-top:0}
         .dataTable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:14px 0;display:table}
         .dataTable th,.dataTable td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
