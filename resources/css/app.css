@@ -450,15 +450,19 @@ button {
 
 .analyticsGrid {
     display: grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
+    grid-template-columns:repeat(3, minmax(0, 1fr));
     gap: 10px;
-    margin-bottom: 14px
+    margin-top: 14px
 }
 
 .chartWrap {
-    height: 430px;
+    height: 390px;
     min-height: 320px;
-    position: relative
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(217, 164, 65, .035), transparent), rgba(255, 255, 255, .018);
+    padding: 8px 6px 2px
 }
 
 .chartWrap.loading::after {
@@ -498,12 +502,19 @@ button {
 }
 
 .recharts-cartesian-grid line {
-    stroke: var(--line)
+    stroke: var(--line);
+    stroke-opacity: .82
 }
 
 .recharts-text {
     fill: var(--muted);
-    font-family: Vazirmatn
+    font-family: Vazirmatn;
+    font-size: 12px
+}
+
+.recharts-label {
+    fill: var(--muted);
+    font-size: 12px
 }
 
 .tooltip {
@@ -720,12 +731,13 @@ body.appReady .homeLearn {
     }
 
     .analyticsGrid {
-        grid-template-columns:repeat(2, minmax(0, 1fr))
+        grid-template-columns:1fr
     }
 
     .chartWrap {
-        height: 360px;
-        margin-inline: -8px
+        height: 340px;
+        margin-inline: -8px;
+        border-radius: 14px
     }
 
     .priceLine strong {

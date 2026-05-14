@@ -10,7 +10,6 @@
             <p class="lead">راهنماهای خواندنی و کاربردی برای فهم قیمت طلا، سکه، اجرت، مالیات، فاکتور و ریسک‌های خرید. هر مقاله با پاسخ سریع شروع می‌شود و بعد جزئیات را مرحله‌به‌مرحله توضیح می‌دهد.</p>
             <div class="meta">
                 <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
-                <span class="pill">{{ config('learn.disclaimer') }}</span>
             </div>
         </section>
 

@@ -56,17 +56,11 @@
         .articleProse p{font-size:17px;line-height:2.15;color:var(--text);margin:0 0 18px}
         .articleProse .hero{padding-top:18px}
         .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px}
-        .summaryGrid{display:grid;grid-template-columns:1fr;gap:10px;margin:28px 0}
-        .summaryBox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px}
-        .summaryBox.fixed h3{color:var(--green)}
-        .summaryBox.live h3{color:var(--blue)}
-        .summaryBox.official h3{color:var(--red)}
         ul{padding-right:20px;margin:8px 0 0}
         li{margin:7px 0}
         .section{border-top:1px solid var(--line);padding-top:2px}
         .links{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
         .links a{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px 11px}
-        .disclaimer{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:var(--text)}
         .answerBox{border-right:4px solid var(--accent);background:var(--surface-soft);border-radius:8px;padding:18px 20px;margin:26px 0}
         .answerBox strong{display:block;margin-bottom:6px}
         .noteBox,.readerQuestions,.checklistPanel{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:20px;margin:30px 0}
@@ -114,7 +108,7 @@
     </header>
     @yield('content')
     <footer>
-        <p>{{ config('learn.disclaimer') }}</p>
+        <p>ارنوکسین گلد؛ راهنمای ساده و قابل پیگیری برای خواندن بازار طلا و سکه.</p>
     </footer>
 </div>
 </body>

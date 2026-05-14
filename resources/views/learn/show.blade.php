@@ -46,21 +46,6 @@
                 </section>
             @endif
 
-            <x-learn-summary :summary="$page['summary']" />
-
-            <div class="disclaimer">{{ config('learn.disclaimer') }}</div>
-
-            @if(!empty($page['important_notes']))
-                <section class="panel">
-                    <h2>نکات مهم قبل از ادامه</h2>
-                    <ul>
-                        @foreach($page['important_notes'] as $note)
-                            <li>{{ $note }}</li>
-                        @endforeach
-                    </ul>
-                </section>
-            @endif
-
             @foreach($page['sections'] as $index => $section)
                 <section class="section" id="section-{{ $index + 1 }}">
                     <h2>{{ $section['heading'] }}</h2>
@@ -114,17 +99,6 @@
                 </section>
             @endif
 
-            @if(!empty($page['common_mistakes']))
-                <section>
-                    <h2>اشتباهات رایج</h2>
-                    <div class="mistakeGrid">
-                        @foreach($page['common_mistakes'] as $mistake)
-                            <div class="mistakeItem">{{ $mistake }}</div>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-
             @if(!empty($page['glossary']))
                 <section>
                     <h2>اصطلاحات رایج بازار</h2>
@@ -141,7 +115,7 @@
 
             <section>
                 <h2>برای بررسی قیمت‌های به‌روز</h2>
-                <p>برای عددهای زنده و نمودارها، از صفحه‌های قیمت استفاده کنید. مقاله‌های آموزشی عمداً قیمت ثابت داخل متن نگه نمی‌دارند.</p>
+                <p>اگر به عددهای لحظه‌ای نیاز دارید، صفحه قیمت زنده بهترین نقطه شروع است. در مقاله‌ها روی توضیح روشن مفاهیم و روش خواندن بازار تمرکز کرده‌ایم.</p>
                 <x-learn-links :links="$page['market_links']" />
             </section>
 

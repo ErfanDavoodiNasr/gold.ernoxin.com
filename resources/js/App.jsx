@@ -44,6 +44,34 @@ function formatPrice(value, item, options = {}) {
     return `${formatNumber(nextValue, options)} ${unit}`;
 }
 
+function formatAxisPrice(value, item) {
+    const nextValue = displayValue(value, item);
+    if (nextValue === null) return '—';
+    return formatNumber(nextValue, {maximumFractionDigits: isUsdItem(item) ? 2 : 0});
+}
+
+function chartUnitLabel(item) {
+    return isUsdItem(item) ? 'قیمت، دلار' : 'قیمت، تومان';
+}
+
+function chartDomain([dataMin, dataMax]) {
+    if (!Number.isFinite(dataMin) || !Number.isFinite(dataMax)) return ['dataMin', 'dataMax'];
+    const span = Math.max(0, dataMax - dataMin);
+    const baseline = Math.max(Math.abs(dataMin), Math.abs(dataMax), 1);
+    const padding = Math.max(span * 0.18, baseline * 0.00025);
+    return [Math.max(0, dataMin - padding), dataMax + padding];
+}
+
+function formatChartTick(value, range) {
+    if (!value) return '';
+    const date = new Date(value);
+    const key = rangeKey(range);
+    const options = key.endsWith('h') || key === '1d'
+        ? {hour: '2-digit', minute: '2-digit'}
+        : {month: '2-digit', day: '2-digit'};
+    return new Intl.DateTimeFormat('fa-IR', options).format(date);
+}
+
 function rangeKey(range) {
     if (typeof range === 'number') return `${range}d`;
     const value = String(range || '').trim().toLowerCase();
@@ -337,38 +365,42 @@ function App() {
             </span>
                     </div>
 
-                    <div className="analyticsGrid">
-                        <Metric value={analytics?.min} item={selected} label="کمترین بازه" compact price/>
-                        <Metric value={analytics?.max} item={selected} label="بیشترین بازه" compact price/>
-                        <Metric value={analytics?.avg} item={selected} label="میانگین" compact price/>
-                        <Metric value={analytics?.changePercent} label="بازده بازه ٪" compact
-                                tone={analytics?.changePercent < 0 ? 'down' : 'up'}/>
-                    </div>
-
                     <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
                         {history.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={history} margin={{top: 12, right: 10, left: 0, bottom: 0}}>
+                                <AreaChart data={history} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
                                     <defs>
                                         <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.55"/>
+                                            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.32"/>
                                             <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.02"/>
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-                                    <XAxis dataKey="time" hide/>
-                                    <YAxis orientation="right" width={82}
-                                           domain={['dataMin', 'dataMax']}
-                                           tickFormatter={(v) => formatNumber(displayValue(v, selected), {notation: 'compact'})}/>
-                                    <Tooltip content={<ChartTooltip item={selected}/>}/>
+                                    <CartesianGrid strokeDasharray="0" vertical={false}/>
+                                    <XAxis dataKey="time" tickLine={false} axisLine={false}
+                                           minTickGap={28}
+                                           tickFormatter={(v) => formatChartTick(v, activeRange)}/>
+                                    <YAxis orientation="right" width={104} tickLine={false} axisLine={false}
+                                           domain={chartDomain}
+                                           tickCount={5}
+                                           label={{value: chartUnitLabel(selected), position: 'insideTopRight', offset: -14}}
+                                           tickFormatter={(v) => formatAxisPrice(v, selected)}/>
+                                    <Tooltip cursor={{stroke: 'var(--line)', strokeDasharray: '3 3'}}
+                                             content={<ChartTooltip item={selected}/>}/>
                                     <Area type="monotone" dataKey="current" stroke="var(--gold)" strokeWidth={3}
-                                          fill="url(#goldGradient)" isAnimationActive/>
+                                          fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} isAnimationActive/>
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="chartEmpty"><WalletCards size={30}/><span>برای این بازه هنوز تاریخچه‌ای ثبت نشده است.</span>
                             </div>
                         )}
+                    </div>
+
+                    <div className="analyticsGrid">
+                        <Metric value={analytics?.max} item={selected} label="بالاترین قیمت" compact price/>
+                        <Metric value={analytics?.min} item={selected} label="پایین‌ترین قیمت" compact price/>
+                        <Metric value={analytics?.changePercent} label="تغییرات ٪" compact
+                                tone={analytics?.changePercent < 0 ? 'down' : 'up'}/>
                     </div>
                 </section>
             </section>
