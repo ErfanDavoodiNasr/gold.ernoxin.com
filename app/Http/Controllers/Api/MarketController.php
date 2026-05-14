@@ -8,6 +8,7 @@ use App\Models\MarketItem;
 use App\Models\PricePoint;
 use App\Services\PriceIngestor;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 
 class MarketController extends Controller
@@ -17,14 +18,21 @@ class MarketController extends Controller
         $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
         return response()->json(Cache::remember('gold:market-summary', $ttl, function () {
-            $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
+            try {
+                $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
+                $lastFetch = FetchLog::latest('finished_at')->first();
+            } catch (QueryException $exception) {
+                $items = collect();
+                $lastFetch = null;
+            }
 
             return [
             'items' => $items->map(fn($item) => $this->itemResource($item)),
-            'lastFetch' => FetchLog::latest('finished_at')->first(),
+            'lastFetch' => $lastFetch,
             'config' => [
                 'sourceName' => config('gold.source_name'),
                 'sourceUrl' => config('gold.source_url'),
+                'chartDefaultRange' => $this->normalizeRange(config('gold.chart_default_range', '1d'))['key'],
                 'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
                 'chartAvailableRanges' => config('gold.chart_available_ranges'),
                 'historyMaxDays' => config('gold.history_max_days'),
@@ -58,16 +66,17 @@ class MarketController extends Controller
 
     public function history(Request $request, MarketItem $item)
     {
-        $days = min((int)config('gold.history_max_days', 365), max(1, (int)$request->query('days', config('gold.chart_default_range_days'))));
+        $range = $this->normalizeRange($request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d'));
         $points = PricePoint::where('market_item_id', $item->id)
             ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
-            ->where('fetched_at', '>=', now()->subDays($days))
+            ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
             ->orderBy('fetched_at')
             ->get();
         $analytics = $this->analytics($points);
         $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
         return response()->json([
             'item' => $this->itemResource($item->load('latestPrice')),
+            'range' => $range['key'],
             'analytics' => $analytics,
             'points' => $points->map(fn($p) => [
                 'time' => optional($p->fetched_at)->toIso8601String(),
@@ -79,6 +88,29 @@ class MarketController extends Controller
                 'direction' => $p->direction,
             ]),
         ]);
+    }
+
+    private function normalizeRange($value): array
+    {
+        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
+        $raw = strtolower(trim((string)$value));
+
+        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
+            $amount = max(1, (int)$matches[1]);
+            $unit = $matches[2];
+        } else {
+            $amount = max(1, (int)$raw);
+            $unit = 'd';
+        }
+
+        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
+        $maxMinutes = $historyMaxDays * 1440;
+        $minutes = min($minutes, $maxMinutes);
+
+        return [
+            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
+            'minutes' => $minutes,
+        ];
     }
 
     private function analytics($points): array

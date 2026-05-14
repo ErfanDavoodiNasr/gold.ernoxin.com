@@ -11,8 +11,8 @@ class PricePageController extends Controller
 {
     public function __invoke($days = null)
     {
-        $availableRanges = collect(config('gold.chart_available_ranges', [1, 7, 30, 90, 180, 365]))
-            ->map(fn($range) => (int)$range)
+        $availableRanges = collect(config('gold.chart_available_ranges', ['1d', '7d', '30d', '90d', '180d', '365d']))
+            ->map(fn($range) => $this->rangeDays($range))
             ->filter(fn($range) => $range >= 1 && $range <= (int)config('gold.history_max_days', 365))
             ->unique()
             ->values();
@@ -42,8 +42,8 @@ class PricePageController extends Controller
         $primaryGold = $items->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
             ?: $items->firstWhere('category', 'gold');
         $primaryCoin = $items->firstWhere('category', 'coin');
-        $goldPrice = $this->formatIrr($primaryGold?->latestPrice?->current_value);
-        $coinPrice = $this->formatIrr($primaryCoin?->latestPrice?->current_value);
+        $goldPrice = $this->formatDisplayPrice($primaryGold, $primaryGold?->latestPrice?->current_value);
+        $coinPrice = $this->formatDisplayPrice($primaryCoin, $primaryCoin?->latestPrice?->current_value);
         $canonical = url($days ? "/price/trends/{$days}" : '/price/');
         $updatedAt = optional($lastFetch?->finished_at ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
         $title = $days
@@ -52,7 +52,7 @@ class PricePageController extends Controller
         $description = $days
             ? "بررسی روند {$days} روزه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران."
             : ($items->isNotEmpty()
-                ? "قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: {$goldPrice} ریال، سکه: {$coinPrice} ریال. مشاهده تغییرات زنده و نمودار تاریخی."
+                ? "قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: {$goldPrice}، سکه: {$coinPrice}. مشاهده تغییرات زنده و نمودار تاریخی."
                 : 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار تعاملی، تاریخچه تغییرات و داده‌های به‌روزشونده.');
 
         return [
@@ -149,13 +149,32 @@ class PricePageController extends Controller
         ];
     }
 
-    private function formatIrr($value): string
+    private function formatDisplayPrice(?MarketItem $item, $value): string
     {
         if ($value === null) {
             return 'نامشخص';
         }
 
-        return number_format((float)$value, 0, '.', ',');
+        if ($this->isUsdItem($item)) {
+            return number_format((float)$value, 2, '.', ',') . ' دلار';
+        }
+
+        return number_format(((float)$value) / 10, 0, '.', ',') . ' تومان';
+    }
+
+    private function isUsdItem(?MarketItem $item): bool
+    {
+        return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
+    }
+
+    private function rangeDays($range): int
+    {
+        $value = strtolower(trim((string)$range));
+        if (str_ends_with($value, 'h')) {
+            return 1;
+        }
+
+        return max(1, (int)$value);
     }
 
     private function schemaNumber($value): ?float

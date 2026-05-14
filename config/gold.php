@@ -12,8 +12,9 @@ return [
     'timeout_read' => (int)env('ESTJT_TIMEOUT_READ', 8),
     'retry_count' => (int)env('ESTJT_RETRY_COUNT', 2),
     'retry_backoff_milliseconds' => (int)env('ESTJT_RETRY_BACKOFF_MS', 300),
-    'chart_default_range_days' => (int)env('CHART_DEFAULT_RANGE_DAYS', 7),
-    'chart_available_ranges' => array_filter(array_map('intval', explode(',', env('CHART_AVAILABLE_RANGES', '1,7,30,90,180,365')))),
+    'chart_default_range' => env('CHART_DEFAULT_RANGE') ?: ((env('CHART_DEFAULT_RANGE_DAYS') ?: 1) . 'd'),
+    'chart_default_range_days' => (int)env('CHART_DEFAULT_RANGE_DAYS', 1),
+    'chart_available_ranges' => array_values(array_filter(array_map('trim', explode(',', env('CHART_AVAILABLE_RANGES', '1h,2h,6h,12h,1d,7d,30d,90d,180d,365d'))))),
     'chart_max_points' => (int)env('CHART_MAX_POINTS', 600),
     'history_max_days' => (int)env('HISTORY_MAX_DAYS', 365),
     'http_headers' => [
@@ -40,6 +41,6 @@ return [
         'auto_migrate' => true,
         'ensure_writable_paths' => true,
     ],
-    'theme_default' => env('THEME_DEFAULT') ?: 'dark',
+    'theme_default' => env('THEME_DEFAULT') ?: 'system',
     'theme_accent' => env('THEME_ACCENT') ?: '#d9a441',
 ];
