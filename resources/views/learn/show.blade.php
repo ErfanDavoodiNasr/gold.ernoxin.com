@@ -3,8 +3,8 @@
 @section('content')
     <x-learn-breadcrumbs :current="$page['title']" />
 
-    <main class="contentGrid">
-        <article>
+    <main class="contentGrid blogContent">
+        <article class="articleProse">
             <header class="hero">
                 <span class="eyebrow">{{ $page['category'] ?? 'مقاله آموزشی طلا و سکه' }}</span>
                 <h1>{{ $page['h1'] }}</h1>
@@ -23,6 +23,17 @@
                 <strong>پاسخ سریع</strong>
                 <p>{{ $page['quick_summary'] ?? $page['short_answer'] ?? $page['intro'] }}</p>
             </section>
+
+            @if(!empty($page['reader_questions']))
+                <section class="readerQuestions">
+                    <h2>این مقاله به چه سؤال‌هایی جواب می‌دهد؟</h2>
+                    <ul>
+                        @foreach($page['reader_questions'] as $question)
+                            <li>{{ $question }}</li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
 
             @if(!empty($page['takeaways']))
                 <section class="panel">
@@ -89,6 +100,17 @@
                 <section class="noteBox">
                     <h2>مثال کاربردی</h2>
                     <p>{{ $page['practical_example'] }}</p>
+                </section>
+            @endif
+
+            @if(!empty($page['decision_checklist']))
+                <section class="panel checklistPanel">
+                    <h2>چک‌لیست عملی</h2>
+                    <ul>
+                        @foreach($page['decision_checklist'] as $item)
+                            <li>{{ $item }}</li>
+                        @endforeach
+                    </ul>
                 </section>
             @endif
 
@@ -160,7 +182,7 @@
                 <div class="sideList">
                     @foreach($page['related'] as $relatedSlug)
                         @if(isset($pages[$relatedSlug]))
-                            <a href="/learn/{{ $relatedSlug }}">{{ $pages[$relatedSlug]['title'] }}</a>
+                            <a href="{{ $basePath }}/{{ $relatedSlug }}">{{ $pages[$relatedSlug]['title'] }}</a>
                         @endif
                     @endforeach
                     <a href="/price/">قیمت طلا امروز و قیمت لحظه‌ای سکه</a>

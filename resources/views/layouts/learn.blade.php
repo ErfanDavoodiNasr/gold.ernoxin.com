@@ -37,24 +37,26 @@
         body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.95;letter-spacing:0}
         a{color:var(--blue);text-decoration:none}
         a:hover{text-decoration:underline}
-        .learnShell{width:min(1120px,100%);margin:auto;padding:22px}
+        .learnShell{width:min(1180px,100%);margin:auto;padding:22px}
         .learnTop{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
         .brand{color:var(--text);font-weight:850;font-size:18px}
         .nav{display:flex;gap:10px;flex-wrap:wrap}
         .nav a{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px;color:var(--text)}
-        .hero{padding:28px 0 18px;border-bottom:1px solid var(--line)}
+        .hero{padding:34px 0 22px;border-bottom:1px solid var(--line)}
         .eyebrow{color:var(--accent);font-size:14px;font-weight:750}
-        h1{margin:8px 0 12px;font-size:clamp(30px,5vw,48px);line-height:1.35}
-        h2{font-size:24px;line-height:1.55;margin:34px 0 12px}
+        h1{margin:8px 0 12px;font-size:clamp(32px,5vw,50px);line-height:1.35;max-width:900px}
+        h2{font-size:25px;line-height:1.55;margin:42px 0 14px}
         h3{font-size:18px;margin:0 0 8px}
         p{margin:0 0 14px}
-        .lead{font-size:18px;color:var(--muted);max-width:850px}
+        .lead{font-size:18px;color:var(--muted);max-width:860px}
         .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font-size:14px}
         .pill{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px}
-        .contentGrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start;margin-top:26px}
+        .contentGrid{display:grid;grid-template-columns:minmax(0,760px) 300px;gap:44px;align-items:start;justify-content:center;margin-top:26px}
         article{min-width:0}
-        .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:20px}
-        .summaryGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+        .articleProse p{font-size:17px;line-height:2.15;color:var(--text);margin:0 0 18px}
+        .articleProse .hero{padding-top:18px}
+        .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px}
+        .summaryGrid{display:grid;grid-template-columns:1fr;gap:10px;margin:28px 0}
         .summaryBox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px}
         .summaryBox.fixed h3{color:var(--green)}
         .summaryBox.live h3{color:var(--blue)}
@@ -65,9 +67,9 @@
         .links{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
         .links a{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:8px 11px}
         .disclaimer{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:14px 16px;margin:22px 0;color:var(--text)}
-        .answerBox{border-right:4px solid var(--accent);background:var(--surface);border-radius:8px;padding:16px;margin:20px 0;box-shadow:var(--shadow)}
+        .answerBox{border-right:4px solid var(--accent);background:var(--surface-soft);border-radius:8px;padding:18px 20px;margin:26px 0}
         .answerBox strong{display:block;margin-bottom:6px}
-        .noteBox{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:20px;margin:28px 0}
+        .noteBox,.readerQuestions,.checklistPanel{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:20px;margin:30px 0}
         .noteBox h2{margin-top:0}
         .dataTable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:14px 0;display:table}
         .dataTable th,.dataTable td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
@@ -87,6 +89,7 @@
         .faqItem[open] summary:after{content:'−'}
         .faqItem p{margin-top:10px}
         aside{position:sticky;top:16px}
+        aside .panel{box-shadow:none}
         .sideList{display:grid;gap:10px}
         .sideList a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;color:var(--text)}
         .tocPanel{margin-bottom:14px}
@@ -106,7 +109,7 @@
         <a class="brand" href="/price/">سکه و طلای ارنوکسین</a>
         <nav class="nav" aria-label="ناوبری اصلی">
             <a href="/price/">قیمت زنده</a>
-            <a href="/learn">آموزش</a>
+            <a href="{{ config('learn.base_path', '/blog') }}">بلاگ</a>
         </nav>
     </header>
     @yield('content')
