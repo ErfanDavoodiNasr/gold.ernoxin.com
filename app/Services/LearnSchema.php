@@ -6,13 +6,15 @@ class LearnSchema
 {
     public function index(array $pages, string $title, string $description): array
     {
+        $basePath = config('learn.base_path', '/blog');
+
         return [
             '@context' => 'https://schema.org',
             '@graph' => [
                 [
                     '@type' => 'CollectionPage',
-                    '@id' => url('/learn#webpage'),
-                    'url' => url('/learn'),
+                    '@id' => url($basePath . '#webpage'),
+                    'url' => url($basePath),
                     'name' => $title,
                     'description' => $description,
                     'inLanguage' => 'fa-IR',
@@ -20,12 +22,12 @@ class LearnSchema
                     'hasPart' => collect($pages)->map(fn($page, $slug) => [
                         '@type' => 'Article',
                         'name' => $page['title'],
-                        'url' => url("/learn/{$slug}"),
+                        'url' => url("{$basePath}/{$slug}"),
                     ])->values()->all(),
                 ],
                 $this->breadcrumb([
                     ['name' => 'خانه', 'url' => url('/')],
-                    ['name' => 'آموزش', 'url' => url('/learn')],
+                    ['name' => 'بلاگ', 'url' => url($basePath)],
                 ]),
             ],
         ];
@@ -68,7 +70,7 @@ class LearnSchema
                 ],
                 $this->breadcrumb([
                     ['name' => 'خانه', 'url' => url('/')],
-                    ['name' => 'آموزش', 'url' => url('/learn')],
+                    ['name' => 'بلاگ', 'url' => url(config('learn.base_path', '/blog'))],
                     ['name' => $page['title'], 'url' => $page['url']],
                 ]),
             ],

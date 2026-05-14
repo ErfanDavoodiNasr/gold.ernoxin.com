@@ -5,9 +5,9 @@
 
     <main>
         <section class="hero">
-            <span class="eyebrow">مرکز آموزش طلا و سکه</span>
-            <h1>آموزش طلا و سکه</h1>
-            <p class="lead">مقاله‌های این بخش برای توضیح مفاهیم پایدار نوشته شده‌اند. قیمت‌های روز، مقررات و ادعاهای رسمی در متن مقاله‌ها ثابت نمی‌شوند و باید از صفحه بازار زنده یا منابع رسمی بررسی شوند.</p>
+            <span class="eyebrow">بلاگ طلا و سکه</span>
+            <h1>بلاگ طلا و سکه ارنوکسین</h1>
+            <p class="lead">راهنماهای خواندنی و کاربردی برای فهم قیمت طلا، سکه، اجرت، مالیات، فاکتور و ریسک‌های خرید. هر مقاله با پاسخ سریع شروع می‌شود و بعد جزئیات را مرحله‌به‌مرحله توضیح می‌دهد.</p>
             <div class="meta">
                 <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
                 <span class="pill">{{ config('learn.disclaimer') }}</span>
@@ -16,7 +16,7 @@
 
         @if(!empty(config('learn.clusters')))
             <section>
-                <h2>نقشه موضوعی محتوا</h2>
+                <h2>موضوعات اصلی بلاگ</h2>
                 <div class="cards">
                     @foreach(config('learn.clusters') as $cluster)
                         <div class="card">
@@ -25,7 +25,7 @@
                             <div class="links">
                                 @foreach($cluster['pages'] as $slug)
                                     @if(isset($pages[$slug]))
-                                        <a href="/learn/{{ $slug }}">{{ $pages[$slug]['title'] }}</a>
+                                        <a href="{{ $basePath }}/{{ $slug }}">{{ $pages[$slug]['title'] }}</a>
                                     @endif
                                 @endforeach
                             </div>
@@ -35,10 +35,10 @@
             </section>
         @endif
 
-        <section class="cards" aria-label="صفحه‌های آموزشی">
+        <section class="cards" aria-label="مقاله‌های بلاگ">
             @foreach($pages as $slug => $page)
                 <article class="card">
-                    <h2><a href="/learn/{{ $slug }}">{{ $page['title'] }}</a></h2>
+                    <h2><a href="{{ $basePath }}/{{ $slug }}">{{ $page['title'] }}</a></h2>
                     <p>{{ $page['meta_description'] }}</p>
                 </article>
             @endforeach

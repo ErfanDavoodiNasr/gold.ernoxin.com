@@ -14,15 +14,17 @@ class LearnPageController extends Controller
     public function index(): Response
     {
         $pages = $this->pages();
-        $title = 'آموزش طلا و سکه';
-        $description = 'مجموعه مقاله‌های آموزشی فارسی درباره طلا و سکه با تمرکز بر اطلاعات ثابت، داده‌های وابسته به قیمت روز و موارد نیازمند بررسی منبع رسمی.';
+        $title = 'بلاگ طلا و سکه ارنوکسین';
+        $description = 'مقاله‌های کاربردی فارسی درباره قیمت طلا، سکه، اجرت، مالیات، فاکتور، اصالت و ریسک‌های خرید با پاسخ سریع و محتوای قابل فهم.';
+        $basePath = config('learn.base_path', '/blog');
 
         return response()->view('learn.index', [
             'pages' => $pages,
+            'basePath' => $basePath,
             'seo' => [
                 'title' => $title,
                 'description' => $description,
-                'canonical' => url('/learn'),
+                'canonical' => url($basePath),
                 'ogImage' => url(config('learn.default_og_image')),
                 'jsonLd' => $this->schema->index($pages, $title, $description),
             ],
@@ -36,12 +38,14 @@ class LearnPageController extends Controller
 
         $page = $pages[$slug];
         $page['slug'] = $slug;
-        $page['url'] = url("/learn/{$slug}");
+        $basePath = config('learn.base_path', '/blog');
+        $page['url'] = url("{$basePath}/{$slug}");
         $page['keywords'] = $page['keywords'] ?? [$page['title'], 'طلا', 'سکه', 'قیمت طلا'];
 
         return response()->view('learn.show', [
             'page' => $page,
             'pages' => $pages,
+            'basePath' => $basePath,
             'seo' => [
                 'title' => $page['title'],
                 'description' => $page['meta_description'],

@@ -71,6 +71,7 @@
     unset($learnExtras['defaults']);
     $learnPages = collect(config('learn.pages', []))
         ->map(fn($page, $slug) => array_merge($learnDefaults, $page, $learnExtras[$slug] ?? [], ['slug' => $slug]));
+    $blogPath = config('learn.base_path', '/blog');
     $featuredLearn = $learnPages->only([
         'gold-price-guide',
         'how-gold-price-is-set',
@@ -89,22 +90,22 @@
 <section class="homeLearn shell" aria-label="مطالب آموزشی بازار طلا">
     <div class="homeLearnHeader">
         <div>
-            <span class="eyebrow">مطالب آموزشی بازار طلا</span>
+            <span class="eyebrow">بلاگ بازار طلا</span>
             <h2>راهنمای خرید و قیمت طلا</h2>
-            <p>مقاله‌های آموزشی برای فهم قیمت طلا، سکه، عیار، اجرت و ریسک‌های خرید. قیمت‌های روز را در داشبورد زنده ببینید و مفاهیم را اینجا دقیق‌تر بخوانید.</p>
+            <p>مقاله‌های کاربردی برای فهم قیمت طلا، سکه، عیار، اجرت، فاکتور و ریسک‌های خرید. قیمت‌های روز را در داشبورد زنده ببینید و پاسخ کامل‌تر را در بلاگ بخوانید.</p>
         </div>
-        <a class="learnCta" href="/learn">مشاهده همه آموزش‌ها</a>
+        <a class="learnCta" href="{{ $blogPath }}">مشاهده همه مقاله‌ها</a>
     </div>
 
     <div class="articleGrid">
         @foreach($featuredLearn as $page)
             <article class="articleCard">
                 <span>{{ $page['category'] ?? 'آموزش طلا' }}</span>
-                <h3><a href="/learn/{{ $page['slug'] }}">{{ $page['title'] }}</a></h3>
+                <h3><a href="{{ $blogPath }}/{{ $page['slug'] }}">{{ $page['title'] }}</a></h3>
                 <p>{{ $page['quick_summary'] ?? $page['meta_description'] }}</p>
                 <div class="articleMeta">
                     <small>{{ $page['reading_time'] ?? '۶ دقیقه' }}</small>
-                    <a href="/learn/{{ $page['slug'] }}">بیشتر بخوانید</a>
+                    <a href="{{ $blogPath }}/{{ $page['slug'] }}">بیشتر بخوانید</a>
                 </div>
             </article>
         @endforeach
@@ -115,7 +116,7 @@
             <h2>آخرین راهنماهای آموزشی</h2>
             <div class="compactLinks">
                 @foreach($latestLearn as $page)
-                    <a href="/learn/{{ $page['slug'] }}">
+                    <a href="{{ $blogPath }}/{{ $page['slug'] }}">
                         <strong>{{ $page['title'] }}</strong>
                         <small>{{ $page['category'] ?? 'آموزش' }} · {{ $page['reading_time'] ?? '۶ دقیقه' }}</small>
                     </a>
@@ -126,10 +127,10 @@
         <section class="learnPanel">
             <h2>سوالات پرتکرار</h2>
             <div class="faqPreview">
-                <a href="/learn/gold-bubble#faq">حباب سکه چیست و چرا تغییر می‌کند؟</a>
-                <a href="/learn/18k-gold#faq">طلای ۱۸ عیار یعنی طلای خالص؟</a>
-                <a href="/learn/gold-price-calculation#faq">قیمت طلا چگونه محاسبه می‌شود؟</a>
-                <a href="/learn/buying-gold-safely#faq">قبل از خرید طلا چه چیزهایی را بررسی کنیم؟</a>
+                <a href="{{ $blogPath }}/gold-bubble#faq">حباب سکه چیست و چرا تغییر می‌کند؟</a>
+                <a href="{{ $blogPath }}/18k-gold#faq">طلای ۱۸ عیار یعنی طلای خالص؟</a>
+                <a href="{{ $blogPath }}/gold-price-calculation#faq">قیمت طلا چگونه محاسبه می‌شود؟</a>
+                <a href="{{ $blogPath }}/buying-gold-safely#faq">قبل از خرید طلا چه چیزهایی را بررسی کنیم؟</a>
             </div>
         </section>
     </div>

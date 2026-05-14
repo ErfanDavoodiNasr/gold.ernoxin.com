@@ -8,16 +8,17 @@ class SitemapController extends Controller
 {
     public function __invoke(): Response
     {
+        $blogPath = config('learn.base_path', '/blog');
         $staticUrls = [
             ['loc' => url('/price/'), 'changefreq' => 'hourly', 'priority' => '1.0'],
             ['loc' => url('/price/trends/7'), 'changefreq' => 'daily', 'priority' => '0.8'],
             ['loc' => url('/price/trends/30'), 'changefreq' => 'daily', 'priority' => '0.8'],
             ['loc' => url('/price/trends/90'), 'changefreq' => 'daily', 'priority' => '0.7'],
-            ['loc' => url('/learn'), 'lastmod' => config('learn.reviewed_at_iso'), 'changefreq' => 'monthly', 'priority' => '0.8'],
+            ['loc' => url($blogPath), 'lastmod' => config('learn.reviewed_at_iso'), 'changefreq' => 'monthly', 'priority' => '0.8'],
         ];
 
         $articleUrls = collect(config('learn.pages', []))->keys()->map(fn($slug) => [
-            'loc' => url("/learn/{$slug}"),
+            'loc' => url("{$blogPath}/{$slug}"),
             'lastmod' => config('learn.reviewed_at_iso'),
             'changefreq' => 'monthly',
             'priority' => '0.7',
