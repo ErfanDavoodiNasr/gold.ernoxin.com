@@ -34,7 +34,7 @@ function isUsdItem(item) {
 
 function displayValue(value, item) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
-    return isUsdItem(item) ? Number(value) : Number(value) / 10;
+    return Number(value);
 }
 
 function formatPrice(value, item, options = {}) {

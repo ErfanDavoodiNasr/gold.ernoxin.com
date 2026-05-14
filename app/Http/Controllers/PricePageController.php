@@ -159,7 +159,7 @@ class PricePageController extends Controller
             return number_format((float)$value, 2, '.', ',') . ' دلار';
         }
 
-        return number_format(((float)$value) / 10, 0, '.', ',') . ' تومان';
+        return number_format((float)$value, 0, '.', ',') . ' تومان';
     }
 
     private function isUsdItem(?MarketItem $item): bool
