@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\FetchLog;
 use App\Models\MarketItem;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Throwable;
 
 class PricePageController extends Controller
 {
@@ -26,7 +28,11 @@ class PricePageController extends Controller
                 ->orderBy('name')
                 ->get();
             $lastFetch = FetchLog::latest('finished_at')->first();
-        } catch (QueryException) {
+        } catch (Throwable $exception) {
+            Log::error('Price page query failed', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
             $items = collect();
             $lastFetch = null;
         }
@@ -61,6 +67,7 @@ class PricePageController extends Controller
             'canonical' => $canonical,
             'robots' => 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1',
             'updatedAt' => $updatedAt,
+            'keywords' => 'قیمت طلا امروز,قیمت سکه امروز,قیمت طلای ۱۸ عیار,نمودار قیمت طلا,قیمت لحظه‌ای طلا,بازار طلا ایران',
             'alternateRanges' => $availableRanges->map(fn($range) => [
                 'days' => $range,
                 'url' => url("/price/trends/{$range}"),
@@ -88,7 +95,7 @@ class PricePageController extends Controller
                 ],
                 'offers' => [
                     '@type' => 'AggregateOffer',
-                    'priceCurrency' => 'IRR',
+                    'priceCurrency' => $this->isUsdItem($item) ? 'USD' : 'IRR',
                     'lowPrice' => $this->schemaNumber($price?->low_value ?: $price?->current_value),
                     'highPrice' => $this->schemaNumber($price?->high_value ?: $price?->current_value),
                     'offerCount' => 1,
@@ -97,7 +104,7 @@ class PricePageController extends Controller
                     'priceValidUntil' => now()->addDay()->toDateString(),
                 ],
                 'additionalProperty' => [
-                    ['@type' => 'PropertyValue', 'name' => 'currentPrice', 'value' => $this->schemaNumber($price?->current_value), 'unitText' => 'IRR'],
+                    ['@type' => 'PropertyValue', 'name' => 'currentPrice', 'value' => $this->schemaNumber($price?->current_value), 'unitText' => $this->isUsdItem($item) ? 'USD' : 'IRR'],
                     ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
                     ['@type' => 'PropertyValue', 'name' => 'lastUpdated', 'value' => $price?->fetched_at?->toIso8601String() ?: $updatedAt],
                 ],
@@ -132,16 +139,42 @@ class PricePageController extends Controller
             '@context' => 'https://schema.org',
             '@graph' => array_merge([
                 [
+                    '@type' => 'Organization',
+                    '@id' => url('/#organization'),
+                    'name' => 'Ernoxin Gold',
+                    'url' => url('/'),
+                    'logo' => url(config('learn.default_og_image')),
+                ],
+                [
+                    '@type' => 'WebSite',
+                    '@id' => url('/#website'),
+                    'name' => 'Ernoxin Gold',
+                    'url' => url('/'),
+                    'inLanguage' => 'fa-IR',
+                    'publisher' => ['@id' => url('/#organization')],
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => url('/price/') . '?q={search_term_string}',
+                        'query-input' => 'required name=search_term_string',
+                    ],
+                ],
+                [
                     '@type' => 'WebPage',
                     '@id' => url('/price/#webpage'),
                     'url' => url('/price/'),
                     'name' => 'قیمت طلا امروز و قیمت لحظه‌ای سکه',
                     'description' => 'داشبورد لحظه‌ای و تاریخی بازار طلا و سکه ایران.',
                     'dateModified' => $updatedAt,
+                    'datePublished' => config('learn.reviewed_at_iso'),
+                    'breadcrumb' => [
+                        '@type' => 'BreadcrumbList',
+                        'itemListElement' => [
+                            ['@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => url('/')],
+                            ['@type' => 'ListItem', 'position' => 2, 'name' => 'قیمت طلا و سکه', 'item' => url('/price/')],
+                        ],
+                    ],
                     'isPartOf' => [
-                        '@type' => 'WebSite',
-                        'name' => 'Ernoxin Gold',
-                        'url' => url('/'),
+                        '@id' => url('/#website'),
                     ],
                 ],
                 $dataset,

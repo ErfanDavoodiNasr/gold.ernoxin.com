@@ -32,7 +32,7 @@ class PriceIngestor
             Cache::forget('gold:market-summary');
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
-            $log->update(['status' => 'failed', 'message' => $e->getMessage(), 'finished_at' => now()]);
+            $log->update(['status' => 'failed', 'message' => 'Price fetch failed.', 'finished_at' => now()]);
             report($e);
             throw $e;
         }
@@ -56,6 +56,12 @@ class PriceIngestor
                         'meta' => ['source_url' => config('gold.source_url')],
                     ]
                 );
+
+                if (!$this->validPrice($row['current']['value'] ?? null)) {
+                    report(new \RuntimeException("Invalid zero or empty price skipped for {$row['type']}"));
+                    continue;
+                }
+
                 PricePoint::updateOrCreate(
                     ['market_item_id' => $item->id, 'fetched_at' => $fetchedAt],
                     [
@@ -73,5 +79,10 @@ class PriceIngestor
             }
         }
         return $count;
+    }
+
+    private function validPrice($value): bool
+    {
+        return $value !== null && is_numeric($value) && (float)$value > 0;
     }
 }

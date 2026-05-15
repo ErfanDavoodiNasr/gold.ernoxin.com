@@ -8,8 +8,9 @@ use App\Models\MarketItem;
 use App\Models\PricePoint;
 use App\Services\PriceIngestor;
 use Illuminate\Http\Request;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class MarketController extends Controller
 {
@@ -17,38 +18,44 @@ class MarketController extends Controller
     {
         $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
-        return response()->json(Cache::remember('gold:market-summary', $ttl, function () {
-            try {
+        try {
+            $payload = Cache::remember('gold:market-summary', $ttl, function () {
                 $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
                 $lastFetch = FetchLog::latest('finished_at')->first();
-            } catch (QueryException $exception) {
-                $items = collect();
-                $lastFetch = null;
-            }
 
-            return [
-            'items' => $items->map(fn($item) => $this->itemResource($item)),
-            'lastFetch' => $lastFetch,
-            'config' => [
-                'sourceName' => config('gold.source_name'),
-                'sourceUrl' => config('gold.source_url'),
-                'chartDefaultRange' => $this->normalizeRange(config('gold.chart_default_range', '1d'))['key'],
-                'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
-                'chartAvailableRanges' => config('gold.chart_available_ranges'),
-                'historyMaxDays' => config('gold.history_max_days'),
-                'chartMaxPoints' => config('gold.chart_max_points'),
-                'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
-                'themeDefault' => config('gold.theme_default'),
-                'themeAccent' => config('gold.theme_accent'),
-                'features' => config('gold.features'),
-            ],
-            ];
-        }));
+                return [
+                    'items' => $items->map(fn($item) => $this->itemResource($item)),
+                    'lastFetch' => $this->fetchLogResource($lastFetch),
+                    'config' => [
+                        'sourceName' => config('gold.source_name'),
+                        'sourceUrl' => config('gold.source_url'),
+                        'chartDefaultRange' => $this->normalizeRange(config('gold.chart_default_range', '1d'))['key'],
+                        'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
+                        'chartAvailableRanges' => config('gold.chart_available_ranges'),
+                        'historyMaxDays' => config('gold.history_max_days'),
+                        'chartMaxPoints' => config('gold.chart_max_points'),
+                        'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
+                        'themeDefault' => config('gold.theme_default'),
+                        'themeAccent' => config('gold.theme_accent'),
+                        'features' => config('gold.features'),
+                    ],
+                ];
+            });
+        } catch (Throwable $exception) {
+            Log::error('Market summary query failed', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $this->serverErrorResponse();
+        }
+
+        return response()->json($payload);
     }
 
     private function itemResource(MarketItem $item): array
     {
-        $p = $item->latestPrice;
+        $p = $this->displayPrice($item);
         return [
             'id' => $item->id,
             'name' => $item->name,
@@ -64,14 +71,54 @@ class MarketController extends Controller
         ];
     }
 
+    private function fetchLogResource(?FetchLog $log): ?array
+    {
+        if (!$log) {
+            return null;
+        }
+
+        return [
+            'status' => $log->status,
+            'items_count' => $log->items_count,
+            'started_at' => $log->started_at?->toIso8601String(),
+            'finished_at' => $log->finished_at?->toIso8601String(),
+        ];
+    }
+
+    private function displayPrice(MarketItem $item): ?PricePoint
+    {
+        $latest = $item->latestPrice;
+        if ($this->isUsablePrice($latest?->current_value)) {
+            return $latest;
+        }
+
+        return $item->prices()
+            ->whereNotNull('current_value')
+            ->where('current_value', '>', 0)
+            ->latest('fetched_at')
+            ->first();
+    }
+
     public function history(Request $request, MarketItem $item)
     {
         $range = $this->normalizeRange($request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d'));
-        $points = PricePoint::where('market_item_id', $item->id)
-            ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
-            ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
-            ->orderBy('fetched_at')
-            ->get();
+        try {
+            $points = PricePoint::where('market_item_id', $item->id)
+                ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
+                ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
+                ->orderBy('fetched_at')
+                ->get();
+        } catch (Throwable $exception) {
+            Log::error('Market history query failed', [
+                'market_item_id' => $item->id,
+                'range' => $range['key'],
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $this->serverErrorResponse();
+        }
+        $points = $this->repairHistoryPoints($points);
         $analytics = $this->analytics($points);
         $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
         return response()->json([
@@ -115,7 +162,7 @@ class MarketController extends Controller
 
     private function analytics($points): array
     {
-        $values = $points->pluck('current_value')->filter(fn($value) => $value !== null)->values();
+        $values = $points->pluck('current_value')->filter(fn($value) => $this->isUsablePrice($value))->values();
         if ($values->isEmpty()) {
             return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
         }
@@ -148,6 +195,32 @@ class MarketController extends Controller
             ->values();
     }
 
+    private function repairHistoryPoints($points)
+    {
+        $rows = $points->values();
+
+        return $rows->map(function ($point, $index) use ($rows) {
+            if ($this->isUsablePrice($point->current_value)) {
+                return $point;
+            }
+
+            $previous = $rows->slice(0, $index)->reverse()->first(fn($row) => $this->isUsablePrice($row->current_value));
+            $next = $rows->slice($index + 1)->first(fn($row) => $this->isUsablePrice($row->current_value));
+
+            if ($previous && $next) {
+                $point->current_value = round(((float)$previous->current_value + (float)$next->current_value) / 2, 4);
+                return $point;
+            }
+
+            return null;
+        })->filter()->values();
+    }
+
+    private function isUsablePrice($value): bool
+    {
+        return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
     public function fetch(PriceIngestor $ingestor)
     {
         if (!config('gold.features.manual_fetch_api')) {
@@ -165,10 +238,24 @@ class MarketController extends Controller
 
         try {
             $result = $ingestor->fetchAndStore();
+        } catch (Throwable $exception) {
+            Log::error('Manual market fetch failed', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $this->serverErrorResponse();
         } finally {
             optional($lock)->release();
         }
 
         return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
+    }
+
+    private function serverErrorResponse()
+    {
+        return response()->json([
+            'message' => 'خطای داخلی سرور رخ داد. لطفاً کمی بعد دوباره تلاش کنید.',
+        ], 500);
     }
 }
