@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} from 'recharts';
 import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, RefreshCw, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
 import '../css/app.css';
 
@@ -128,7 +128,10 @@ function sanitizeHistory(points) {
     const rows = (points || []).map((point) => ({...point}));
     for (let index = 0; index < rows.length; index += 1) {
         const current = Number(rows[index].current);
-        if (Number.isFinite(current) && current > 0) continue;
+        if (Number.isFinite(current) && current > 0) {
+            rows[index].current = current;
+            continue;
+        }
 
         const previous = [...rows.slice(0, index)].reverse().find((point) => Number(point.current) > 0);
         const next = rows.slice(index + 1).find((point) => Number(point.current) > 0);
@@ -143,6 +146,41 @@ function sanitizeHistory(points) {
     }
 
     return rows.filter((point) => Number(point.current) > 0);
+}
+
+function useElementSize() {
+    const ref = useRef(null);
+    const [size, setSize] = useState({width: 0, height: 0});
+
+    useEffect(() => {
+        const element = ref.current;
+        if (!element) return undefined;
+
+        const update = () => {
+            const rect = element.getBoundingClientRect();
+            setSize((current) => {
+                const next = {
+                    width: Math.max(0, Math.floor(rect.width)),
+                    height: Math.max(0, Math.floor(rect.height)),
+                };
+
+                return current.width === next.width && current.height === next.height ? current : next;
+            });
+        };
+
+        update();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', update);
+            return () => window.removeEventListener('resize', update);
+        }
+
+        const observer = new ResizeObserver(update);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, []);
+
+    return [ref, size];
 }
 
 async function fetchHistory(itemId, range, signal) {
@@ -387,33 +425,8 @@ function App() {
 
                     <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
                         {history.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={history} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
-                                    <defs>
-                                        <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.32"/>
-                                            <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.02"/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="0" vertical={false}/>
-                                    <XAxis dataKey="time" tickLine={false} axisLine={false}
-                                           minTickGap={28}
-                                           tickFormatter={(v) => formatChartTick(v, activeRange)}/>
-                                    <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
-                                           domain={chartDomain}
-                                           tickCount={5}
-                                           label={{
-                                               value: chartUnitLabel(selected),
-                                               position: 'insideTopRight',
-                                               offset: -14
-                                           }}
-                                           tickFormatter={(v) => formatAxisPrice(v, selected)}/>
-                                    <Tooltip cursor={{stroke: 'var(--line)', strokeDasharray: '3 3'}}
-                                             content={<ChartTooltip item={selected}/>}/>
-                                    <Area type="monotone" dataKey="current" stroke="var(--gold)" strokeWidth={3}
-                                          fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} isAnimationActive/>
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <PriceChart history={history} selected={selected} activeRange={activeRange}
+                                        accent={config.themeAccent || defaultConfig.themeAccent} theme={theme}/>
                         ) : (
                             <div className="chartEmpty"><WalletCards size={30}/><span>برای این بازه هنوز تاریخچه‌ای ثبت نشده است.</span>
                             </div>
@@ -430,6 +443,54 @@ function App() {
             </section>
         </main>
     );
+}
+
+function PriceChart({history, selected, activeRange, accent, theme}) {
+    const [chartRef, size] = useElementSize();
+    const [colors, setColors] = useState({accent: accent || defaultConfig.themeAccent, line: '#263241'});
+    const data = useMemo(() => history
+        .map((point) => ({...point, current: Number(point.current)}))
+        .filter((point) => Number.isFinite(point.current) && point.current > 0 && point.time),
+    [history]);
+
+    useEffect(() => {
+        const styles = getComputedStyle(document.documentElement);
+        setColors({
+            accent: styles.getPropertyValue('--gold').trim() || accent || defaultConfig.themeAccent,
+            line: styles.getPropertyValue('--line').trim() || '#263241',
+        });
+    }, [accent, theme]);
+
+    return <div className="chartCanvas" ref={chartRef}>
+        {size.width > 0 && size.height > 0 && data.length > 0 && (
+            <AreaChart width={size.width} height={size.height} data={data} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
+                <defs>
+                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
+                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
+                <XAxis dataKey="time" tickLine={false} axisLine={false}
+                       minTickGap={28}
+                       tickFormatter={(v) => formatChartTick(v, activeRange)}/>
+                <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
+                       domain={chartDomain}
+                       tickCount={5}
+                       label={{
+                           value: chartUnitLabel(selected),
+                           position: 'insideTopRight',
+                           offset: -14
+                       }}
+                       tickFormatter={(v) => formatAxisPrice(v, selected)}/>
+                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
+                         content={<ChartTooltip item={selected}/>}/>
+                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
+                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
+                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
+            </AreaChart>
+        )}
+    </div>;
 }
 
 function Metric({value, label, compact = false, tone = '', item = null, price = false}) {
