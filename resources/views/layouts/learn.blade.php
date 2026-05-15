@@ -6,17 +6,28 @@
     <meta name="theme-color" content="#0b0f14">
     <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
     <meta name="description" content="{{ $seo['description'] }}">
+    @if(!empty($seo['keywords']))
+    <meta name="keywords" content="{{ implode(',', $seo['keywords']) }}">
+    @endif
     <link rel="canonical" href="{{ $seo['canonical'] }}">
+    <link rel="alternate" hreflang="fa-IR" href="{{ $seo['canonical'] }}">
+    <meta name="author" content="Ernoxin Gold">
     <meta property="og:locale" content="fa_IR">
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ $seo['title'] }}">
     <meta property="og:description" content="{{ $seo['description'] }}">
     <meta property="og:url" content="{{ $seo['canonical'] }}">
+    <meta property="article:section" content="{{ $page['category'] ?? 'آموزش طلا و سکه' }}">
+    @if(!empty($seo['modifiedTime']))
+    <meta property="article:modified_time" content="{{ $seo['modifiedTime'] }}">
+    @endif
     @if(!empty($seo['ogImage']))
     <meta property="og:image" content="{{ $seo['ogImage'] }}">
     <meta name="twitter:image" content="{{ $seo['ogImage'] }}">
     @endif
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $seo['title'] }}">
+    <meta name="twitter:description" content="{{ $seo['description'] }}">
     <title>{{ $seo['title'] }}</title>
     <script>
         (function () {
@@ -64,6 +75,8 @@
         .answerBox{border-right:4px solid var(--accent);background:var(--surface-soft);border-radius:8px;padding:18px 20px;margin:26px 0}
         .answerBox strong{display:block;margin-bottom:6px}
         .noteBox,.readerQuestions,.checklistPanel{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:20px;margin:30px 0}
+        .insightGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:30px 0}
+        .insightGrid h2{margin-top:0}
         .noteBox h2{margin-top:0}
         .dataTable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:14px 0;display:table}
         .dataTable th,.dataTable td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
@@ -94,7 +107,7 @@
         .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:8px}
         .breadcrumb a{color:var(--muted)}
         footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:14px}
-        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid{grid-template-columns:1fr}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
+        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid{grid-template-columns:1fr}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
     </style>
 </head>
 <body id="top">

@@ -52,7 +52,10 @@ class LearnSchema
                     'datePublished' => config('learn.reviewed_at_iso'),
                     'author' => config('learn.author'),
                     'publisher' => config('learn.author'),
+                    'articleSection' => $page['category'] ?? 'آموزش طلا و سکه',
                     'about' => $page['keywords'] ?? [],
+                    'keywords' => implode(', ', $page['keywords'] ?? []),
+                    'wordCount' => $this->wordCount($page),
                     'isAccessibleForFree' => true,
                     'image' => $page['og_image'] ?? url(config('learn.default_og_image')),
                 ],
@@ -73,6 +76,7 @@ class LearnSchema
                     ['name' => 'بلاگ', 'url' => url(config('learn.base_path', '/blog'))],
                     ['name' => $page['title'], 'url' => $page['url']],
                 ]),
+                $this->website(),
             ],
         ];
     }
@@ -96,6 +100,44 @@ class LearnSchema
             '@type' => 'WebSite',
             'name' => 'Ernoxin Gold',
             'url' => url('/'),
+            'inLanguage' => 'fa-IR',
         ];
+    }
+
+    private function wordCount(array $page): int
+    {
+        $parts = [$page['title'] ?? '', $page['intro'] ?? '', $page['quick_summary'] ?? '', $page['conclusion'] ?? ''];
+
+        foreach (($page['sections'] ?? []) as $section) {
+            $parts[] = $section['heading'] ?? '';
+            array_push($parts, ...($section['body'] ?? []));
+        }
+
+        foreach (($page['faqs'] ?? []) as $faq) {
+            $parts[] = $faq['question'] ?? '';
+            $parts[] = $faq['answer'] ?? '';
+        }
+
+        foreach (($page['important_notes'] ?? []) as $item) {
+            $parts[] = $item;
+        }
+
+        foreach (($page['common_mistakes'] ?? []) as $item) {
+            $parts[] = $item;
+        }
+
+        foreach (($page['decision_points'] ?? []) as $item) {
+            $parts[] = $item;
+        }
+
+        $text = trim(strip_tags(implode(' ', $parts)));
+
+        if ($text === '') {
+            return 0;
+        }
+
+        preg_match_all('/[\p{L}\p{N}]+/u', $text, $matches);
+
+        return count($matches[0]);
     }
 }

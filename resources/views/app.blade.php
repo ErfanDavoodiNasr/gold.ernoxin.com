@@ -6,7 +6,10 @@
     <meta name="theme-color" content="#0b0f14">
     <meta name="robots" content="{{ $seo['robots'] ?? 'index,follow' }}">
     <meta name="description" content="{{ $seo['description'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار و تاریخچه تغییرات.' }}">
+    <meta name="keywords" content="{{ $seo['keywords'] ?? 'قیمت طلا امروز,قیمت سکه,قیمت طلای ۱۸ عیار,نمودار قیمت طلا,بازار طلا ایران' }}">
     <link rel="canonical" href="{{ $seo['canonical'] ?? url('/price/') }}">
+    <link rel="alternate" hreflang="fa-IR" href="{{ $seo['canonical'] ?? url('/price/') }}">
+    <link rel="alternate" type="application/rss+xml" title="بلاگ طلا و سکه ارنوکسین" href="{{ url(config('learn.base_path', '/blog')) }}">
     @foreach(($seo['alternateRanges'] ?? []) as $range)
     <link rel="alternate" href="{{ $range['url'] }}" title="{{ $range['title'] }}">
     @endforeach
@@ -15,7 +18,12 @@
     <meta property="og:title" content="{{ $seo['title'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه' }}">
     <meta property="og:description" content="{{ $seo['description'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار و تاریخچه تغییرات.' }}">
     <meta property="og:url" content="{{ $seo['canonical'] ?? url('/price/') }}">
-    <meta name="twitter:card" content="summary">
+    @if(!empty($seo['updatedAt']))
+    <meta property="article:modified_time" content="{{ $seo['updatedAt'] }}">
+    @endif
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $seo['title'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه' }}">
+    <meta name="twitter:description" content="{{ $seo['description'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار و تاریخچه تغییرات.' }}">
     <title>{{ $seo['title'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه' }}</title>
     <script>
         (function () {

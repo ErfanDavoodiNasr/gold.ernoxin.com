@@ -13,24 +13,6 @@ return [
         'name' => 'Ernoxin Gold Editorial',
         'url' => 'https://gold.ernoxin.com',
     ],
-    'author_note' => 'این مقاله توسط تیم تحریریه ارنوکسین گلد نوشته و با تمرکز بر خوانایی، شفافیت و امکان بررسی منبع به‌روزرسانی شده است.',
-    'default_sources' => [
-        [
-            'label' => 'اتحادیه فروشندگان و سازندگان طلا، جواهر، نقره و سکه تهران',
-            'url' => 'https://www.estjt.ir/price/',
-            'note' => 'منبع مرجع قیمت‌های زنده استفاده‌شده در سامانه.',
-        ],
-        [
-            'label' => 'World Gold Council',
-            'url' => 'https://www.gold.org/',
-            'note' => 'مرجع بین‌المللی داده‌ها و آموزش‌های عمومی صنعت طلا.',
-        ],
-        [
-            'label' => 'NIST Precious Metals Conversion Information',
-            'url' => 'https://www.nist.gov/pml/owm/metric-si/unit-conversion/precious-metals-conversion-information',
-            'note' => 'مرجع تبدیل واحد و روش فروش فلزات گران‌بها بر پایه وزن تروا یا SI.',
-        ],
-    ],
     'clusters' => [
         [
             'name' => 'مبانی طلا',

@@ -81,18 +81,37 @@
                 </section>
             @endforeach
 
-            @if(!empty($page['practical_example']))
-                <section class="noteBox">
-                    <h2>مثال کاربردی</h2>
-                    <p>{{ $page['practical_example'] }}</p>
+            @if(!empty($page['important_notes']) || !empty($page['common_mistakes']))
+                <section class="insightGrid" aria-label="نکات تکمیلی مقاله">
+                    @if(!empty($page['important_notes']))
+                        <div class="panel">
+                            <h2>نکات مهم قبل از تصمیم</h2>
+                            <ul>
+                                @foreach($page['important_notes'] as $item)
+                                    <li>{{ $item }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if(!empty($page['common_mistakes']))
+                        <div class="panel">
+                            <h2>اشتباه‌های رایج</h2>
+                            <ul>
+                                @foreach($page['common_mistakes'] as $item)
+                                    <li>{{ $item }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </section>
             @endif
 
-            @if(!empty($page['decision_checklist']))
-                <section class="panel checklistPanel">
-                    <h2>چک‌لیست عملی</h2>
+            @if(!empty($page['decision_points']))
+                <section class="panel">
+                    <h2>جزئیات کاربردی برای بررسی دقیق‌تر</h2>
                     <ul>
-                        @foreach($page['decision_checklist'] as $item)
+                        @foreach($page['decision_points'] as $item)
                             <li>{{ $item }}</li>
                         @endforeach
                     </ul>
@@ -128,15 +147,6 @@
                 </section>
             @endif
 
-            <section class="panel">
-                <h2>نویسنده و منابع</h2>
-                <p>{{ config('learn.author_note') }}</p>
-                <ul class="sourceList">
-                    @foreach(($page['sources'] ?? config('learn.default_sources')) as $source)
-                        <li><a href="{{ $source['url'] }}" rel="nofollow noopener">{{ $source['label'] }}</a> - {{ $source['note'] }}</li>
-                    @endforeach
-                </ul>
-            </section>
         </article>
 
         <aside>
