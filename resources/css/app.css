@@ -80,7 +80,8 @@ button {
 .shell {
     width: min(1220px, 100%);
     margin: auto;
-    padding: 16px
+    padding: 16px;
+    min-height: 100svh
 }
 
 .topbar, .brand, .actions, .stats, .layout, .chartHeader, .priceLine, .range, .search, .marketItem, .badge, .analyticsGrid {
@@ -131,13 +132,25 @@ button {
 }
 
 .iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 43px;
     height: 43px;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: var(--panel);
     color: var(--text);
+    line-height: 0;
+    padding: 0;
     transition: .2s
+}
+
+.iconButton svg {
+    display: block;
+    flex: 0 0 auto;
+    width: 19px;
+    height: 19px
 }
 
 .iconButton:hover {
@@ -249,7 +262,8 @@ button {
 .layout {
     align-items: stretch;
     gap: 16px;
-    margin-top: 16px
+    margin-top: 16px;
+    min-height: 520px
 }
 
 .marketPanel {
@@ -387,7 +401,9 @@ button {
     border: 1px solid var(--line);
     border-radius: 18px;
     background: var(--panel);
-    padding: 18px
+    padding: 18px;
+    display: flex;
+    flex-direction: column
 }
 
 .chartHeader {
@@ -458,11 +474,18 @@ button {
 .chartWrap {
     height: 390px;
     min-height: 320px;
+    flex: 1 1 390px;
     position: relative;
     border: 1px solid var(--line);
     border-radius: 16px;
     background: linear-gradient(180deg, rgba(217, 164, 65, .035), transparent), rgba(255, 255, 255, .018);
     padding: 8px 6px 2px
+}
+
+.chartWrap .recharts-responsive-container,
+.chartWrap .recharts-wrapper,
+.chartWrap svg {
+    max-width: 100%
 }
 
 .chartWrap.loading::after {
@@ -665,12 +688,26 @@ body.appReady .homeLearn {
 }
 
 @media (max-width: 860px) {
+    html, body, #root {
+        min-height: 100%;
+        width: 100%;
+        overflow-x: hidden
+    }
+
     .shell {
-        padding: 12px
+        width: 100%;
+        padding: 10px;
+        min-height: 100svh;
+        display: flex;
+        flex-direction: column
     }
 
     .topbar {
-        align-items: flex-start
+        align-items: center
+    }
+
+    .actions {
+        flex: 0 0 auto
     }
 
     .brand p {
@@ -707,7 +744,10 @@ body.appReady .homeLearn {
     }
 
     .layout {
-        display: grid
+        display: grid;
+        gap: 12px;
+        flex: 1;
+        min-height: 0
     }
 
     .marketPanel {
@@ -718,7 +758,10 @@ body.appReady .homeLearn {
 
     .chartPanel {
         order: 1;
-        padding: 14px
+        width: 100%;
+        padding: 12px;
+        overflow: hidden;
+        min-height: calc(100svh - 20px)
     }
 
     .chartHeader, .priceLine {
@@ -727,6 +770,7 @@ body.appReady .homeLearn {
     }
 
     .range {
+        width: 100%;
         justify-content: flex-start
     }
 
@@ -735,9 +779,13 @@ body.appReady .homeLearn {
     }
 
     .chartWrap {
-        height: 340px;
-        margin-inline: -8px;
-        border-radius: 14px
+        width: 100%;
+        height: clamp(420px, 58svh, 620px);
+        min-height: 420px;
+        flex: 1 1 auto;
+        margin-inline: 0;
+        border-radius: 14px;
+        padding: 8px 0 2px
     }
 
     .priceLine strong {
@@ -746,7 +794,7 @@ body.appReady .homeLearn {
 
     .range button {
         padding: 8px 10px;
-        flex: 1 1 auto
+        flex: 1 1 calc(25% - 8px)
     }
 
     .homeLearnHeader, .learnSplit {
@@ -760,5 +808,73 @@ body.appReady .homeLearn {
     .learnCta {
         width: 100%;
         text-align: center
+    }
+}
+
+@media (max-width: 520px) {
+    .shell {
+        padding: 6px;
+    }
+
+    .topbar {
+        padding-inline: 12px;
+    }
+
+    .brand {
+        gap: 8px
+    }
+
+    .brandTitle {
+        white-space: normal;
+        line-height: 1.45
+    }
+
+    .hero {
+        padding: 16px
+    }
+
+    .hero h1 {
+        font-size: 27px
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        overflow: visible
+    }
+
+    .metric {
+        min-width: 0;
+        padding: 11px
+    }
+
+    .metric strong {
+        font-size: 20px
+    }
+
+    .chartHeader h2 {
+        font-size: 20px
+    }
+
+    .priceLine strong {
+        font-size: 24px;
+        overflow-wrap: anywhere
+    }
+
+    .priceLine span {
+        white-space: normal
+    }
+
+    .range button {
+        flex-basis: calc(50% - 8px)
+    }
+
+    .chartWrap {
+        height: clamp(430px, 62svh, 640px);
+        min-height: 430px
+    }
+
+    .recharts-text {
+        font-size: 11px
     }
 }

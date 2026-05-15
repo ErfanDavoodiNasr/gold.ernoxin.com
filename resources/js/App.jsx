@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
-import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
+import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, RefreshCw, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
 import '../css/app.css';
 
 const defaultConfig = {
@@ -91,13 +91,11 @@ function formatDate(value) {
 
 function fetchStatusMessage(lastFetch, itemsCount) {
     if (!lastFetch && itemsCount === 0) {
-        return 'هنوز هیچ دریافت موفقی ثبت نشده است. اتصال دیتابیس و دسترسی سرور به منبع قیمت را بررسی کنید.';
+        return 'هنوز هیچ دریافت موفقی ثبت نشده است. لطفاً کمی بعد دوباره تلاش کنید.';
     }
 
     if (lastFetch?.status === 'failed') {
-        return lastFetch.message
-            ? `آخرین دریافت ناموفق بود: ${lastFetch.message}`
-            : 'آخرین دریافت ناموفق بود. لاگ سرور را بررسی کنید.';
+        return 'آخرین دریافت قیمت‌ها ناموفق بود.';
     }
 
     if (lastFetch?.status === 'running' && itemsCount === 0) {
@@ -105,7 +103,7 @@ function fetchStatusMessage(lastFetch, itemsCount) {
     }
 
     if (lastFetch?.status === 'success' && Number(lastFetch.items_count || 0) === 0) {
-        return 'آخرین دریافت موفق بود اما هیچ آیتمی از منبع استخراج نشد. احتمالاً ساختار صفحه منبع تغییر کرده است.';
+        return 'آخرین دریافت انجام شد اما داده قابل نمایش کافی وجود ندارد.';
     }
 
     return '';
@@ -124,6 +122,27 @@ function setMeta(name, content) {
         document.head.appendChild(tag);
     }
     tag.setAttribute('content', content);
+}
+
+function sanitizeHistory(points) {
+    const rows = (points || []).map((point) => ({...point}));
+    for (let index = 0; index < rows.length; index += 1) {
+        const current = Number(rows[index].current);
+        if (Number.isFinite(current) && current > 0) continue;
+
+        const previous = [...rows.slice(0, index)].reverse().find((point) => Number(point.current) > 0);
+        const next = rows.slice(index + 1).find((point) => Number(point.current) > 0);
+
+        if (previous && next) {
+            rows[index].current = (Number(previous.current) + Number(next.current)) / 2;
+            rows[index].isInterpolated = true;
+        } else {
+            rows[index].current = null;
+            rows[index].isInvalid = true;
+        }
+    }
+
+    return rows.filter((point) => Number(point.current) > 0);
 }
 
 async function fetchHistory(itemId, range, signal) {
@@ -194,7 +213,7 @@ function App() {
             setSelectedId((current) => current || data.items?.[0]?.id || null);
             setStatus('ready');
         } catch {
-            setError('ارتباط با API برقرار نشد. تنظیمات سرور، دیتابیس و route ها را بررسی کنید.');
+            setError('در حال حاضر امکان دریافت اطلاعات بازار وجود ندارد. لطفاً کمی بعد دوباره تلاش کنید.');
             setStatus('error');
             if (!silent) {
                 setItems([]);
@@ -246,8 +265,9 @@ function App() {
 
         fetchHistory(selected.id, range, controller.signal)
             .then((data) => {
-                historyCache.current.set(cacheKey, data);
-                setHistory(data.points || []);
+                const normalized = {...data, points: sanitizeHistory(data.points)};
+                historyCache.current.set(cacheKey, normalized);
+                setHistory(normalized.points || []);
                 setAnalytics(data.analytics || null);
                 setHistoryLoading(false);
             })
@@ -274,7 +294,7 @@ function App() {
 
         queue.forEach((item) => {
             fetchHistory(item.id, range, controller.signal)
-                .then((data) => historyCache.current.set(`${item.id}:${range}`, data))
+                .then((data) => historyCache.current.set(`${item.id}:${range}`, {...data, points: sanitizeHistory(data.points)}))
                 .catch(() => {
                 });
         });
@@ -328,7 +348,7 @@ function App() {
                 </div>
             </section>
 
-            {error && <div className="notice">{error}</div>}
+            {error && <div className="notice noticeWithAction"><span>{error}</span><button type="button" onClick={() => loadSummary()}><RefreshCw size={16}/>تلاش دوباره</button></div>}
             {!error && fetchNotice && <div className="notice">{fetchNotice}</div>}
 
             <section className="layout">
@@ -348,7 +368,7 @@ function App() {
                     </div>
                 </aside>
 
-                <section className="chartPanel">
+                <section className="chartPanel" aria-label="نمودار قیمت بازار انتخاب ‌شده">
                     <div className="chartHeader">
                         <div><span>{selected ? categoryLabel(selected.category) : 'بازار'}</span>
                             <h2>{selected?.name ? `نمودار قیمت ${selected.name}` : 'نمودار قیمت طلا و سکه'}</h2></div>
@@ -379,10 +399,14 @@ function App() {
                                     <XAxis dataKey="time" tickLine={false} axisLine={false}
                                            minTickGap={28}
                                            tickFormatter={(v) => formatChartTick(v, activeRange)}/>
-                                    <YAxis orientation="right" width={104} tickLine={false} axisLine={false}
+                                    <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
                                            domain={chartDomain}
                                            tickCount={5}
-                                           label={{value: chartUnitLabel(selected), position: 'insideTopRight', offset: -14}}
+                                           label={{
+                                               value: chartUnitLabel(selected),
+                                               position: 'insideTopRight',
+                                               offset: -14
+                                           }}
                                            tickFormatter={(v) => formatAxisPrice(v, selected)}/>
                                     <Tooltip cursor={{stroke: 'var(--line)', strokeDasharray: '3 3'}}
                                              content={<ChartTooltip item={selected}/>}/>
