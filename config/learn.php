@@ -1,6 +1,7 @@
 <?php
 
 $reviewedAt = '۱۴۰۵/۰۲/۲۳';
+$evergreenPages = require __DIR__ . '/learn_evergreen.php';
 
 return [
     'reviewed_at' => $reviewedAt,
@@ -17,25 +18,35 @@ return [
         [
             'name' => 'مبانی طلا',
             'description' => 'تعریف عیار، تفاوت وزن و عیار، اجرت، مالیات و اصطلاحات پایه خرید طلا.',
-            'pages' => ['18k-gold', '24k-gold', 'gold-karat-difference', 'gold-making-charge', 'gold-vat'],
+            'pages' => ['18k-gold', '24k-gold', 'gold-karat-difference', 'gold-making-charge', 'gold-vat', 'gold-sot'],
         ],
         [
             'name' => 'آموزش قیمت طلا',
             'description' => 'نحوه خواندن قیمت طلا، تفاوت انس، مثقال و گرم، و عوامل عمومی اثرگذار بر قیمت.',
-            'pages' => ['gold-price-guide', 'how-gold-price-is-set', 'gold-price-factors', 'gold-ounce-mesghal'],
+            'pages' => ['gold-price-guide', 'how-gold-price-is-set', 'gold-price-factors', 'gold-ounce-mesghal', 'gold-mozaneh', 'melted-gold-price-calculation'],
         ],
         [
             'name' => 'سکه و حباب',
             'description' => 'شناخت انواع سکه، تفاوت سکه امامی و بهار آزادی، و مفهوم حباب سکه.',
-            'pages' => ['gold-coin-guide', 'imami-vs-bahar-coin', 'gold-bubble'],
+            'pages' => ['gold-coin-guide', 'imami-vs-bahar-coin', 'banki-vs-nonbanki-coin', 'why-coin-price-differs-from-gold-weight', 'gold-bubble'],
         ],
         [
             'name' => 'راهنمای خرید و محاسبه',
             'description' => 'چک‌لیست‌های آموزشی و فرمول‌های عمومی.',
-            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'used-vs-new-gold', 'gold-price-calculation', 'gold-authenticity-check', 'online-gold-buying-risks'],
+            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'buy-sell-gold-price-spread', 'gold-price-calculation', 'seller-profit-in-gold-invoice', 'selling-gold-tips', 'used-vs-new-gold', 'melted-vs-bar-vs-coin', 'should-buy-melted-gold', 'gold-authenticity-check', 'online-gold-buying-risks'],
+        ],
+        [
+            'name' => 'اعتماد، نگهداری و خرید کاربردی',
+            'description' => 'راهنماهای عملی درباره فاکتور، نگهداری طلا، خرید قسطی، هدیه طلا و مقایسه روش‌های نگهداری ارزش.',
+            'pages' => ['fake-gold-invoice-check', 'gold-storage-at-home', 'coin-vs-jewelry-investment', 'high-gold-making-charge-reasons', 'installment-gold-buying-risks', 'second-hand-gold-buying-checklist', 'gold-price-differences-iran-cities', 'second-hand-gold-without-invoice', 'gold-gift-buying-guide', 'gold-bar-investment-guide'],
+        ],
+        [
+            'name' => 'شناخت محصول و فروش مجدد',
+            'description' => 'تفاوت رنگ‌ها، وزن‌ها، طلای بدون اجرت، خرید آنلاین، فاکتور دست‌نویس و نکات فروش دوباره طلا و سکه.',
+            'pages' => ['white-gold-vs-yellow-gold', 'read-gold-weight-correctly', 'is-no-wage-gold-always-better', 'why-gold-colors-differ', 'online-shop-gold-coin-buying-checklist', 'iranian-vs-foreign-gold-price', 'handwritten-gold-invoice-validity', 'decorative-vs-investment-gold', 'why-some-gold-loses-more-on-resale', 'coin-selling-checklist'],
         ],
     ],
-    'pages' => [
+    'pages' => $evergreenPages + [
         'gold-price-guide' => [
             'title' => 'راهنمای قیمت طلا در ایران',
             'meta_description' => 'راهنمای آموزشی و محافظه‌کارانه درباره مفهوم قیمت طلا در ایران، عوامل عمومی اثرگذار و تفاوت اطلاعات ثابت با داده‌های وابسته به قیمت روز.',
