@@ -101,12 +101,23 @@
         .mistakeItem{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:14px}
         .searchPanel{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:18px;margin:24px 0}
         .blogSearch label{display:block;font-weight:850;margin-bottom:10px}
-        .searchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+        .searchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+        .searchBox{position:relative;min-width:0}
         .searchRow input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;padding:10px 12px}
         .searchClear,.searchSubmit{border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;font-weight:800;padding:10px 14px;text-align:center;cursor:pointer}
         .searchClear[hidden]{display:none}
         .searchSubmit{display:inline-block;margin-top:10px;background:var(--accent);color:#fff}
         .searchMeta{margin:12px 0 0;color:var(--muted);font-size:14px}
+        .searchSuggestions{display:grid;gap:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px;margin-top:10px;max-height:min(470px,70vh);overflow:auto}
+        .searchSuggestions[hidden]{display:none}
+        .suggestionItem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:12px;color:var(--text)}
+        .suggestionItem:hover,.suggestionItem.isActive{border-color:var(--accent);text-decoration:none}
+        .suggestionContent{display:grid;gap:4px;min-width:0}
+        .suggestionCategory{color:var(--accent);font-size:12px;font-weight:850}
+        .suggestionItem strong{font-size:16px;line-height:1.7}
+        .suggestionItem small{color:var(--muted);font-size:13px;line-height:1.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .suggestionMeta{white-space:nowrap;color:var(--muted);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 8px}
+        .suggestionEmpty{border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted)}
         .articleResult{display:grid;gap:8px;align-content:start}
         .articleResult h2{font-size:20px;margin:0;line-height:1.55}
         .articleMeta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;color:var(--muted);font-size:14px}
@@ -136,7 +147,7 @@
         .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:8px}
         .breadcrumb a{color:var(--muted)}
         footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:14px}
-        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid,.relatedGrid{grid-template-columns:1fr}.searchRow{grid-template-columns:1fr}.searchClear,.searchSubmit{width:100%}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
+        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid,.relatedGrid{grid-template-columns:1fr}.searchRow{grid-template-columns:1fr}.searchClear,.searchSubmit{width:100%}.searchSuggestions{max-height:none}.suggestionItem{grid-template-columns:1fr}.suggestionMeta{justify-self:start}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
     </style>
 </head>
 <body id="top">

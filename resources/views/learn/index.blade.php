@@ -16,7 +16,10 @@
             <form action="{{ $basePath }}" method="get" class="blogSearch" role="search">
                 <label for="blog-search">جستجو در مقاله‌ها</label>
                 <div class="searchRow">
-                    <input id="blog-search" name="q" value="{{ $searchQuery }}" type="search" placeholder="مثلاً حباب سکه، فاکتور طلا، اجرت، صندوق طلا" autocomplete="off" aria-controls="blog-results" aria-describedby="blog-search-meta" data-search-input>
+                    <div class="searchBox">
+                        <input id="blog-search" name="q" value="{{ $searchQuery }}" type="search" placeholder="مثلاً حباب سکه، فاکتور طلا، اجرت، صندوق طلا" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions" aria-describedby="blog-search-meta" data-search-input>
+                        <div class="searchSuggestions" id="search-suggestions" role="listbox" aria-label="پیشنهادهای جستجو" data-search-suggestions hidden></div>
+                    </div>
                     <button type="button" class="searchClear" data-search-clear @if($searchQuery === '') hidden @endif>پاک کردن</button>
                 </div>
                 <noscript>
@@ -33,7 +36,7 @@
         </section>
 
         @if($searchQuery === '' && !empty(config('learn.clusters')))
-            <section>
+            <section data-clusters-section>
                 <h2>موضوعات اصلی بلاگ</h2>
                 <div class="cards">
                     @foreach(config('learn.clusters') as $cluster)
@@ -53,7 +56,7 @@
             </section>
         @endif
 
-        <section aria-label="مقاله‌های بلاگ">
+        <section aria-label="مقاله‌های بلاگ" data-results-section>
             @if($searchQuery !== '')
                 <h2 data-results-title>نتایج جستجو</h2>
             @else
@@ -87,15 +90,20 @@
             var panel = document.querySelector('[data-blog-search]');
             var input = document.querySelector('[data-search-input]');
             var results = document.querySelector('[data-search-results]');
+            var resultsSection = document.querySelector('[data-results-section]');
+            var clustersSection = document.querySelector('[data-clusters-section]');
+            var suggestions = document.querySelector('[data-search-suggestions]');
             var meta = document.querySelector('[data-search-meta]');
             var title = document.querySelector('[data-results-title]');
             var clear = document.querySelector('[data-search-clear]');
 
-            if (!indexNode || !panel || !input || !results || !meta || !title) {
+            if (!indexNode || !panel || !input || !results || !resultsSection || !suggestions || !meta || !title) {
                 return;
             }
 
             var searchIndex = JSON.parse(indexNode.textContent || '[]');
+            var activeSuggestionIndex = -1;
+            var currentSuggestions = [];
             var stopWords = ['و', 'یا', 'در', 'از', 'به', 'با', 'برای', 'را', 'که', 'این', 'آن', 'اون', 'چیست', 'چیه', 'چطور', 'چگونه', 'کدام', 'ایا', 'آیا', 'بهترین', 'ای', 'تی', 'اف'];
             var genericTokens = ['طلا', 'سکه', 'قیمت', 'بازار'];
             var synonyms = {
@@ -235,6 +243,85 @@
                 return article;
             }
 
+            function createSuggestion(item, index) {
+                var link = document.createElement('a');
+                var content = document.createElement('span');
+                var category = document.createElement('span');
+                var heading = document.createElement('strong');
+                var summary = document.createElement('small');
+                var metaText = document.createElement('span');
+
+                link.className = 'suggestionItem';
+                link.id = 'search-suggestion-' + index;
+                link.href = item.url;
+                link.setAttribute('role', 'option');
+                link.setAttribute('aria-selected', 'false');
+                link.dataset.suggestionIndex = String(index);
+
+                content.className = 'suggestionContent';
+                category.className = 'suggestionCategory';
+                metaText.className = 'suggestionMeta';
+
+                category.textContent = item.category || 'آموزش طلا و سکه';
+                heading.textContent = item.title;
+                summary.textContent = item.searchExcerpt || item.summary || item.description || '';
+                metaText.textContent = item.readingTime || '۶ دقیقه';
+
+                content.appendChild(category);
+                content.appendChild(heading);
+                content.appendChild(summary);
+                link.appendChild(content);
+                link.appendChild(metaText);
+
+                return link;
+            }
+
+            function setActiveSuggestion(index) {
+                var items = suggestions.querySelectorAll('.suggestionItem');
+                activeSuggestionIndex = index;
+
+                items.forEach(function (item, itemIndex) {
+                    var active = itemIndex === index;
+                    item.classList.toggle('isActive', active);
+                    item.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+
+                if (index >= 0 && items[index]) {
+                    input.setAttribute('aria-activedescendant', items[index].id);
+                } else {
+                    input.removeAttribute('aria-activedescendant');
+                }
+            }
+
+            function renderSuggestions(items, query) {
+                suggestions.innerHTML = '';
+                currentSuggestions = items.slice(0, 6);
+                activeSuggestionIndex = -1;
+                input.removeAttribute('aria-activedescendant');
+
+                if (query.trim() === '') {
+                    suggestions.hidden = true;
+                    input.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+
+                if (currentSuggestions.length === 0) {
+                    var empty = document.createElement('div');
+                    empty.className = 'suggestionEmpty';
+                    empty.textContent = 'نتیجه‌ای پیدا نشد. عبارت کوتاه‌تر یا دقیق‌تری وارد کنید.';
+                    suggestions.appendChild(empty);
+                } else {
+                    var fragment = document.createDocumentFragment();
+                    currentSuggestions.forEach(function (item, index) {
+                        fragment.appendChild(createSuggestion(item, index));
+                    });
+                    suggestions.appendChild(fragment);
+                }
+
+                suggestions.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
+            }
+
             function render(query) {
                 var normalizedQuery = normalize(query);
                 var tokens = tokenize(query);
@@ -253,6 +340,7 @@
                         .slice(0, 18);
                 }
 
+                renderSuggestions(items, query);
                 results.innerHTML = '';
 
                 if (items.length === 0) {
@@ -275,10 +363,18 @@
 
                 if (tokens.length > 0) {
                     title.textContent = 'نتایج جستجو';
-                    meta.textContent = formatNumber(items.length) + ' نتیجه مرتبط برای «' + query.trim() + '»';
+                    meta.textContent = items.length > 0 ? 'پیشنهادهای مرتبط' : 'نتیجه‌ای پیدا نشد';
+                    resultsSection.hidden = true;
+                    if (clustersSection) {
+                        clustersSection.hidden = true;
+                    }
                 } else {
                     title.textContent = 'همه مقاله‌ها';
                     meta.textContent = 'عبارت موردنظر را تایپ کنید';
+                    resultsSection.hidden = false;
+                    if (clustersSection) {
+                        clustersSection.hidden = false;
+                    }
                 }
 
                 if (clear) {
@@ -298,8 +394,64 @@
                 render(input.value);
             });
 
+            input.addEventListener('keydown', function (event) {
+                if (suggestions.hidden || currentSuggestions.length === 0) {
+                    return;
+                }
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setActiveSuggestion((activeSuggestionIndex + 1) % currentSuggestions.length);
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setActiveSuggestion(activeSuggestionIndex <= 0 ? currentSuggestions.length - 1 : activeSuggestionIndex - 1);
+                }
+
+                if (event.key === 'Enter' && activeSuggestionIndex >= 0 && currentSuggestions[activeSuggestionIndex]) {
+                    event.preventDefault();
+                    window.location.href = currentSuggestions[activeSuggestionIndex].url;
+                }
+
+                if (event.key === 'Escape') {
+                    suggestions.hidden = true;
+                    input.setAttribute('aria-expanded', 'false');
+                    setActiveSuggestion(-1);
+                }
+            });
+
+            suggestions.addEventListener('mousemove', function (event) {
+                var item = event.target.closest('.suggestionItem');
+                if (!item) {
+                    return;
+                }
+
+                setActiveSuggestion(Number(item.dataset.suggestionIndex));
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!panel.contains(event.target)) {
+                    suggestions.hidden = true;
+                    input.setAttribute('aria-expanded', 'false');
+                    setActiveSuggestion(-1);
+                }
+            });
+
+            input.addEventListener('focus', function () {
+                if (input.value.trim() !== '' && suggestions.children.length > 0) {
+                    suggestions.hidden = false;
+                    input.setAttribute('aria-expanded', 'true');
+                }
+            });
+
             input.form.addEventListener('submit', function (event) {
                 event.preventDefault();
+                if (currentSuggestions.length > 0) {
+                    window.location.href = currentSuggestions[Math.max(activeSuggestionIndex, 0)].url;
+                    return;
+                }
+
                 render(input.value);
             });
 
