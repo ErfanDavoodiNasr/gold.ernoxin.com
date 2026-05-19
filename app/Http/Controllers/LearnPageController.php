@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\LearnSchema;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 
 class LearnPageController extends Controller
 {
@@ -11,22 +13,27 @@ class LearnPageController extends Controller
     {
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $pages = $this->pages();
+        $allPages = $this->pages();
+        $query = trim((string)$request->query('q', ''));
+        $pages = $query !== '' ? $this->searchPages($allPages, $query) : $allPages;
         $title = 'بلاگ طلا و سکه ارنوکسین';
         $description = 'مقاله‌های کاربردی فارسی درباره قیمت طلا، سکه، اجرت، مالیات، فاکتور، اصالت و ریسک‌های خرید با پاسخ سریع و محتوای قابل فهم.';
         $basePath = config('learn.base_path', '/blog');
 
         return response()->view('learn.index', [
             'pages' => $pages,
+            'allPages' => $allPages,
             'basePath' => $basePath,
+            'searchQuery' => $query,
+            'resultCount' => count($pages),
             'seo' => [
                 'title' => $title,
                 'description' => $description,
                 'canonical' => url($basePath),
                 'ogImage' => url(config('learn.default_og_image')),
-                'jsonLd' => $this->schema->index($pages, $title, $description),
+                'jsonLd' => $this->schema->index($allPages, $title, $description),
             ],
         ]);
     }
@@ -66,7 +73,9 @@ class LearnPageController extends Controller
 
         return collect(config('learn.pages', []))
             ->map(function ($page, $slug) use ($defaults, $extras) {
+                $sourcePage = array_merge($page, $extras[$slug] ?? []);
                 $merged = array_merge($defaults, $page, $extras[$slug] ?? []);
+                $merged['_source_search_text'] = $this->pageBodyText($sourcePage);
                 unset(
                     $merged['author_note'],
                     $merged['default_sources'],
@@ -97,7 +106,24 @@ class LearnPageController extends Controller
             ],
         ];
 
+        $page['sections'] = $page['sections'] ?? [];
+        $page['related'] = $page['related'] ?? $this->fallbackRelated($slug);
+        $page['market_links'] = $page['market_links'] ?? [
+            ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
+            ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
+        ];
+        $page['faqs'] = $page['faqs'] ?? [];
+
         $headings = collect($page['sections'] ?? [])->pluck('heading')->all();
+        $iranSection = [
+            'heading' => 'خواندن این موضوع در بازار ایران',
+            'body' => $this->iranMarketSection($slug, $topic, $page),
+        ];
+
+        if (!in_array($iranSection['heading'], $headings, true)) {
+            $page['sections'][] = $iranSection;
+        }
+
         if (!in_array('چک‌لیست عملی این موضوع', $headings, true)) {
             $page['sections'][] = [
                 'heading' => 'چک‌لیست عملی این موضوع',
@@ -112,8 +138,8 @@ class LearnPageController extends Controller
         $page['sections'][] = [
             'heading' => 'داده‌های لازم برای بررسی دقیق‌تر',
             'body' => [
-                'برای خواندن دقیق‌تر بازار، قیمت لحظه‌ای را کنار روند کوتاه‌مدت، زمان آخرین به‌روزرسانی و نوع کالا بگذارید. تغییر یک عدد بدون دانستن اینکه مربوط به گرم، مثقال، سکه یا انس است می‌تواند برداشت اشتباه بسازد.',
-                'اگر موضوع مقاله به خرید مربوط است، علاوه بر قیمت پایه، مبلغ نهایی فاکتور، شرایط تسویه، شیوه تحویل، اعتبار فروشنده و امکان پیگیری بعد از معامله را هم در تصمیم وارد کنید. اگر موضوع تحلیلی است، از داده‌های هم‌زمان استفاده کنید و عددهای امروز را با داده قدیمی مقایسه نکنید.',
+                'برای خواندن دقیق‌تر بازار ایران، قیمت لحظه‌ای را کنار روند کوتاه‌مدت، زمان آخرین به‌روزرسانی و نوع کالا بگذارید. تغییر یک عدد بدون دانستن اینکه مربوط به گرم ۱۸ عیار، مثقال، سکه یا انس است می‌تواند برداشت اشتباه بسازد.',
+                'اگر موضوع مقاله به خرید مربوط است، علاوه بر قیمت پایه، مبلغ نهایی فاکتور، شرایط تسویه، شیوه تحویل، اعتبار فروشنده و امکان پیگیری بعد از معامله را هم در تصمیم وارد کنید. اگر موضوع تحلیلی است، عددهای هم‌زمان را کنار هم بگذارید و قیمت امروز را با نرخ ارز، انس یا مظنه قدیمی مقایسه نکنید.',
                 $this->topicSpecificGuidance($slug, $topic),
             ],
         ];
@@ -122,7 +148,8 @@ class LearnPageController extends Controller
             'heading' => 'چطور از این مقاله در عمل استفاده کنیم؟',
             'body' => [
                 'ابتدا پاسخ سریع و نکات «در یک نگاه» را بخوانید تا چارچوب موضوع روشن شود. سپس بخش‌های اصلی مقاله را با وضعیت واقعی خود تطبیق دهید: آیا دنبال فهم اصطلاح هستید، مقایسه قیمت می‌کنید، یا می‌خواهید خرید انجام دهید؟',
-                'در پایان، لینک‌های قیمت زنده و مطالب مرتبط را بررسی کنید. این ساختار کمک می‌کند محتوای آموزشی، داده بازار و پرسش‌های عملی از هم جدا بمانند و تصمیم شما فقط به یک جمله یا یک عدد وابسته نشود.',
+                'در پایان، لینک‌های قیمت زنده و مطالب مرتبط را بررسی کنید. این مسیر کمک می‌کند محتوای آموزشی، داده بازار و پرسش‌های عملی از هم جدا بمانند و تصمیم شما فقط به یک جمله یا یک عدد وابسته نشود.',
+                $this->relatedReadingSentence($slug, $page),
             ],
         ];
 
@@ -142,6 +169,199 @@ class LearnPageController extends Controller
         ])));
 
         return $page;
+    }
+
+    private function searchPages(array $pages, string $query): array
+    {
+        $normalizedQuery = $this->normalizeSearchText($query);
+        $tokens = collect(preg_split('/\s+/u', $normalizedQuery, -1, PREG_SPLIT_NO_EMPTY))
+            ->map(fn($token) => trim($token))
+            ->filter(fn($token) => mb_strlen($token) >= 2)
+            ->unique()
+            ->values();
+
+        if ($tokens->isEmpty()) {
+            return $pages;
+        }
+
+        return collect($pages)
+            ->map(function ($page, $slug) use ($tokens, $normalizedQuery) {
+                if (!$this->matchesSearchTokens($page, $tokens->all())) {
+                    return null;
+                }
+
+                $score = $this->searchScore($page, $tokens->all(), $normalizedQuery);
+                if ($score < 12) {
+                    return null;
+                }
+
+                $page['slug'] = $slug;
+                $page['search_score'] = $score;
+                $page['search_excerpt'] = $this->searchExcerpt($page, $tokens->all());
+                return $page;
+            })
+            ->filter()
+            ->sortByDesc('search_score')
+            ->take(18)
+            ->mapWithKeys(fn($page) => [$page['slug'] => $page])
+            ->all();
+    }
+
+    private function searchScore(array $page, array $tokens, string $query): int
+    {
+        $fields = [
+            'title' => [$page['title'] ?? '', 30],
+            'h1' => [$page['h1'] ?? '', 24],
+            'category' => [$page['category'] ?? '', 12],
+            'keywords' => [implode(' ', $page['keywords'] ?? []), 18],
+            'summary' => [implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? '']), 10],
+            'body' => [$page['_source_search_text'] ?? $this->pageBodyText($page), 3],
+        ];
+
+        $score = 0;
+        foreach ($fields as [$text, $weight]) {
+            $normalized = $this->normalizeSearchText($text);
+            if ($query !== '' && str_contains($normalized, $query)) {
+                $score += $weight * 4;
+            }
+
+            foreach ($tokens as $token) {
+                if (str_contains($normalized, $token)) {
+                    $score += $weight + min(4, substr_count($normalized, $token));
+                }
+            }
+        }
+
+        return $score;
+    }
+
+    private function matchesSearchTokens(array $page, array $tokens): bool
+    {
+        $corpus = $this->normalizeSearchText(implode(' ', [
+            $page['title'] ?? '',
+            $page['h1'] ?? '',
+            $page['category'] ?? '',
+            implode(' ', $page['keywords'] ?? []),
+            $page['meta_description'] ?? '',
+            $page['quick_summary'] ?? '',
+            $page['intro'] ?? '',
+            $page['_source_search_text'] ?? $this->pageBodyText($page),
+        ]));
+
+        foreach ($tokens as $token) {
+            if (!str_contains($corpus, $token)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function searchExcerpt(array $page, array $tokens): string
+    {
+        $candidates = array_merge(
+            [$page['quick_summary'] ?? '', $page['meta_description'] ?? '', $page['intro'] ?? ''],
+            collect($page['sections'] ?? [])->flatMap(fn($section) => $section['body'] ?? [])->all()
+        );
+
+        foreach ($candidates as $candidate) {
+            if (str_contains($candidate, 'برای کامل‌تر شدن مسیر مطالعه')) {
+                continue;
+            }
+
+            $normalized = $this->normalizeSearchText($candidate);
+            foreach ($tokens as $token) {
+                if (str_contains($normalized, $token)) {
+                    return Str::limit(trim(strip_tags($candidate)), 230);
+                }
+            }
+        }
+
+        return Str::limit($page['meta_description'] ?? $page['intro'] ?? '', 230);
+    }
+
+    private function pageBodyText(array $page): string
+    {
+        $parts = [];
+        foreach (($page['sections'] ?? []) as $section) {
+            $parts[] = $section['heading'] ?? '';
+            foreach (($section['body'] ?? []) as $paragraph) {
+                if (str_contains($paragraph, 'برای کامل‌تر شدن مسیر مطالعه')) {
+                    continue;
+                }
+                $parts[] = $paragraph;
+            }
+        }
+        foreach (($page['faqs'] ?? []) as $faq) {
+            $parts[] = $faq['question'] ?? '';
+            $parts[] = $faq['answer'] ?? '';
+        }
+        array_push($parts, ...($page['important_notes'] ?? []), ...($page['common_mistakes'] ?? []), ...($page['decision_points'] ?? []));
+
+        return implode(' ', $parts);
+    }
+
+    private function normalizeSearchText(string $text): string
+    {
+        $text = strip_tags($text);
+        $text = str_replace(['ي', 'ك', 'ۀ', 'ة', 'ؤ', 'إ', 'أ', 'آ'], ['ی', 'ک', 'ه', 'ه', 'و', 'ا', 'ا', 'ا'], $text);
+        $text = mb_strtolower($text, 'UTF-8');
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
+        return trim(preg_replace('/\s+/u', ' ', $text));
+    }
+
+    private function iranMarketSection(string $slug, string $topic, array $page): array
+    {
+        $base = [
+            "{$topic} در بازار ایران معمولاً با چند لایه کنار هم فهمیده می‌شود: قیمت پایه بازار، نوع کالا، عیار، وزن، هزینه‌های فاکتور و شرایط فروش مجدد. اگر یکی از این لایه‌ها حذف شود، نتیجه ظاهراً ساده می‌شود اما برای تصمیم عملی قابل اتکا نیست.",
+            'در ایران، یک عدد قیمت ممکن است از تابلوی بازار، گفت‌وگوی مغازه، سایت قیمت، کانال خبری یا فاکتور فروشنده بیاید. قبل از مقایسه، منبع عدد، زمان اعلام، واحد قیمت و اینکه عدد برای خرید از مشتری است یا فروش به مشتری را روشن کنید.',
+        ];
+
+        $specific = [
+            'gold-bubble' => 'در حباب سکه، بازار ایران اهمیت ویژه‌ای دارد چون قیمت معامله‌شده سکه فقط از وزن طلای آن پیروی نمی‌کند؛ تقاضای نقدی، انتظارات، اختلاف خرید و فروش و نوع دقیق سکه هم اثر می‌گذارند.',
+            'gold-vat' => 'در مالیات و اجزای قانونی فاکتور، اتکا به شنیده‌های بازار کافی نیست. نرخ، مبنا و شیوه ثبت باید با قانون و اطلاعیه رسمی همان زمان تطبیق داده شود.',
+            'gold-coin-guide' => 'در سکه، عنوان دقیق کالا مهم است. سکه امامی، بهار آزادی، نیم، ربع و یک‌گرمی بازار و نقدشوندگی یکسان ندارند و نباید فقط با واژه کلی «سکه» مقایسه شوند.',
+            'gold-invoice-guide' => 'در فاکتور طلا، خوانا بودن جزئیات از خود عدد نهایی مهم‌تر است. وزن، عیار، اجرت، سود، مالیات، تاریخ و مشخصات فروشنده باید بعداً قابل بازخوانی باشد.',
+            'online-gold-buying-risks' => 'در خرید آنلاین طلا، قیمت پایین بدون مسیر تحویل روشن، فاکتور قابل پیگیری و هویت معتبر فروشنده مزیت محسوب نمی‌شود؛ چون ریسک بعد از پرداخت منتقل می‌شود.',
+        ];
+
+        $base[] = $specific[$slug] ?? 'برای همین، این مقاله عدد روز یا توصیه خرید و فروش نمی‌دهد؛ هدف این است که هنگام دیدن قیمت در بازار ایران بدانید چه سؤال‌هایی باید بپرسید و کدام بخش‌ها را جداگانه بررسی کنید.';
+        $base[] = $this->relatedReadingSentence($slug, $page);
+
+        return $base;
+    }
+
+    private function relatedReadingSentence(string $slug, array $page): string
+    {
+        $links = $this->relatedLinks($slug, $page);
+        if (!$links) {
+            return 'برای تکمیل بررسی، صفحه قیمت زنده و چند مقاله هم‌خانواده را کنار این مطلب بخوانید تا تصویر کامل‌تری از بازار ایران داشته باشید.';
+        }
+
+        return 'برای کامل‌تر شدن مسیر مطالعه، بعد از این مقاله سراغ ' . implode('، ', $links) . ' هم بروید؛ این لینک‌ها کمک می‌کنند موضوع را فقط از یک زاویه نبینید.';
+    }
+
+    private function relatedLinks(string $slug, array $page): array
+    {
+        $rawPages = config('learn.pages', []);
+        return collect($page['related'] ?? [])
+            ->reject(fn($relatedSlug) => $relatedSlug === $slug || !isset($rawPages[$relatedSlug]))
+            ->take(3)
+            ->map(fn($relatedSlug) => '<a href="' . e(config('learn.base_path', '/blog') . '/' . $relatedSlug) . '">' . e($rawPages[$relatedSlug]['title'] ?? $relatedSlug) . '</a>')
+            ->values()
+            ->all();
+    }
+
+    private function fallbackRelated(string $slug): array
+    {
+        $fallbacks = [
+            'gold-price-guide',
+            'gold-price-calculation',
+            'gold-invoice-guide',
+            'buying-gold-safely',
+        ];
+
+        return array_values(array_filter($fallbacks, fn($item) => $item !== $slug));
     }
 
     private function topicSpecificGuidance(string $slug, string $topic): string

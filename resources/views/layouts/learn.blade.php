@@ -28,6 +28,10 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $seo['title'] }}">
     <meta name="twitter:description" content="{{ $seo['description'] }}">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
     <title>{{ $seo['title'] }}</title>
     <script>
         (function () {
@@ -88,6 +92,23 @@
         .sourceList a{color:var(--blue)}
         .mistakeGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 4px}
         .mistakeItem{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:14px}
+        .searchPanel{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:18px;margin:24px 0}
+        .blogSearch label{display:block;font-weight:850;margin-bottom:10px}
+        .searchRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+        .searchRow input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;padding:10px 12px}
+        .searchRow button,.searchRow a{border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:800;padding:10px 14px;text-align:center}
+        .searchRow a{background:transparent;color:var(--accent)}
+        .searchMeta{margin:12px 0 0;color:var(--muted);font-size:14px}
+        .articleResult{display:grid;gap:8px;align-content:start}
+        .articleResult h2{font-size:20px;margin:0;line-height:1.55}
+        .articleMeta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;color:var(--muted);font-size:14px}
+        .emptySearch{grid-column:1/-1}
+        .relatedPanel{margin:28px 0}
+        .relatedPanel h2{margin-top:0}
+        .relatedGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+        .relatedGrid a{display:grid;gap:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:14px;color:var(--text)}
+        .relatedGrid span{color:var(--accent);font-size:13px;font-weight:800}
+        .relatedGrid small{color:var(--muted);font-size:13px;line-height:1.8}
         .faqItem{border-top:1px solid var(--line);padding:16px 0}
         .faqItem:first-child{border-top:0}
         .faqItem summary{cursor:pointer;font-weight:800;list-style:none}
@@ -107,7 +128,7 @@
         .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:8px}
         .breadcrumb a{color:var(--muted)}
         footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:14px}
-        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid{grid-template-columns:1fr}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
+        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid,.relatedGrid{grid-template-columns:1fr}.searchRow{grid-template-columns:1fr}.searchRow button,.searchRow a{width:100%}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
     </style>
 </head>
 <body id="top">

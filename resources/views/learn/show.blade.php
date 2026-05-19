@@ -138,6 +138,24 @@
                 <x-learn-links :links="$page['market_links']" />
             </section>
 
+            @if(!empty($page['related']))
+                <section class="panel relatedPanel" aria-label="مسیر مطالعه مرتبط">
+                    <h2>مسیر مطالعه مرتبط</h2>
+                    <p>برای اینکه موضوع را در بازار ایران کامل‌تر ببینید، این مقاله‌ها را کنار همین مطلب بخوانید:</p>
+                    <div class="relatedGrid">
+                        @foreach($page['related'] as $relatedSlug)
+                            @if(isset($pages[$relatedSlug]))
+                                <a href="{{ $basePath }}/{{ $relatedSlug }}">
+                                    <span>{{ $pages[$relatedSlug]['category'] ?? 'آموزش طلا و سکه' }}</span>
+                                    <strong>{{ $pages[$relatedSlug]['title'] }}</strong>
+                                    <small>{{ $pages[$relatedSlug]['quick_summary'] ?? $pages[$relatedSlug]['meta_description'] }}</small>
+                                </a>
+                            @endif
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <x-learn-faq :faqs="$page['faqs']" />
 
             @if(!empty($page['conclusion']))

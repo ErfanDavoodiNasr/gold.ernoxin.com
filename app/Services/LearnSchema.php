@@ -24,6 +24,11 @@ class LearnSchema
                         'name' => $page['title'],
                         'url' => url("{$basePath}/{$slug}"),
                     ])->values()->all(),
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => url($basePath) . '?q={search_term_string}',
+                        'query-input' => 'required name=search_term_string',
+                    ],
                 ],
                 $this->breadcrumb([
                     ['name' => 'خانه', 'url' => url('/')],
