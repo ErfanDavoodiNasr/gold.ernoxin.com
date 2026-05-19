@@ -231,11 +231,6 @@ class MarketController extends Controller
         if ($token === '' || $provided === '' || !hash_equals($token, $provided)) {
             return response()->json(['message' => 'دسترسی غیرمجاز است.'], 401);
         }
-        $lock = Cache::lock('gold:price-fetch', max(60, (int)config('gold.fetch_lock_seconds', 120)));
-        if (!$lock->get()) {
-            return response()->json(['message' => 'دریافت دیگری در حال اجراست.'], 409);
-        }
-
         try {
             $result = $ingestor->fetchAndStore();
         } catch (Throwable $exception) {
@@ -245,8 +240,6 @@ class MarketController extends Controller
             ]);
 
             return $this->serverErrorResponse();
-        } finally {
-            optional($lock)->release();
         }
 
         return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);

@@ -12,14 +12,9 @@ class FetchEstjtPrices extends Command
 
     public function handle(AutoPriceFetcher $fetcher): int
     {
-        if (!config('gold.features.auto_fetch')) {
-            $this->warn('دریافت خودکار غیرفعال است.');
-            return self::SUCCESS;
-        }
-
         $result = $fetcher->fetchIfDue((bool)$this->option('force'));
         if (!$result) {
-            $this->line('زمان دریافت بعدی هنوز نرسیده یا دریافت دیگری در حال اجراست.');
+            $this->line('زمان دریافت بعدی هنوز نرسیده است.');
             return self::SUCCESS;
         }
 

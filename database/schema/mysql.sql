@@ -189,6 +189,11 @@ CREATE TABLE IF NOT EXISTS `fetch_logs`
     KEY `fetch_logs_status_index`
 (
     `status`
+),
+    KEY `fetch_logs_status_started_at_index`
+(
+    `status`,
+    `started_at`
 )
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci;
 
@@ -196,4 +201,5 @@ INSERT
 IGNORE INTO `migrations` (`migration`, `batch`) VALUES
 ('2026_05_08_000001_create_market_items_table', 1),
 ('2026_05_08_000002_create_price_points_table', 1),
-('2026_05_08_000003_create_fetch_logs_table', 1);
+('2026_05_08_000003_create_fetch_logs_table', 1),
+('2026_05_19_000001_add_started_at_index_to_fetch_logs_table', 2);
