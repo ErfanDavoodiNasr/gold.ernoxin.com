@@ -11,13 +11,20 @@
     @endif
     <link rel="canonical" href="{{ $seo['canonical'] }}">
     <link rel="alternate" hreflang="fa-IR" href="{{ $seo['canonical'] }}">
+    <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
     <meta name="author" content="Ernoxin Gold">
     <meta property="og:locale" content="fa_IR">
-    <meta property="og:type" content="article">
+    <meta property="og:type" content="{{ $seo['type'] ?? 'article' }}">
+    <meta property="og:site_name" content="Ernoxin Gold">
     <meta property="og:title" content="{{ $seo['title'] }}">
     <meta property="og:description" content="{{ $seo['description'] }}">
     <meta property="og:url" content="{{ $seo['canonical'] }}">
+    @isset($page)
     <meta property="article:section" content="{{ $page['category'] ?? 'آموزش طلا و سکه' }}">
+    @endisset
+    @if(!empty($seo['publishedTime']))
+    <meta property="article:published_time" content="{{ $seo['publishedTime'] }}">
+    @endif
     @if(!empty($seo['modifiedTime']))
     <meta property="article:modified_time" content="{{ $seo['modifiedTime'] }}">
     @endif
@@ -94,10 +101,11 @@
         .mistakeItem{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:14px}
         .searchPanel{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:18px;margin:24px 0}
         .blogSearch label{display:block;font-weight:850;margin-bottom:10px}
-        .searchRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+        .searchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
         .searchRow input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;padding:10px 12px}
-        .searchRow button,.searchRow a{border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:800;padding:10px 14px;text-align:center}
-        .searchRow a{background:transparent;color:var(--accent)}
+        .searchClear,.searchSubmit{border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;font-weight:800;padding:10px 14px;text-align:center;cursor:pointer}
+        .searchClear[hidden]{display:none}
+        .searchSubmit{display:inline-block;margin-top:10px;background:var(--accent);color:#fff}
         .searchMeta{margin:12px 0 0;color:var(--muted);font-size:14px}
         .articleResult{display:grid;gap:8px;align-content:start}
         .articleResult h2{font-size:20px;margin:0;line-height:1.55}
@@ -128,7 +136,7 @@
         .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:8px}
         .breadcrumb a{color:var(--muted)}
         footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:14px}
-        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid,.relatedGrid{grid-template-columns:1fr}.searchRow{grid-template-columns:1fr}.searchRow button,.searchRow a{width:100%}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
+        @media (max-width:860px){.learnShell{padding:16px}.learnTop{align-items:flex-start;flex-direction:column}.contentGrid,.summaryGrid,.cards,.mistakeGrid,.insightGrid,.relatedGrid{grid-template-columns:1fr}.searchRow{grid-template-columns:1fr}.searchClear,.searchSubmit{width:100%}aside{position:static}.hero{padding-top:12px}h1{font-size:31px}.lead{font-size:16px}.dataTable{display:block;overflow-x:auto}.tocPanel{display:none}}
     </style>
 </head>
 <body id="top">

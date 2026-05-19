@@ -1,11 +1,11 @@
 <?php
 
-$reviewedAt = '۱۴۰۵/۰۲/۲۳';
+$reviewedAt = '۱۴۰۵/۰۲/۲۹';
 $evergreenPages = require __DIR__ . '/learn_evergreen.php';
 
 return [
     'reviewed_at' => $reviewedAt,
-    'reviewed_at_iso' => '2026-05-13',
+    'reviewed_at_iso' => '2026-05-19',
     'base_path' => '/blog',
     'disclaimer' => '',
     'default_og_image' => '/og/learn-gold.svg',
@@ -33,7 +33,7 @@ return [
         [
             'name' => 'راهنمای خرید و محاسبه',
             'description' => 'چک‌لیست‌های آموزشی و فرمول‌های عمومی.',
-            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'buy-sell-gold-price-spread', 'gold-price-calculation', 'seller-profit-in-gold-invoice', 'selling-gold-tips', 'used-vs-new-gold', 'melted-vs-bar-vs-coin', 'should-buy-melted-gold', 'gold-authenticity-check', 'online-gold-buying-risks'],
+            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'buy-sell-gold-price-spread', 'gold-price-calculation', 'seller-profit-in-gold-invoice', 'selling-gold-tips', 'used-vs-new-gold', 'melted-vs-bar-vs-coin', 'should-buy-melted-gold', 'gold-etf-fund-guide', 'gold-authenticity-check', 'online-gold-buying-risks'],
         ],
         [
             'name' => 'اعتماد، نگهداری و خرید کاربردی',

@@ -28,11 +28,13 @@ class LearnPageController extends Controller
             'basePath' => $basePath,
             'searchQuery' => $query,
             'resultCount' => count($pages),
+            'searchIndex' => $this->searchIndex($allPages, $basePath),
             'seo' => [
                 'title' => $title,
                 'description' => $description,
                 'canonical' => url($basePath),
                 'ogImage' => url(config('learn.default_og_image')),
+                'type' => 'website',
                 'jsonLd' => $this->schema->index($allPages, $title, $description),
             ],
         ]);
@@ -54,12 +56,14 @@ class LearnPageController extends Controller
             'pages' => $pages,
             'basePath' => $basePath,
             'seo' => [
-                'title' => $page['title'],
+                'title' => $page['meta_title'] ?? $page['title'],
                 'description' => $page['meta_description'],
                 'canonical' => $page['url'],
                 'keywords' => $page['keywords'],
                 'modifiedTime' => config('learn.reviewed_at_iso'),
+                'publishedTime' => config('learn.reviewed_at_iso'),
                 'ogImage' => $page['og_image'] ?? url(config('learn.default_og_image')),
+                'type' => 'article',
                 'jsonLd' => $this->schema->article($page),
             ],
         ]);
@@ -174,11 +178,7 @@ class LearnPageController extends Controller
     private function searchPages(array $pages, string $query): array
     {
         $normalizedQuery = $this->normalizeSearchText($query);
-        $tokens = collect(preg_split('/\s+/u', $normalizedQuery, -1, PREG_SPLIT_NO_EMPTY))
-            ->map(fn($token) => trim($token))
-            ->filter(fn($token) => mb_strlen($token) >= 2)
-            ->unique()
-            ->values();
+        $tokens = collect($this->searchTokens($normalizedQuery));
 
         if ($tokens->isEmpty()) {
             return $pages;
@@ -186,12 +186,8 @@ class LearnPageController extends Controller
 
         return collect($pages)
             ->map(function ($page, $slug) use ($tokens, $normalizedQuery) {
-                if (!$this->matchesSearchTokens($page, $tokens->all())) {
-                    return null;
-                }
-
                 $score = $this->searchScore($page, $tokens->all(), $normalizedQuery);
-                if ($score < 12) {
+                if ($score < 10) {
                     return null;
                 }
 
@@ -207,6 +203,24 @@ class LearnPageController extends Controller
             ->all();
     }
 
+    private function searchIndex(array $pages, string $basePath): array
+    {
+        return collect($pages)
+            ->map(fn($page, $slug) => [
+                'slug' => $slug,
+                'url' => "{$basePath}/{$slug}",
+                'title' => $page['title'] ?? '',
+                'category' => $page['category'] ?? 'آموزش طلا و سکه',
+                'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
+                'description' => $page['meta_description'] ?? '',
+                'keywords' => implode(' ', $page['keywords'] ?? []),
+                'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
+                'searchText' => $page['_source_search_text'] ?? $this->pageBodyText($page),
+            ])
+            ->values()
+            ->all();
+    }
+
     private function searchScore(array $page, array $tokens, string $query): int
     {
         $fields = [
@@ -219,20 +233,76 @@ class LearnPageController extends Controller
         ];
 
         $score = 0;
-        foreach ($fields as [$text, $weight]) {
+        foreach ($fields as $fieldName => [$text, $weight]) {
             $normalized = $this->normalizeSearchText($text);
-            if ($query !== '' && str_contains($normalized, $query)) {
+            if ($query !== '' && $this->containsSearchToken($normalized, $query)) {
                 $score += $weight * 4;
+                if (in_array($fieldName, ['title', 'h1'], true) && str_starts_with($normalized, $query)) {
+                    $score += $weight * 3;
+                }
             }
 
             foreach ($tokens as $token) {
-                if (str_contains($normalized, $token)) {
+                if ($this->containsSearchToken($normalized, $token)) {
                     $score += $weight + min(4, substr_count($normalized, $token));
+                    $score += intdiv($weight, 2);
                 }
             }
         }
 
         return $score;
+    }
+
+    private function containsSearchToken(string $normalizedText, string $token): bool
+    {
+        return preg_match('/(^|\s)' . preg_quote($token, '/') . '/u', $normalizedText) === 1;
+    }
+
+    private function searchTokens(string $normalizedQuery): array
+    {
+        $stopWords = [
+            'و', 'یا', 'در', 'از', 'به', 'با', 'برای', 'را', 'که', 'این', 'آن', 'اون',
+            'چیست', 'چیه', 'چطور', 'چگونه', 'کدام', 'ایا', 'آیا', 'بهترین', 'ای', 'تی', 'اف',
+        ];
+        $genericTokens = ['طلا', 'سکه', 'قیمت', 'بازار'];
+
+        $tokens = collect(preg_split('/\s+/u', $normalizedQuery, -1, PREG_SPLIT_NO_EMPTY))
+            ->map(fn($token) => trim($token))
+            ->filter(fn($token) => mb_strlen($token) >= 2)
+            ->reject(fn($token) => in_array($token, $stopWords, true))
+            ->values();
+
+        $specificTokens = $tokens->reject(fn($token) => in_array($token, $genericTokens, true))->values();
+        if ($specificTokens->isNotEmpty()) {
+            $tokens = $specificTokens;
+        }
+
+        if (str_contains($normalizedQuery, 'صندوق طلا')) {
+            $tokens = collect(['صندوق طلا', 'صندوق سرمایه گذاری', 'etf']);
+        }
+
+        $synonyms = [
+            'ای تی اف' => ['etf', 'صندوق', 'بورس'],
+            'etf' => ['صندوق', 'بورس'],
+            'بورس' => ['صندوق', 'گواهی', 'سرمایه گذاری'],
+            'اب شده' => ['آبشده', 'انگ'],
+            'رسید' => ['فاکتور'],
+            'مالیات' => ['ارزش افزوده'],
+            'سکه' => ['حباب', 'امامی', 'بهار'],
+        ];
+
+        foreach ($synonyms as $phrase => $extraTokens) {
+            if (str_contains($normalizedQuery, $this->normalizeSearchText($phrase))) {
+                $tokens = $tokens->merge($extraTokens);
+            }
+        }
+
+        return $tokens
+            ->map(fn($token) => $this->normalizeSearchText($token))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function matchesSearchTokens(array $page, array $tokens): bool
@@ -249,7 +319,7 @@ class LearnPageController extends Controller
         ]));
 
         foreach ($tokens as $token) {
-            if (!str_contains($corpus, $token)) {
+            if (!$this->containsSearchToken($corpus, $token)) {
                 return false;
             }
         }
@@ -271,7 +341,7 @@ class LearnPageController extends Controller
 
             $normalized = $this->normalizeSearchText($candidate);
             foreach ($tokens as $token) {
-                if (str_contains($normalized, $token)) {
+                if ($this->containsSearchToken($normalized, $token)) {
                     return Str::limit(trim(strip_tags($candidate)), 230);
                 }
             }
@@ -312,6 +382,15 @@ class LearnPageController extends Controller
 
     private function iranMarketSection(string $slug, string $topic, array $page): array
     {
+        if ($slug === 'gold-etf-fund-guide') {
+            return [
+                'صندوق طلا در بازار ایران فقط با قیمت روز طلا سنجیده نمی‌شود. قیمت تابلو صندوق، NAV، ترکیب دارایی، کارمزد، بازارگردان، حجم معاملات و فاصله خرید و فروش باید کنار هم خوانده شوند.',
+                'اگر صندوق را با سکه فیزیکی مقایسه می‌کنید، ریسک نگهداری، اصالت و حباب سکه را در یک طرف بگذارید و ریسک نوسان بازار سرمایه، فاصله قیمت با NAV و نقدشوندگی صندوق را در طرف دیگر.',
+                'این مقاله صندوق یا زمان خرید معرفی نمی‌کند؛ هدف این است که هنگام دیدن نام صندوق‌های طلا بدانید چه داده‌هایی را از صفحه رسمی صندوق و سامانه‌های معتبر بررسی کنید.',
+                $this->relatedReadingSentence($slug, $page),
+            ];
+        }
+
         $base = [
             "{$topic} در بازار ایران معمولاً با چند لایه کنار هم فهمیده می‌شود: قیمت پایه بازار، نوع کالا، عیار، وزن، هزینه‌های فاکتور و شرایط فروش مجدد. اگر یکی از این لایه‌ها حذف شود، نتیجه ظاهراً ساده می‌شود اما برای تصمیم عملی قابل اتکا نیست.",
             'در ایران، یک عدد قیمت ممکن است از تابلوی بازار، گفت‌وگوی مغازه، سایت قیمت، کانال خبری یا فاکتور فروشنده بیاید. قبل از مقایسه، منبع عدد، زمان اعلام، واحد قیمت و اینکه عدد برای خرید از مشتری است یا فروش به مشتری را روشن کنید.',
@@ -323,6 +402,7 @@ class LearnPageController extends Controller
             'gold-coin-guide' => 'در سکه، عنوان دقیق کالا مهم است. سکه امامی، بهار آزادی، نیم، ربع و یک‌گرمی بازار و نقدشوندگی یکسان ندارند و نباید فقط با واژه کلی «سکه» مقایسه شوند.',
             'gold-invoice-guide' => 'در فاکتور طلا، خوانا بودن جزئیات از خود عدد نهایی مهم‌تر است. وزن، عیار، اجرت، سود، مالیات، تاریخ و مشخصات فروشنده باید بعداً قابل بازخوانی باشد.',
             'online-gold-buying-risks' => 'در خرید آنلاین طلا، قیمت پایین بدون مسیر تحویل روشن، فاکتور قابل پیگیری و هویت معتبر فروشنده مزیت محسوب نمی‌شود؛ چون ریسک بعد از پرداخت منتقل می‌شود.',
+            'gold-etf-fund-guide' => 'در صندوق طلا، بازار ایران را باید از مسیر بازار سرمایه هم خواند. قیمت تابلو، NAV، ترکیب دارایی، کارمزد، بازارگردان و حجم معاملات کنار قیمت طلا و سکه معنی پیدا می‌کنند.',
         ];
 
         $base[] = $specific[$slug] ?? 'برای همین، این مقاله عدد روز یا توصیه خرید و فروش نمی‌دهد؛ هدف این است که هنگام دیدن قیمت در بازار ایران بدانید چه سؤال‌هایی باید بپرسید و کدام بخش‌ها را جداگانه بررسی کنید.';
@@ -382,6 +462,7 @@ class LearnPageController extends Controller
             'gold-price-calculation' => 'در محاسبه قیمت، ابتدا واحد وزن، عیار و قیمت مبنا را مشخص کنید و سپس فقط هزینه‌هایی را اضافه کنید که در فاکتور شفاف نوشته شده‌اند.',
             'gold-authenticity-check' => 'برای بررسی اصالت، ظاهر کالا فقط یک نشانه است؛ فاکتور، فروشنده معتبر، عیار، وزن و امکان پیگیری بعد از معامله اهمیت بیشتری دارد.',
             'online-gold-buying-risks' => 'در خرید آنلاین، قبل از پرداخت مسیر تحویل، بیمه یا مسئولیت ارسال، شرایط مرجوعی، فاکتور و اطلاعات قابل پیگیری فروشنده را بررسی کنید.',
+            'gold-etf-fund-guide' => 'در صندوق طلا، واحد صندوق را با مالکیت مستقیم سکه یکی ندانید؛ NAV، ترکیب دارایی، کارمزد، نقدشوندگی و فاصله قیمت تابلو با ارزش دارایی‌ها باید هم‌زمان بررسی شود.',
         ];
 
         return $guides[$slug] ?? "{$topic} را با داده زنده، منبع معتبر و شرایط واقعی معامله کنار هم بررسی کنید تا متن آموزشی با تصمیم عملی اشتباه گرفته نشود.";
@@ -484,6 +565,11 @@ class LearnPageController extends Controller
                 'هویت فروشنده، مجوزهای قابل بررسی و راه ارتباط پس از خرید را کنترل کنید.',
                 'شرایط تحویل، بیمه یا مسئولیت ارسال و مرجوعی را قبل از پرداخت بخوانید.',
                 'قیمت پایین را بدون فاکتور و اصالت قابل پیگیری مزیت ندانید.',
+            ],
+            'gold-etf-fund-guide' => [
+                'قیمت تابلو صندوق را کنار NAV و زمان به‌روزرسانی آن بخوانید.',
+                'ترکیب دارایی، کارمزد، بازارگردان، حجم معاملات و اختلاف خرید و فروش را بررسی کنید.',
+                'صندوق طلا را با سکه فیزیکی فقط بعد از مقایسه ریسک نگهداری، نقدشوندگی و کارمزدها بسنجید.',
             ],
         ];
 

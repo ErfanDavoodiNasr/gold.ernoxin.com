@@ -30,6 +30,17 @@ class LearnSchema
                         'query-input' => 'required name=search_term_string',
                     ],
                 ],
+                [
+                    '@type' => 'ItemList',
+                    '@id' => url($basePath . '#articles'),
+                    'name' => 'فهرست مقاله‌های بلاگ طلا و سکه',
+                    'itemListElement' => collect($pages)->map(fn($page, $slug) => [
+                        '@type' => 'ListItem',
+                        'position' => array_search($slug, array_keys($pages), true) + 1,
+                        'name' => $page['title'],
+                        'url' => url("{$basePath}/{$slug}"),
+                    ])->values()->all(),
+                ],
                 $this->breadcrumb([
                     ['name' => 'خانه', 'url' => url('/')],
                     ['name' => 'بلاگ', 'url' => url($basePath)],
@@ -60,6 +71,7 @@ class LearnSchema
                     'articleSection' => $page['category'] ?? 'آموزش طلا و سکه',
                     'about' => $page['keywords'] ?? [],
                     'keywords' => implode(', ', $page['keywords'] ?? []),
+                    'citation' => collect($page['sources'] ?? [])->pluck('url')->filter()->values()->all(),
                     'wordCount' => $this->wordCount($page),
                     'isAccessibleForFree' => true,
                     'image' => $page['og_image'] ?? url(config('learn.default_og_image')),

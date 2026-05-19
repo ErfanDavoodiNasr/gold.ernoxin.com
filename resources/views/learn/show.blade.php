@@ -138,6 +138,22 @@
                 <x-learn-links :links="$page['market_links']" />
             </section>
 
+            @if(!empty($page['sources']))
+                <section class="sourceList" aria-label="منابع و مسیر بررسی">
+                    <h2>منابع و مسیر بررسی</h2>
+                    <ul>
+                        @foreach($page['sources'] as $source)
+                            <li>
+                                <a href="{{ $source['url'] }}" rel="nofollow noopener" target="_blank">{{ $source['label'] }}</a>
+                                @if(!empty($source['note']))
+                                    <span> - {{ $source['note'] }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+
             @if(!empty($page['related']))
                 <section class="panel relatedPanel" aria-label="مسیر مطالعه مرتبط">
                     <h2>مسیر مطالعه مرتبط</h2>
