@@ -1,6 +1,7 @@
 <?php
 
 $reviewedAt = '۱۴۰۵/۰۲/۲۹';
+$trendingPages = require __DIR__ . '/learn_trending.php';
 $evergreenPages = require __DIR__ . '/learn_evergreen.php';
 
 return [
@@ -33,7 +34,12 @@ return [
         [
             'name' => 'راهنمای خرید و محاسبه',
             'description' => 'چک‌لیست‌های آموزشی و فرمول‌های عمومی.',
-            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'buy-sell-gold-price-spread', 'gold-price-calculation', 'seller-profit-in-gold-invoice', 'selling-gold-tips', 'used-vs-new-gold', 'melted-vs-bar-vs-coin', 'should-buy-melted-gold', 'gold-etf-fund-guide', 'gold-authenticity-check', 'online-gold-buying-risks'],
+            'pages' => ['buying-gold-safely', 'gold-invoice-guide', 'gold-price-board-vs-shop', 'buy-sell-gold-price-spread', 'gold-price-calculation', 'seller-profit-in-gold-invoice', 'selling-gold-tips', 'used-vs-new-gold', 'melted-vs-bar-vs-coin', 'should-buy-melted-gold', 'gold-authenticity-check', 'online-gold-buying-risks'],
+        ],
+        [
+            'name' => 'ابزارهای بورسی، کدها و ریسک‌های پنهان',
+            'description' => 'گواهی سپرده، صندوق طلا، انگ آب‌شده، کد عیار، سکه پارسیان، وکیوم سکه و ریسک‌های پرتکرار خرید.',
+            'pages' => ['gold-etf-fund-guide', 'gold-deposit-certificate-guide', 'melted-gold-ang-inquiry', 'gold-hallmark-code-guide', 'persian-coin-guide', 'gold-coin-vacuum-package', 'gold-jewelry-stone-weight', 'gold-small-budget-options', 'gold-return-exchange-policy', 'gold-scam-red-flags', 'gold-wedding-set-buying-guide'],
         ],
         [
             'name' => 'اعتماد، نگهداری و خرید کاربردی',
@@ -46,7 +52,7 @@ return [
             'pages' => ['white-gold-vs-yellow-gold', 'read-gold-weight-correctly', 'is-no-wage-gold-always-better', 'why-gold-colors-differ', 'online-shop-gold-coin-buying-checklist', 'iranian-vs-foreign-gold-price', 'handwritten-gold-invoice-validity', 'decorative-vs-investment-gold', 'why-some-gold-loses-more-on-resale', 'coin-selling-checklist'],
         ],
     ],
-    'pages' => $evergreenPages + [
+    'pages' => $trendingPages + $evergreenPages + [
         'gold-price-guide' => [
             'title' => 'راهنمای قیمت طلا در ایران',
             'meta_description' => 'راهنمای آموزشی و محافظه‌کارانه درباره مفهوم قیمت طلا در ایران، عوامل عمومی اثرگذار و تفاوت اطلاعات ثابت با داده‌های وابسته به قیمت روز.',

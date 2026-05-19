@@ -7,10 +7,8 @@
         <section class="hero">
             <span class="eyebrow">بلاگ طلا و سکه</span>
             <h1>بلاگ طلا و سکه ارنوکسین</h1>
-            <p class="lead">راهنماهای خواندنی و کاربردی برای فهم قیمت طلا، سکه، اجرت، مالیات، فاکتور و ریسک‌های خرید. هر مقاله با پاسخ سریع شروع می‌شود و بعد جزئیات را مرحله‌به‌مرحله توضیح می‌دهد.</p>
             <div class="meta">
                 <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
-                <span class="pill">{{ count($allPages) }} مقاله ایران‌محور</span>
             </div>
         </section>
 
@@ -29,7 +27,7 @@
                 @if($searchQuery !== '')
                     {{ $resultCount }} نتیجه مرتبط برای «{{ $searchQuery }}»
                 @else
-                    عبارت موردنظر را تایپ کنید تا نتایج همان لحظه بر اساس عنوان، سؤال‌ها، خلاصه و متن اصلی مرتب شوند.
+                    عبارت موردنظر را تایپ کنید
                 @endif
             </p>
         </section>
@@ -280,7 +278,7 @@
                     meta.textContent = formatNumber(items.length) + ' نتیجه مرتبط برای «' + query.trim() + '»';
                 } else {
                     title.textContent = 'همه مقاله‌ها';
-                    meta.textContent = 'عبارت موردنظر را تایپ کنید تا نتایج همان لحظه بر اساس عنوان، سؤال‌ها، خلاصه و متن اصلی مرتب شوند.';
+                    meta.textContent = 'عبارت موردنظر را تایپ کنید';
                 }
 
                 if (clear) {

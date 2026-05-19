@@ -19,28 +19,12 @@
 
             @php($tocItems = collect($page['sections'])->pluck('heading')->values())
 
-            <section class="answerBox">
-                <strong>پاسخ سریع</strong>
-                <p>{{ $page['quick_summary'] ?? $page['short_answer'] ?? $page['intro'] }}</p>
-            </section>
-
             @if(!empty($page['reader_questions']))
                 <section class="readerQuestions">
                     <h2>این مقاله به چه سؤال‌هایی جواب می‌دهد؟</h2>
                     <ul>
                         @foreach($page['reader_questions'] as $question)
                             <li>{{ $question }}</li>
-                        @endforeach
-                    </ul>
-                </section>
-            @endif
-
-            @if(!empty($page['takeaways']))
-                <section class="panel">
-                    <h2>در یک نگاه</h2>
-                    <ul>
-                        @foreach($page['takeaways'] as $takeaway)
-                            <li>{{ $takeaway }}</li>
                         @endforeach
                     </ul>
                 </section>
@@ -131,12 +115,6 @@
                     </div>
                 </section>
             @endif
-
-            <section>
-                <h2>برای بررسی قیمت‌های به‌روز</h2>
-                <p>اگر به عددهای لحظه‌ای نیاز دارید، صفحه قیمت زنده بهترین نقطه شروع است. در مقاله‌ها روی توضیح روشن مفاهیم و روش خواندن بازار تمرکز کرده‌ایم.</p>
-                <x-learn-links :links="$page['market_links']" />
-            </section>
 
             @if(!empty($page['sources']))
                 <section class="sourceList" aria-label="منابع و مسیر بررسی">
