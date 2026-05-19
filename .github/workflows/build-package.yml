@@ -1,0 +1,102 @@
+name: Build package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build downloadable hosting ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: dom, pdo, pdo_mysql, mbstring, openssl, tokenizer, xml, ctype, json, fileinfo, curl
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Validate PHP syntax
+        run: |
+          find app config database routes -name '*.php' -print0 | xargs -0 -n 1 php -l
+
+      - name: Prepare package directory
+        run: |
+          set -euo pipefail
+          PACKAGE_DIR="ernoxin-gold"
+          rm -rf "$PACKAGE_DIR" "$PACKAGE_DIR.zip"
+          mkdir -p "$PACKAGE_DIR"
+
+          rsync -a ./ "$PACKAGE_DIR"/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.idea/' \
+            --exclude='.env' \
+            --exclude='node_modules/' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/framework/hosting-bootstrap.lock' \
+            --exclude='storage/logs/*.log' \
+            --exclude='.DS_Store' \
+            --exclude='._*' \
+            --exclude="$PACKAGE_DIR/"
+
+          mkdir -p "$PACKAGE_DIR/storage/framework/cache/data" \
+                   "$PACKAGE_DIR/storage/framework/sessions" \
+                   "$PACKAGE_DIR/storage/framework/views" \
+                   "$PACKAGE_DIR/storage/logs" \
+                   "$PACKAGE_DIR/bootstrap/cache"
+
+          touch "$PACKAGE_DIR/storage/framework/cache/data/.gitkeep" \
+                "$PACKAGE_DIR/storage/framework/sessions/.gitkeep" \
+                "$PACKAGE_DIR/storage/framework/views/.gitkeep" \
+                "$PACKAGE_DIR/storage/logs/.gitkeep" \
+                "$PACKAGE_DIR/bootstrap/cache/.gitkeep"
+
+          rm -f "$PACKAGE_DIR/bootstrap/cache/config.php" \
+                "$PACKAGE_DIR/bootstrap/cache/routes-v7.php" \
+                "$PACKAGE_DIR/bootstrap/cache/events.php"
+
+          zip -qr "$PACKAGE_DIR.zip" "$PACKAGE_DIR"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ernoxin-gold
+          path: ernoxin-gold.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ernoxin-gold.zip
+          generate_release_notes: true
