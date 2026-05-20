@@ -10,6 +10,7 @@
     <link rel="canonical" href="{{ $seo['canonical'] ?? url('/price/') }}">
     <link rel="alternate" hreflang="fa-IR" href="{{ $seo['canonical'] ?? url('/price/') }}">
     <link rel="alternate" type="application/rss+xml" title="بلاگ طلا و سکه ارنوکسین" href="{{ url(config('learn.base_path', '/blog')) }}">
+    <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
     @foreach(($seo['alternateRanges'] ?? []) as $range)
     <link rel="alternate" href="{{ $range['url'] }}" title="{{ $range['title'] }}">
     @endforeach
@@ -18,6 +19,7 @@
     <meta property="og:title" content="{{ $seo['title'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه' }}">
     <meta property="og:description" content="{{ $seo['description'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار و تاریخچه تغییرات.' }}">
     <meta property="og:url" content="{{ $seo['canonical'] ?? url('/price/') }}">
+    <meta property="og:image" content="{{ url(config('learn.default_og_image')) }}">
     @if(!empty($seo['updatedAt']))
     <meta property="article:modified_time" content="{{ $seo['updatedAt'] }}">
     @endif
@@ -44,6 +46,11 @@
     @php($manifest = json_decode(file_get_contents($manifestPath), true))
     @foreach(($manifest['resources/js/App.jsx']['css'] ?? []) as $css)
     <link rel="stylesheet" href="{{ asset('build/'.$css) }}">
+    @endforeach
+    @foreach(($manifest['resources/js/App.jsx']['imports'] ?? []) as $import)
+        @if(!empty($manifest[$import]['file']))
+    <link rel="modulepreload" href="{{ asset('build/'.$manifest[$import]['file']) }}">
+        @endif
     @endforeach
     <script type="module" src="{{ asset('build/'.$manifest['resources/js/App.jsx']['file']) }}" defer></script>
     @endif
@@ -76,6 +83,46 @@
         </table>
     </main>
 </noscript>
+<main class="seoAppFallback shell" aria-label="خلاصه سریع بازار طلا و سکه">
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo">Au</span>
+            <div>
+                <strong class="brandTitle">سکه و طلای ارنوکسین</strong>
+                <p>قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران</p>
+            </div>
+        </div>
+    </header>
+    <section class="hero">
+        <div>
+            <span class="eyebrow">داشبورد زنده بازار</span>
+            <h1>قیمت طلا امروز و قیمت لحظه‌ای سکه</h1>
+            <p>{{ $seo['description'] ?? 'آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه تغییرات.' }}</p>
+        </div>
+        <div class="stats">
+            <div class="metric"><strong>{{ count($seoItems ?? []) }}</strong><span>نماد فعال</span></div>
+        </div>
+    </section>
+    @if(!empty($seoItems) && count($seoItems) > 0)
+        <section class="marketPanel" style="width:auto;flex:auto;margin-top:16px">
+            <div class="panelTitle">
+                <h2>آخرین قیمت‌های ثبت‌شده</h2>
+            </div>
+            <div class="itemList">
+                @foreach(collect($seoItems)->take(6) as $item)
+                    <div class="marketItem">
+                        <span class="itemIcon">{{ $item->category === 'coin' ? 'س' : 'ط' }}</span>
+                        <span class="itemMain">
+                            <b>{{ $item->name }}</b>
+                            <small>{{ number_format((float)($item->latestPrice?->current_value ?? 0), 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</small>
+                        </span>
+                        <span class="badge {{ $item->latestPrice?->direction === 'desc' ? 'down' : 'up' }}">{{ $item->latestPrice?->change_percent ?? '—' }}٪</span>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+</main>
 <div id="root"></div>
 <?php
     $learnExtras = config('learn_extras', []);

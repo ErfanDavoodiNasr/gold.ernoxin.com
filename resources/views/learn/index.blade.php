@@ -12,7 +12,7 @@
             </div>
         </section>
 
-        <section class="searchPanel" aria-label="جستجوی مقاله‌های بلاگ" data-blog-search>
+        <section class="searchPanel" aria-label="جستجوی مقاله‌های بلاگ" data-blog-search data-search-index-url="{{ $searchIndexUrl }}">
             <form action="{{ $basePath }}" method="get" class="blogSearch" role="search">
                 <label for="blog-search">جستجو در مقاله‌ها</label>
                 <div class="searchRow">
@@ -83,10 +83,8 @@
         </section>
     </main>
 
-    <script type="application/json" id="blog-search-index">{!! json_encode($searchIndex, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}</script>
     <script>
         (function () {
-            var indexNode = document.getElementById('blog-search-index');
             var panel = document.querySelector('[data-blog-search]');
             var input = document.querySelector('[data-search-input]');
             var results = document.querySelector('[data-search-results]');
@@ -97,11 +95,14 @@
             var title = document.querySelector('[data-results-title]');
             var clear = document.querySelector('[data-search-clear]');
 
-            if (!indexNode || !panel || !input || !results || !resultsSection || !suggestions || !meta || !title) {
+            if (!panel || !input || !results || !resultsSection || !suggestions || !meta || !title) {
                 return;
             }
 
-            var searchIndex = JSON.parse(indexNode.textContent || '[]');
+            var searchIndex = [];
+            var searchIndexPromise = null;
+            var searchIndexUrl = panel.dataset.searchIndexUrl || '/blog/search-index.json';
+            var initialResultsHtml = results.innerHTML;
             var activeSuggestionIndex = -1;
             var currentSuggestions = [];
             var stopWords = ['و', 'یا', 'در', 'از', 'به', 'با', 'برای', 'را', 'که', 'این', 'آن', 'اون', 'چیست', 'چیه', 'چطور', 'چگونه', 'کدام', 'ایا', 'آیا', 'بهترین', 'ای', 'تی', 'اف'];
@@ -161,17 +162,18 @@
             }
 
             function scoreItem(item, tokens, normalizedQuery) {
+                var searchable = item.search || {};
                 var fields = [
-                    ['title', item.title, 30],
-                    ['category', item.category, 12],
-                    ['keywords', item.keywords, 18],
-                    ['summary', [item.summary, item.description].join(' '), 10],
-                    ['body', item.searchText, 3]
+                    ['title', searchable.title || normalize(item.title), 30],
+                    ['category', searchable.category || normalize(item.category), 12],
+                    ['keywords', searchable.keywords || '', 18],
+                    ['summary', searchable.summary || normalize([item.summary, item.description].join(' ')), 10],
+                    ['body', searchable.body || normalize(item.plainText), 3]
                 ];
 
                 return fields.reduce(function (sum, field) {
                     var fieldName = field[0];
-                    var text = normalize(field[1]);
+                    var text = field[1] || '';
                     var weight = field[2];
                     var fieldScore = normalizedQuery && matchesToken(text, normalizedQuery) ? weight * 4 : 0;
                     if (fieldScore > 0 && fieldName === 'title' && text.indexOf(normalizedQuery) === 0) {
@@ -194,7 +196,7 @@
             }
 
             function excerpt(item, tokens) {
-                var candidates = [item.summary, item.description, item.searchText];
+                var candidates = [item.summary, item.description, item.plainText];
                 for (var i = 0; i < candidates.length; i += 1) {
                     var plain = stripTags(candidates[i]);
                     var normalized = normalize(plain);
@@ -204,6 +206,36 @@
                 }
 
                 return item.summary || item.description || '';
+            }
+
+            function loadSearchIndex() {
+                if (searchIndex.length > 0) {
+                    return Promise.resolve(searchIndex);
+                }
+
+                if (!searchIndexPromise) {
+                    searchIndexPromise = fetch(searchIndexUrl, {
+                        headers: {Accept: 'application/json'},
+                        credentials: 'same-origin'
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('search_index_failed');
+                            }
+
+                            return response.json();
+                        })
+                        .then(function (payload) {
+                            searchIndex = Array.isArray(payload.items) ? payload.items : [];
+                            return searchIndex;
+                        })
+                        .catch(function (error) {
+                            searchIndexPromise = null;
+                            throw error;
+                        });
+                }
+
+                return searchIndexPromise;
             }
 
             function formatNumber(number) {
@@ -322,10 +354,29 @@
                 input.setAttribute('aria-expanded', 'true');
             }
 
-            function render(query) {
+            function renderLoaded(query) {
                 var normalizedQuery = normalize(query);
                 var tokens = tokenize(query);
                 var items = searchIndex;
+
+                if (tokens.length === 0) {
+                    renderSuggestions([], query);
+                    results.innerHTML = initialResultsHtml;
+                    title.textContent = 'همه مقاله‌ها';
+                    meta.textContent = 'عبارت موردنظر را تایپ کنید';
+                    resultsSection.hidden = false;
+                    if (clustersSection) {
+                        clustersSection.hidden = false;
+                    }
+                    if (clear) {
+                        clear.hidden = true;
+                    }
+
+                    var cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('q');
+                    window.history.replaceState({}, '', cleanUrl.toString());
+                    return;
+                }
 
                 if (tokens.length > 0) {
                     items = searchIndex
@@ -364,7 +415,7 @@
                 if (tokens.length > 0) {
                     title.textContent = 'نتایج جستجو';
                     meta.textContent = items.length > 0 ? 'پیشنهادهای مرتبط' : 'نتیجه‌ای پیدا نشد';
-                    resultsSection.hidden = true;
+                    resultsSection.hidden = false;
                     if (clustersSection) {
                         clustersSection.hidden = true;
                     }
@@ -388,6 +439,22 @@
                     url.searchParams.delete('q');
                 }
                 window.history.replaceState({}, '', url.toString());
+            }
+
+            function render(query) {
+                if (tokenize(query).length === 0) {
+                    renderLoaded(query);
+                    return;
+                }
+
+                meta.textContent = 'در حال آماده‌سازی جستجو...';
+                loadSearchIndex()
+                    .then(function () {
+                        renderLoaded(query);
+                    })
+                    .catch(function () {
+                        meta.textContent = 'جستجوی سریع در دسترس نیست؛ برای جستجوی سروری Enter بزنید.';
+                    });
             }
 
             input.addEventListener('input', function () {
@@ -461,6 +528,12 @@
                     input.focus();
                     render('');
                 });
+            }
+
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(loadSearchIndex, {timeout: 2500});
+            } else {
+                window.setTimeout(loadSearchIndex, 900);
             }
 
             render(input.value);

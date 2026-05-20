@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Services\LearnSchema;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class LearnPageController extends Controller
@@ -28,7 +30,7 @@ class LearnPageController extends Controller
             'basePath' => $basePath,
             'searchQuery' => $query,
             'resultCount' => count($pages),
-            'searchIndex' => $this->searchIndex($allPages, $basePath),
+            'searchIndexUrl' => "{$basePath}/search-index.json",
             'seo' => [
                 'title' => $title,
                 'description' => $description,
@@ -38,6 +40,22 @@ class LearnPageController extends Controller
                 'jsonLd' => $this->schema->index($allPages, $title, $description),
             ],
         ]);
+    }
+
+    public function searchIndexJson(): JsonResponse
+    {
+        $ttl = 86400;
+        $payload = [
+            'updatedAt' => config('learn.reviewed_at_iso'),
+            'items' => $this->buildSearchIndex($this->pages(), config('learn.base_path', '/blog')),
+        ];
+
+        return response()
+            ->json($payload)
+            ->withHeaders([
+                'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=604800",
+                'X-Robots-Tag' => 'noindex',
+            ]);
     }
 
     public function show(string $slug): Response
@@ -71,25 +89,27 @@ class LearnPageController extends Controller
 
     private function pages(): array
     {
-        $extras = config('learn_extras', []);
-        unset($extras['defaults']);
+        return Cache::remember($this->contentCacheKey('pages:v4'), 86400, function () {
+            $extras = config('learn_extras', []);
+            unset($extras['defaults']);
 
-        return collect(config('learn.pages', []))
-            ->map(function ($page, $slug) use ($extras) {
-                $sourcePage = array_merge($page, $extras[$slug] ?? []);
-                $merged = array_merge($page, $extras[$slug] ?? []);
-                $merged['_source_search_text'] = $this->pageBodyText($sourcePage);
-                unset(
-                    $merged['author_note'],
-                    $merged['default_sources'],
-                    $merged['expert_review_notes'],
-                    $merged['practical_example'],
-                    $merged['decision_checklist']
-                );
+            return collect(config('learn.pages', []))
+                ->map(function ($page, $slug) use ($extras) {
+                    $sourcePage = array_merge($page, $extras[$slug] ?? []);
+                    $merged = array_merge($page, $extras[$slug] ?? []);
+                    $merged['_source_search_text'] = $this->pageBodyText($sourcePage);
+                    unset(
+                        $merged['author_note'],
+                        $merged['default_sources'],
+                        $merged['expert_review_notes'],
+                        $merged['practical_example'],
+                        $merged['decision_checklist']
+                    );
 
-                return $this->enrichPage($merged, $slug);
-            })
-            ->all();
+                    return $this->enrichPage($merged, $slug);
+                })
+                ->all();
+        });
     }
 
     private function enrichPage(array $page, string $slug): array
@@ -141,22 +161,28 @@ class LearnPageController extends Controller
             ->all();
     }
 
-    private function searchIndex(array $pages, string $basePath): array
+    private function buildSearchIndex(array $pages, string $basePath): array
     {
-        return collect($pages)
-            ->map(fn($page, $slug) => [
-                'slug' => $slug,
-                'url' => "{$basePath}/{$slug}",
-                'title' => $page['title'] ?? '',
-                'category' => $page['category'] ?? 'آموزش طلا و سکه',
-                'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
-                'description' => $page['meta_description'] ?? '',
-                'keywords' => implode(' ', $page['keywords'] ?? []),
-                'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
-                'searchText' => $page['_source_search_text'] ?? $this->pageBodyText($page),
-            ])
-            ->values()
-            ->all();
+        return Cache::remember($this->contentCacheKey('search-index:v3'), 86400, fn() => collect($pages)
+                ->map(fn($page, $slug) => [
+                    'slug' => $slug,
+                    'url' => "{$basePath}/{$slug}",
+                    'title' => $page['title'] ?? '',
+                    'category' => $page['category'] ?? 'آموزش طلا و سکه',
+                    'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
+                    'description' => $page['meta_description'] ?? '',
+                    'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
+                    'search' => [
+                        'title' => $this->normalizeSearchText($page['title'] ?? ''),
+                        'category' => $this->normalizeSearchText($page['category'] ?? 'آموزش طلا و سکه'),
+                        'keywords' => $this->normalizeSearchText(implode(' ', $page['keywords'] ?? [])),
+                        'summary' => $this->normalizeSearchText(implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? ''])),
+                        'body' => $this->normalizeSearchText($page['_source_search_text'] ?? $this->pageBodyText($page)),
+                    ],
+                    'plainText' => Str::limit(trim(strip_tags($page['_source_search_text'] ?? $this->pageBodyText($page))), 700),
+                ])
+                ->values()
+                ->all());
     }
 
     private function searchScore(array $page, array $tokens, string $query): int
@@ -316,6 +342,21 @@ class LearnPageController extends Controller
         $text = mb_strtolower($text, 'UTF-8');
         $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
         return trim(preg_replace('/\s+/u', ' ', $text));
+    }
+
+    private function contentCacheKey(string $name): string
+    {
+        $files = [
+            config_path('learn.php'),
+            config_path('learn_articles.php'),
+            config_path('learn_extras.php'),
+        ];
+
+        $signature = collect($files)
+            ->map(fn($file) => is_file($file) ? filemtime($file) . ':' . filesize($file) : 'missing')
+            ->implode('|');
+
+        return 'learn:' . $name . ':' . md5($signature);
     }
 
     private function iranMarketSection(string $slug, string $topic, array $page): array

@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} from 'recharts';
 import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, RefreshCw, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
 import '../css/app.css';
 
@@ -14,6 +13,41 @@ const defaultConfig = {
     sourceName: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
     sourceUrl: 'https://www.estjt.ir/price/',
 };
+
+const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
+    default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
+        const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
+
+        return (
+            <AreaChart width={width} height={height} data={data} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
+                <defs>
+                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
+                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
+                <XAxis dataKey="time" tickLine={false} axisLine={false}
+                       minTickGap={28}
+                       tickFormatter={(v) => formatChartTick(v, activeRange)}/>
+                <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
+                       domain={chartDomain}
+                       tickCount={5}
+                       label={{
+                           value: chartUnitLabel(selected),
+                           position: 'insideTopRight',
+                           offset: -14
+                       }}
+                       tickFormatter={(v) => formatAxisPrice(v, selected)}/>
+                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
+                         content={<ChartTooltip item={selected}/>}/>
+                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
+                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
+                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
+            </AreaChart>
+        );
+    },
+})));
 
 function formatNumber(value, options = {}) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
@@ -325,19 +359,38 @@ function App() {
     useEffect(() => {
         if (items.length === 0 || !range) return;
         const controller = new AbortController();
-        const queue = items
-            .filter((item) => item.id !== selected?.id)
-            .slice(0, 8)
-            .filter((item) => !historyCache.current.has(`${item.id}:${range}`));
+        var idleId = null;
+        var timerId = null;
 
-        queue.forEach((item) => {
-            fetchHistory(item.id, range, controller.signal)
-                .then((data) => historyCache.current.set(`${item.id}:${range}`, {...data, points: sanitizeHistory(data.points)}))
-                .catch(() => {
-                });
-        });
+        const warmHistoryCache = () => {
+            const queue = items
+                .filter((item) => item.id !== selected?.id)
+                .slice(0, 6)
+                .filter((item) => !historyCache.current.has(`${item.id}:${range}`));
 
-        return () => controller.abort();
+            queue.forEach((item) => {
+                fetchHistory(item.id, range, controller.signal)
+                    .then((data) => historyCache.current.set(`${item.id}:${range}`, {...data, points: sanitizeHistory(data.points)}))
+                    .catch(() => {
+                    });
+            });
+        };
+
+        if ('requestIdleCallback' in window) {
+            idleId = window.requestIdleCallback(warmHistoryCache, {timeout: 2500});
+        } else {
+            timerId = window.setTimeout(warmHistoryCache, 1200);
+        }
+
+        return () => {
+            controller.abort();
+            if (idleId) {
+                window.cancelIdleCallback?.(idleId);
+            }
+            if (timerId) {
+                window.clearTimeout(timerId);
+            }
+        };
     }, [items, selected?.id, range]);
 
     const filtered = useMemo(() => items.filter((item) => item.name.includes(query)), [items, query]);
@@ -463,32 +516,10 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
 
     return <div className="chartCanvas" ref={chartRef}>
         {size.width > 0 && size.height > 0 && data.length > 0 && (
-            <AreaChart width={size.width} height={size.height} data={data} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
-                <defs>
-                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
-                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
-                    </linearGradient>
-                </defs>
-                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
-                <XAxis dataKey="time" tickLine={false} axisLine={false}
-                       minTickGap={28}
-                       tickFormatter={(v) => formatChartTick(v, activeRange)}/>
-                <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
-                       domain={chartDomain}
-                       tickCount={5}
-                       label={{
-                           value: chartUnitLabel(selected),
-                           position: 'insideTopRight',
-                           offset: -14
-                       }}
-                       tickFormatter={(v) => formatAxisPrice(v, selected)}/>
-                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
-                         content={<ChartTooltip item={selected}/>}/>
-                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
-                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
-                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
-            </AreaChart>
+            <React.Suspense fallback={<div className="chartSkeleton" aria-hidden="true"/>}>
+                <ChartRenderer width={size.width} height={size.height} data={data} selected={selected}
+                               activeRange={activeRange} colors={colors}/>
+            </React.Suspense>
         )}
     </div>;
 }
