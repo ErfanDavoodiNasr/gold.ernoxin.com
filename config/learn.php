@@ -16,6 +16,11 @@ return [
     ],
     'clusters' => [
         [
+            'name' => 'طلای دیجیتال و پلتفرم‌های آنلاین',
+            'description' => 'راهنمای بی‌طرف برای خرید طلای دیجیتال، بررسی مجوز، پشتوانه، کارمزد، تحویل فیزیکی و ریسک پلتفرم‌هایی مثل وال‌گلد و میلی‌گلد.',
+            'pages' => ['digital-gold-platform-guide', 'digital-gold-license-checklist', 'milli-gold-wallgold-checklist', 'digital-gold-physical-delivery-guide', 'digital-gold-fees-spread-guide', 'digital-gold-custody-risk-guide', 'digital-gold-empty-selling-risk', 'digital-gold-vs-etf-vs-physical', 'digital-gold-tax-invoice-records', 'digital-gold-small-saving-plan'],
+        ],
+        [
             'name' => 'قیمت روز، روند بازار و تحلیل طلا',
             'description' => 'مهم‌ترین مقاله‌ها برای کاربرانی که قیمت طلا امروز، اثر دلار و انس، مظنه و روند بازار را دنبال می‌کنند.',
             'pages' => ['gold-price-today-dollar-ounce', 'gold-price-alert-watchlist', 'global-ounce-impact-iran-gold', 'gold-price-guide', 'how-gold-price-is-set', 'gold-price-factors', 'gold-ounce-mesghal', 'gold-mozaneh', 'gold-price-differences-iran-cities'],
