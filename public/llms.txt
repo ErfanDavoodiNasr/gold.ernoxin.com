@@ -1,0 +1,20 @@
+# Ernoxin Gold
+
+Ernoxin Gold is a Persian-language gold and coin price dashboard and learning hub for the Iranian market.
+
+## Primary URLs
+
+- Live gold and coin prices: https://gold.ernoxin.com/price/
+- Blog index: https://gold.ernoxin.com/blog
+- Sitemap: https://gold.ernoxin.com/sitemap.xml
+
+## Content Scope
+
+The site covers live gold and coin prices, historical trends, gold buying safety, invoices, taxes, making charge, karat differences, coin bubble, gold ETFs, digital gold, and practical risk checklists for users in Iran.
+
+## Crawling Notes
+
+- Article pages are under `/blog/{slug}` and are written in Persian.
+- Price pages are under `/price/` and `/price/trends/{days}`.
+- The public read API for current market data is `/api/market/summary`.
+- The write-only manual fetch endpoint `/api/market/fetch` should not be crawled.

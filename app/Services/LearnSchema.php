@@ -19,8 +19,11 @@ class LearnSchema
                     'description' => $description,
                     'inLanguage' => 'fa-IR',
                     'isPartOf' => $this->website(),
+                    'publisher' => ['@id' => url('/#organization')],
+                    'about' => ['قیمت طلا', 'قیمت سکه', 'خرید طلا', 'بازار طلا ایران'],
+                    'mainEntity' => ['@id' => url($basePath . '#articles')],
                     'hasPart' => collect($pages)->map(fn($page, $slug) => [
-                        '@type' => 'Article',
+                        '@type' => 'BlogPosting',
                         'name' => $page['title'],
                         'url' => url("{$basePath}/{$slug}"),
                     ])->values()->all(),
@@ -34,6 +37,7 @@ class LearnSchema
                     '@type' => 'ItemList',
                     '@id' => url($basePath . '#articles'),
                     'name' => 'فهرست مقاله‌های بلاگ طلا و سکه',
+                    'numberOfItems' => count($pages),
                     'itemListElement' => collect($pages)->map(fn($page, $slug) => [
                         '@type' => 'ListItem',
                         'position' => array_search($slug, array_keys($pages), true) + 1,
@@ -45,6 +49,8 @@ class LearnSchema
                     ['name' => 'خانه', 'url' => url('/')],
                     ['name' => 'بلاگ', 'url' => url($basePath)],
                 ]),
+                $this->organization(),
+                $this->website(),
             ],
         ];
     }
@@ -55,7 +61,19 @@ class LearnSchema
             '@context' => 'https://schema.org',
             '@graph' => [
                 [
-                    '@type' => 'Article',
+                    '@type' => 'WebPage',
+                    '@id' => $page['url'] . '#webpage',
+                    'url' => $page['url'],
+                    'name' => $page['meta_title'] ?? $page['title'],
+                    'description' => $page['meta_description'],
+                    'inLanguage' => 'fa-IR',
+                    'dateModified' => config('learn.reviewed_at_iso'),
+                    'isPartOf' => ['@id' => url('/#website')],
+                    'breadcrumb' => ['@id' => $page['url'] . '#breadcrumb'],
+                    'mainEntity' => ['@id' => $page['url'] . '#article'],
+                ],
+                [
+                    '@type' => 'BlogPosting',
                     '@id' => $page['url'] . '#article',
                     'mainEntityOfPage' => [
                         '@type' => 'WebPage',
@@ -70,11 +88,16 @@ class LearnSchema
                     'publisher' => config('learn.author'),
                     'articleSection' => $page['category'] ?? 'آموزش طلا و سکه',
                     'about' => $page['keywords'] ?? [],
+                    'mentions' => $this->mentions($page),
                     'keywords' => implode(', ', $page['keywords'] ?? []),
                     'citation' => collect($page['sources'] ?? [])->pluck('url')->filter()->values()->all(),
                     'wordCount' => $this->wordCount($page),
                     'isAccessibleForFree' => true,
                     'image' => $page['og_image'] ?? url(config('learn.default_og_image')),
+                    'speakable' => [
+                        '@type' => 'SpeakableSpecification',
+                        'cssSelector' => ['h1', '.lead', '.answerBox'],
+                    ],
                 ],
                 [
                     '@type' => 'FAQPage',
@@ -92,15 +115,16 @@ class LearnSchema
                     ['name' => 'خانه', 'url' => url('/')],
                     ['name' => 'بلاگ', 'url' => url(config('learn.base_path', '/blog'))],
                     ['name' => $page['title'], 'url' => $page['url']],
-                ]),
+                ], $page['url'] . '#breadcrumb'),
+                $this->organization(),
                 $this->website(),
             ],
         ];
     }
 
-    public function breadcrumb(array $items): array
+    public function breadcrumb(array $items, ?string $id = null): array
     {
-        return [
+        $schema = [
             '@type' => 'BreadcrumbList',
             'itemListElement' => collect($items)->map(fn($item, $index) => [
                 '@type' => 'ListItem',
@@ -109,16 +133,52 @@ class LearnSchema
                 'item' => $item['url'],
             ])->all(),
         ];
+
+        if ($id) {
+            $schema['@id'] = $id;
+        }
+
+        return $schema;
     }
 
     private function website(): array
     {
         return [
             '@type' => 'WebSite',
+            '@id' => url('/#website'),
             'name' => 'Ernoxin Gold',
             'url' => url('/'),
             'inLanguage' => 'fa-IR',
+            'publisher' => ['@id' => url('/#organization')],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => url(config('learn.base_path', '/blog')) . '?q={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
         ];
+    }
+
+    private function organization(): array
+    {
+        return [
+            '@type' => 'Organization',
+            '@id' => url('/#organization'),
+            'name' => 'Ernoxin Gold',
+            'url' => url('/'),
+            'logo' => url(config('learn.default_og_image')),
+        ];
+    }
+
+    private function mentions(array $page): array
+    {
+        return collect($page['keywords'] ?? [])
+            ->take(8)
+            ->map(fn($keyword) => [
+                '@type' => 'Thing',
+                'name' => $keyword,
+            ])
+            ->values()
+            ->all();
     }
 
     private function wordCount(array $page): int
