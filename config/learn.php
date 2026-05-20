@@ -16,6 +16,11 @@ return [
     ],
     'clusters' => [
         [
+            'name' => 'سرمایه‌گذاری طلا و سکه',
+            'description' => 'راهنمای عملی برای سرمایه‌گذاری کوتاه‌مدت و بلندمدت، انتخاب ابزار، مدیریت ریسک، زمان ورود و برنامه خروج از بازار طلا و سکه.',
+            'pages' => ['gold-investment-short-term-guide', 'gold-investment-long-term-guide', 'gold-investment-portfolio-allocation', 'coin-vs-gold-short-term', 'gold-dca-investment-strategy', 'gold-investment-risk-management', 'gold-investment-exit-strategy', 'gold-vs-dollar-investment-iran', 'gold-etf-short-term-trading-risks', 'gold-investment-mistakes-beginners'],
+        ],
+        [
             'name' => 'طلای دیجیتال و پلتفرم‌های آنلاین',
             'description' => 'راهنمای بی‌طرف برای خرید طلای دیجیتال، بررسی مجوز، پشتوانه، کارمزد، تحویل فیزیکی و ریسک پلتفرم‌هایی مثل وال‌گلد و میلی‌گلد.',
             'pages' => ['digital-gold-platform-guide', 'digital-gold-license-checklist', 'milli-gold-wallgold-checklist', 'digital-gold-physical-delivery-guide', 'digital-gold-fees-spread-guide', 'digital-gold-custody-risk-guide', 'digital-gold-empty-selling-risk', 'digital-gold-vs-etf-vs-physical', 'digital-gold-tax-invoice-records', 'digital-gold-small-saving-plan'],
