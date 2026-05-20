@@ -7,6 +7,7 @@ return [
     'fetch_interval_minutes' => (int)env('ESTJT_FETCH_INTERVAL_MINUTES', 1),
     'frontend_refresh_seconds' => (int)env('FRONTEND_REFRESH_SECONDS', 60),
     'summary_cache_seconds' => (int)env('MARKET_SUMMARY_CACHE_SECONDS', 10),
+    'history_cache_seconds' => (int)env('MARKET_HISTORY_CACHE_SECONDS', 45),
     'timeout_connect' => (int)env('ESTJT_TIMEOUT_CONNECT', 3),
     'timeout_read' => (int)env('ESTJT_TIMEOUT_READ', 5),
     'retry_count' => (int)env('ESTJT_RETRY_COUNT', 1),

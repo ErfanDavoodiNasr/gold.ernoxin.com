@@ -50,7 +50,7 @@ class MarketController extends Controller
             return $this->serverErrorResponse();
         }
 
-        return response()->json($payload);
+        return $this->cachedJson($payload, $ttl);
     }
 
     private function itemResource(MarketItem $item): array
@@ -102,12 +102,45 @@ class MarketController extends Controller
     public function history(Request $request, MarketItem $item)
     {
         $range = $this->normalizeRange($request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d'));
+        $ttl = max(10, (int)config('gold.history_cache_seconds', 45));
+
         try {
-            $points = PricePoint::where('market_item_id', $item->id)
-                ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
-                ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
-                ->orderBy('fetched_at')
-                ->get();
+            $latestFetchedAt = PricePoint::where('market_item_id', $item->id)->max('fetched_at') ?: 'empty';
+            $cacheKey = implode(':', [
+                'gold',
+                'market-history',
+                'v3',
+                $item->getKey(),
+                $range['key'],
+                md5((string)$latestFetchedAt),
+            ]);
+
+            $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range) {
+                $points = PricePoint::where('market_item_id', $item->id)
+                    ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
+                    ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
+                    ->orderBy('fetched_at')
+                    ->get();
+
+                $points = $this->repairHistoryPoints($points);
+                $analytics = $this->analytics($points);
+                $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
+
+                return [
+                    'item' => $this->itemResource($item->load('latestPrice')),
+                    'range' => $range['key'],
+                    'analytics' => $analytics,
+                    'points' => $points->map(fn($p) => [
+                        'time' => optional($p->fetched_at)->toIso8601String(),
+                        'current' => $p->current_value,
+                        'high' => $p->high_value,
+                        'low' => $p->low_value,
+                        'change' => $p->change_value,
+                        'percent' => $p->change_percent,
+                        'direction' => $p->direction,
+                    ])->values(),
+                ];
+            });
         } catch (Throwable $exception) {
             Log::error('Market history query failed', [
                 'market_item_id' => $item->id,
@@ -118,23 +151,8 @@ class MarketController extends Controller
 
             return $this->serverErrorResponse();
         }
-        $points = $this->repairHistoryPoints($points);
-        $analytics = $this->analytics($points);
-        $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
-        return response()->json([
-            'item' => $this->itemResource($item->load('latestPrice')),
-            'range' => $range['key'],
-            'analytics' => $analytics,
-            'points' => $points->map(fn($p) => [
-                'time' => optional($p->fetched_at)->toIso8601String(),
-                'current' => $p->current_value,
-                'high' => $p->high_value,
-                'low' => $p->low_value,
-                'change' => $p->change_value,
-                'percent' => $p->change_percent,
-                'direction' => $p->direction,
-            ]),
-        ]);
+
+        return $this->cachedJson($payload, $ttl);
     }
 
     private function normalizeRange($value): array
@@ -250,5 +268,21 @@ class MarketController extends Controller
         return response()->json([
             'message' => 'خطای داخلی سرور رخ داد. لطفاً کمی بعد دوباره تلاش کنید.',
         ], 500);
+    }
+
+    private function cachedJson($payload, int $ttl)
+    {
+        $response = response()->json($payload);
+        $etag = '"' . sha1((string)$response->getContent()) . '"';
+        $headers = [
+            'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=" . ($ttl * 6),
+            'ETag' => $etag,
+        ];
+
+        if (request()->headers->get('If-None-Match') === $etag) {
+            return response('', 304, $headers);
+        }
+
+        return $response->withHeaders($headers);
     }
 }
