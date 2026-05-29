@@ -25,6 +25,7 @@ class EstjtScraper
             'timeout' => config('gold.timeout_connect') + config('gold.timeout_read'),
             'connect_timeout' => config('gold.timeout_connect'),
             'http_errors' => false,
+            'verify' => false,
             'headers' => [
                 'User-Agent' => config('gold.http_headers.user_agent'),
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
