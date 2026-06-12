@@ -26,37 +26,60 @@ const defaultConfig = {
     sourceUrl: 'https://www.estjt.ir/price/',
 };
 
+function chartYAxisWidth(item, values) {
+    if (!values.length) return 72;
+    const labels = values.map((value) => formatAxisPrice(value, item));
+    const longest = labels.reduce((max, label) => Math.max(max, label.length), 0);
+    return Math.min(96, Math.max(58, longest * 7 + 14));
+}
+
+function ChartYAxisTick({x, y, payload, fill, panelFill, item}) {
+    const label = formatAxisPrice(payload.value, item);
+    if (label === '—') return null;
+    const width = Math.max(48, label.length * 6.8 + 8);
+    return (
+        <g className="chartYAxisTick" transform={`translate(${x},${y})`}>
+            <rect x={2} y={-10} width={width} height={20} fill={panelFill} opacity={0.94} rx={4}/>
+            <text x={6} y={4} textAnchor="start" fill={fill} fontSize={11} fontFamily="Vazirmatn, Tahoma, sans-serif">
+                {label}
+            </text>
+        </g>
+    );
+}
+
 const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
-    default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
-        const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
+    default: function ChartRenderer({data, selected, activeRange, colors}) {
+        const {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} = module;
+        const chartData = data
+            .map((point) => ({...point, timeValue: new Date(point.time).getTime()}))
+            .filter((point) => Number.isFinite(point.timeValue));
+        const yAxisWidth = chartYAxisWidth(selected, chartData.map((point) => point.current));
 
         return (
-            <AreaChart width={width} height={height} data={data} margin={{top: 22, right: 8, left: 4, bottom: 14}}>
-                <defs>
-                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
-                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
-                    </linearGradient>
-                </defs>
-                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
-                <XAxis dataKey="time" tickLine={false} axisLine={false}
-                       minTickGap={28}
-                       tickFormatter={(v) => formatChartTick(v, activeRange)}/>
-                <YAxis orientation="right" width={88} tickLine={false} axisLine={false}
-                       domain={chartDomain}
-                       tickCount={5}
-                       label={{
-                           value: chartUnitLabel(selected),
-                           position: 'insideTopRight',
-                           offset: -14
-                       }}
-                       tickFormatter={(v) => formatAxisPrice(v, selected)}/>
-                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
-                         content={<ChartTooltip item={selected}/>}/>
-                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
-                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
-                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
-            </AreaChart>
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{top: 12, right: 2, left: 2, bottom: 8}}>
+                    <defs>
+                        <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
+                            <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
+                    <XAxis dataKey="timeValue" type="number" scale="time" domain={['dataMin', 'dataMax']}
+                           padding={{left: 0, right: 0}} tickLine={false} axisLine={false}
+                           minTickGap={28}
+                           tickFormatter={(value) => formatChartTick(value, activeRange)}/>
+                    <YAxis orientation="right" width={yAxisWidth} tickLine={false} axisLine={false}
+                           domain={chartDomain}
+                           tickCount={5}
+                           tick={<ChartYAxisTick fill={colors.muted} panelFill={colors.panel} item={selected}/>}/>
+                    <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
+                             content={<ChartTooltip item={selected}/>}/>
+                    <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
+                          fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
+                          strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
+                </AreaChart>
+            </ResponsiveContainer>
         );
     },
 })));
@@ -94,10 +117,6 @@ function formatAxisPrice(value, item) {
     const nextValue = displayValue(value, item);
     if (nextValue === null) return '—';
     return formatNumber(nextValue, {maximumFractionDigits: isUsdItem(item) ? 2 : 0});
-}
-
-function chartUnitLabel(item) {
-    return isUsdItem(item) ? 'قیمت، دلار' : 'قیمت، تومان';
 }
 
 function changeTone(direction, percent = null) {
@@ -539,7 +558,12 @@ function App() {
 
 function PriceChart({history, selected, activeRange, accent, theme}) {
     const [chartRef, size] = useElementSize();
-    const [colors, setColors] = useState({accent: accent || defaultConfig.themeAccent, line: '#263241'});
+    const [colors, setColors] = useState({
+        accent: accent || defaultConfig.themeAccent,
+        line: '#263241',
+        panel: '#111821',
+        muted: '#9aa7b4',
+    });
     const data = useMemo(() => history
             .map((point) => ({...point, current: Number(point.current)}))
             .filter((point) => Number.isFinite(point.current) && point.current > 0 && point.time),
@@ -550,14 +574,15 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
         setColors({
             accent: styles.getPropertyValue('--gold').trim() || accent || defaultConfig.themeAccent,
             line: styles.getPropertyValue('--line').trim() || '#263241',
+            panel: styles.getPropertyValue('--panel').trim() || '#111821',
+            muted: styles.getPropertyValue('--muted').trim() || '#9aa7b4',
         });
     }, [accent, theme]);
 
     return <div className="chartCanvas" ref={chartRef}>
         {size.width > 0 && size.height > 0 && data.length > 0 && (
             <React.Suspense fallback={<div className="chartSkeleton" aria-hidden="true"/>}>
-                <ChartRenderer width={size.width} height={size.height} data={data} selected={selected}
-                               activeRange={activeRange} colors={colors}/>
+                <ChartRenderer data={data} selected={selected} activeRange={activeRange} colors={colors}/>
             </React.Suspense>
         )}
     </div>;
