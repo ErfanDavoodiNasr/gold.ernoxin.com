@@ -24,12 +24,85 @@
     @endif
     @endif
     <style>
-        :root{color-scheme:light;--bg:#f5f7f8;--surface:#fff;--text:#182027;--muted:#5c6873;--line:#d7e0e5;--accent:#a87520;--panel:#fff;--panel2:#eef3f5;--gold:#a87520;--blue:#2368a2;--green:#267d5a;--red:#a24646}
-        :root[data-theme=dark]{color-scheme:dark;--bg:#080b10;--surface:#111821;--text:#f8fafc;--muted:#9aa7b4;--line:#263241;--accent:#d9a441;--panel:#111821;--panel2:#17212d;--gold:#d9a441;--blue:#62a8ff;--green:#33d69f;--red:#ff647c}
-        html{font-family:Vazirmatn,Tahoma,sans-serif;background:var(--bg);color:var(--text)}body{margin:0}.shell{width:min(1180px,100%);margin:auto;padding:22px}
-        .topbar,.brand,.hero h1,.hero p,.eyebrow{font-family:Vazirmatn,Tahoma,sans-serif}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px}
-        .hero h1{margin:8px 0 12px;font-size:clamp(28px,5vw,42px);line-height:1.35}.hero p,.brand p{color:var(--muted)}.eyebrow{color:var(--accent);font-size:14px;font-weight:750}
-        .homeLearn,.homeLearn [id=faq]{content-visibility:auto;contain-intrinsic-size:auto 520px}
+        :root {
+            color-scheme: light;
+            --bg: #f5f7f8;
+            --surface: #fff;
+            --text: #182027;
+            --muted: #5c6873;
+            --line: #d7e0e5;
+            --accent: #a87520;
+            --panel: #fff;
+            --panel2: #eef3f5;
+            --gold: #a87520;
+            --blue: #2368a2;
+            --green: #267d5a;
+            --red: #a24646
+        }
+
+        :root[data-theme=dark] {
+            color-scheme: dark;
+            --bg: #080b10;
+            --surface: #111821;
+            --text: #f8fafc;
+            --muted: #9aa7b4;
+            --line: #263241;
+            --accent: #d9a441;
+            --panel: #111821;
+            --panel2: #17212d;
+            --gold: #d9a441;
+            --blue: #62a8ff;
+            --green: #33d69f;
+            --red: #ff647c
+        }
+
+        html {
+            font-family: Vazirmatn, Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text)
+        }
+
+        body {
+            margin: 0
+        }
+
+        .shell {
+            width: min(1180px, 100%);
+            margin: auto;
+            padding: 22px
+        }
+
+        .topbar, .brand, .hero h1, .hero p, .eyebrow {
+            font-family: Vazirmatn, Tahoma, sans-serif
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px
+        }
+
+        .hero h1 {
+            margin: 8px 0 12px;
+            font-size: clamp(28px, 5vw, 42px);
+            line-height: 1.35
+        }
+
+        .hero p, .brand p {
+            color: var(--muted)
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 750
+        }
+
+        .homeLearn {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 320px
+        }
     </style>
     @foreach(($seo['alternateRanges'] ?? []) as $range)
     <link rel="alternate" href="{{ $range['url'] }}" title="{{ $range['title'] }}">
@@ -41,7 +114,8 @@
     <meta property="og:description"
           content="{{ $seo['description'] ?? 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار و تاریخچه تغییرات.' }}">
     <meta property="og:url" content="{{ $seo['canonical'] ?? url('/price/') }}">
-    <meta property="og:image" content="{{ $seo['ogImage'] ?? url(config('learn.price_og_image', config('learn.default_og_image'))) }}">
+    <meta property="og:image"
+          content="{{ $seo['ogImage'] ?? url(config('learn.price_og_image', config('learn.default_og_image'))) }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="قیمت طلا امروز و قیمت لحظه‌ای سکه — Ernoxin Gold">
@@ -65,7 +139,12 @@
         })();
     </script>
     @if(!empty($seo['jsonLd']))
-    <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}</script>
+    <script type="application/ld+json">{
+            !!
+            json_encode($seo[
+            'jsonLd'
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!
+        }</script>
     @endif
     @php($manifestPath = public_path('build/manifest.json'))
     @if(file_exists($manifestPath))
@@ -152,37 +231,6 @@
 </main>
 <div id="root"></div>
 <?php
-    $faqGold = collect($seoItems ?? [])->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
-        ?: collect($seoItems ?? [])->firstWhere('category', 'gold');
-    $faqCoin = collect($seoItems ?? [])->firstWhere('category', 'coin');
-    $faqGoldPrice = $faqGold ? number_format((float)($faqGold->latestPrice?->current_value ?? 0), 0, '.', ',') . ' تومان' : 'نامشخص';
-    $faqCoinPrice = $faqCoin ? number_format((float)($faqCoin->latestPrice?->current_value ?? 0), 0, '.', ',') . ' تومان' : 'نامشخص';
-?>
-@if(!empty($seoItems) && count($seoItems) > 0)
-<section class="homeLearn shell" id="faq" aria-label="سوالات پرتکرار قیمت طلا">
-    <div class="homeLearnHeader">
-        <div>
-            <span class="eyebrow">سوالات پرتکرار</span>
-            <h2>قیمت طلا امروز — پاسخ سریع</h2>
-        </div>
-    </div>
-    <div class="faqPreview">
-        <details class="faqItem" open>
-            <summary>قیمت طلای ۱۸ عیار امروز چقدر است؟</summary>
-            <p>بر اساس آخرین داده ثبت‌شده از اتحادیه طلا تهران، قیمت طلای ۱۸ عیار: {{ $faqGoldPrice }}. این عدد فقط برای اطلاع‌رسانی است و ممکن است با قیمت فروشگاه متفاوت باشد.</p>
-        </details>
-        <details class="faqItem">
-            <summary>قیمت سکه امروز چقدر است؟</summary>
-            <p>بر اساس آخرین داده ثبت‌شده، قیمت سکه: {{ $faqCoinPrice }}. برای جزئیات بیشتر به داشبورد قیمت زنده در بالای صفحه مراجعه کنید.</p>
-        </details>
-        <details class="faqItem">
-            <summary>منبع قیمت طلا در این سایت چیست؟</summary>
-            <p>قیمت‌ها از اتحادیه صنف فروشندگان و سازندگان طلا و جواهر تهران (estjt.ir) دریافت و به‌صورت دوره‌ای به‌روزرسانی می‌شوند.</p>
-        </details>
-    </div>
-</section>
-@endif
-<?php
 $learnExtras = config('learn_extras', []);
 $learnDefaults = $learnExtras['defaults'] ?? [];
 unset($learnExtras['defaults']);
@@ -204,32 +252,6 @@ $latestLearn = $learnPages->only([
         'online-gold-buying-risks',
 ]);
 ?>
-<section class="homeLearn shell" aria-label="صفحات تخصصی قیمت طلا">
-    <div class="homeLearnHeader">
-        <div>
-            <span class="eyebrow">جستجوهای پرتکرار</span>
-            <h2>قیمت‌های تخصصی بازار</h2>
-            <p>صفحات اختصاصی برای مظنه، حباب سکه و انس جهانی — با قیمت زنده و لینک به مقالات.</p>
-        </div>
-    </div>
-    <div class="articleGrid">
-        <a class="articleCard" href="/price/mozaneh" style="display:block;color:inherit;text-decoration:none">
-            <span>مظنه تهران</span>
-            <h3>قیمت مظنه طلا امروز</h3>
-            <p>آخرین مظنه از منبع رسمی + راهنمای تفاوت با گرم ۱۸ عیار.</p>
-        </a>
-        <a class="articleCard" href="/price/coin-bubble" style="display:block;color:inherit;text-decoration:none">
-            <span>حباب سکه</span>
-            <h3>حباب سکه امروز</h3>
-            <p>قیمت لحظه‌ای سکه و راهنمای خواندن حباب.</p>
-        </a>
-        <a class="articleCard" href="/price/ounce" style="display:block;color:inherit;text-decoration:none">
-            <span>انس جهانی</span>
-            <h3>قیمت انس جهانی طلا</h3>
-            <p>اونس لحظه‌ای و اثر آن بر بازار ایران.</p>
-        </a>
-    </div>
-</section>
 <section class="homeLearn shell" aria-label="مطالب آموزشی بازار طلا">
     <div class="homeLearnHeader">
         <div>
@@ -255,29 +277,17 @@ $latestLearn = $learnPages->only([
         @endforeach
     </div>
 
-    <div class="learnSplit">
-        <section class="learnPanel">
-            <h2>آخرین راهنماهای آموزشی</h2>
-            <div class="compactLinks">
-                @foreach($latestLearn as $page)
-                <a href="{{ $blogPath }}/{{ $page['slug'] }}">
-                    <strong>{{ $page['title'] }}</strong>
-                    <small>{{ $page['category'] ?? 'آموزش' }} · {{ $page['reading_time'] ?? '۶ دقیقه' }}</small>
-                </a>
-                @endforeach
-            </div>
-        </section>
-
-        <section class="learnPanel">
-            <h2>سوالات پرتکرار</h2>
-            <div class="faqPreview">
-                <a href="{{ $blogPath }}/gold-bubble#faq">حباب سکه چیست و چرا تغییر می‌کند؟</a>
-                <a href="{{ $blogPath }}/18k-gold#faq">طلای ۱۸ عیار یعنی طلای خالص؟</a>
-                <a href="{{ $blogPath }}/gold-price-calculation#faq">قیمت طلا چگونه محاسبه می‌شود؟</a>
-                <a href="{{ $blogPath }}/buying-gold-safely#faq">قبل از خرید طلا چه چیزهایی را بررسی کنیم؟</a>
-            </div>
-        </section>
-    </div>
+    <section class="learnPanel latestGuides">
+        <h2>آخرین راهنماهای آموزشی</h2>
+        <div class="compactLinks">
+            @foreach($latestLearn as $page)
+            <a href="{{ $blogPath }}/{{ $page['slug'] }}">
+                <strong>{{ $page['title'] }}</strong>
+                <small>{{ $page['category'] ?? 'آموزش' }} · {{ $page['reading_time'] ?? '۶ دقیقه' }}</small>
+            </a>
+            @endforeach
+        </div>
+    </section>
 </section>
 </body>
 </html>

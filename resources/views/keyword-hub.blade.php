@@ -40,33 +40,209 @@
         })();
     </script>
     @if(!empty($seo['jsonLd']))
-    <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}</script>
+    <script type="application/ld+json">{
+            !!
+            json_encode($seo[
+            'jsonLd'
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!
+        }</script>
     @endif
     <style>
-        @font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
-        :root{color-scheme:light;--bg:#f5f7f8;--surface:#fff;--surface-soft:#eef3f5;--text:#182027;--muted:#5c6873;--line:#d7e0e5;--accent:#a87520;--blue:#2368a2}
-        :root[data-theme=dark]{color-scheme:dark;--bg:#080b10;--surface:#111821;--surface-soft:#17212d;--text:#f8fafc;--muted:#9aa7b4;--line:#263241;--accent:#d9a441;--blue:#62a8ff}
-        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.9}
-        a{color:var(--blue);text-decoration:none}.shell{width:min(1180px,100%);margin:auto;padding:22px}
-        .top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-        .nav{display:flex;gap:10px;flex-wrap:wrap}.nav a{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px;color:var(--text)}
-        .hero{padding:28px 0;border-bottom:1px solid var(--line)}.eyebrow{color:var(--accent);font-size:14px;font-weight:750}
-        h1{margin:8px 0 12px;font-size:clamp(30px,5vw,46px);line-height:1.35}h2{font-size:24px;margin:34px 0 12px}
-        .lead{font-size:18px;color:var(--muted);max-width:860px}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:14px}
-        .pill{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px}
-        .priceGrid,.articleGrid,.hubNav{display:grid;gap:12px}.priceGrid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:18px}
-        .articleGrid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.hubNav{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:18px}
-        .card,.priceCard{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px}
-        .priceCard strong{display:block;font-size:22px;margin:8px 0}.priceCard small{color:var(--muted)}
-        .faq details{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;margin-top:10px}
-        .faq summary{cursor:pointer;font-weight:800}.cta{display:inline-block;margin-top:18px;border:1px solid var(--accent);border-radius:10px;background:var(--accent);color:#fff;padding:10px 16px;font-weight:800}
-        footer{border-top:1px solid var(--line);margin-top:36px;padding-top:16px;color:var(--muted);font-size:14px}
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap
+        }
+
+        :root {
+            color-scheme: light;
+            --bg: #f5f7f8;
+            --surface: #fff;
+            --surface-soft: #eef3f5;
+            --text: #182027;
+            --muted: #5c6873;
+            --line: #d7e0e5;
+            --accent: #a87520;
+            --blue: #2368a2
+        }
+
+        :root[data-theme=dark] {
+            color-scheme: dark;
+            --bg: #080b10;
+            --surface: #111821;
+            --surface-soft: #17212d;
+            --text: #f8fafc;
+            --muted: #9aa7b4;
+            --line: #263241;
+            --accent: #d9a441;
+            --blue: #62a8ff
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Vazirmatn, Tahoma, sans-serif;
+            line-height: 1.9
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none
+        }
+
+        .shell {
+            width: min(1180px, 100%);
+            margin: auto;
+            padding: 22px
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .nav a {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            padding: 8px 12px;
+            color: var(--text)
+        }
+
+        .hero {
+            padding: 28px 0;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 750
+        }
+
+        h1 {
+            margin: 8px 0 12px;
+            font-size: clamp(30px, 5vw, 46px);
+            line-height: 1.35
+        }
+
+        h2 {
+            font-size: 24px;
+            margin: 34px 0 12px
+        }
+
+        .lead {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 860px
+        }
+
+        .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        .pill {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface);
+            padding: 6px 10px
+        }
+
+        .priceGrid, .articleGrid, .hubNav {
+            display: grid;
+            gap: 12px
+        }
+
+        .priceGrid {
+            grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+            margin-top: 18px
+        }
+
+        .articleGrid {
+            grid-template-columns:repeat(auto-fit, minmax(260px, 1fr))
+        }
+
+        .hubNav {
+            grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+            margin-top: 18px
+        }
+
+        .card, .priceCard {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px
+        }
+
+        .priceCard strong {
+            display: block;
+            font-size: 22px;
+            margin: 8px 0
+        }
+
+        .priceCard small {
+            color: var(--muted)
+        }
+
+        .faq details {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 10px
+        }
+
+        .faq summary {
+            cursor: pointer;
+            font-weight: 800
+        }
+
+        .cta {
+            display: inline-block;
+            margin-top: 18px;
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 16px;
+            font-weight: 800
+        }
+
+        footer {
+            border-top: 1px solid var(--line);
+            margin-top: 36px;
+            padding-top: 16px;
+            color: var(--muted);
+            font-size: 14px
+        }
     </style>
 </head>
 <body>
 <div class="shell">
     <header class="top">
-        <a href="/price/" style="color:var(--text);font-weight:850;font-size:18px;text-decoration:none">سکه و طلای ارنوکسین</a>
+        <a href="/price/" style="color:var(--text);font-weight:850;font-size:18px;text-decoration:none">سکه و طلای
+            ارنوکسین</a>
         <nav class="nav" aria-label="ناوبری">
             <a href="/price/">قیمت زنده</a>
             <a href="{{ $blogPath }}">بلاگ</a>
@@ -92,13 +268,15 @@
         @if($featuredItems->isNotEmpty())
         <section>
             <h2>قیمت‌های مرتبط</h2>
-            <p class="lead" style="font-size:15px;margin-bottom:12px">داده‌های زنده از اتحادیه طلا تهران — {{ $featuredItems->count() }} نماد مرتبط با این صفحه.</p>
+            <p class="lead" style="font-size:15px;margin-bottom:12px">داده‌های زنده از اتحادیه طلا تهران — {{
+                $featuredItems->count() }} نماد مرتبط با این صفحه.</p>
             <div class="priceGrid">
                 @foreach($featuredItems as $item)
                 <article class="priceCard" id="item-{{ $item->id }}">
                     <small>{{ $item->category === 'coin' ? 'سکه' : 'طلا' }}</small>
                     <strong>{{ $item->name }}</strong>
-                    <strong>{{ number_format((float)($item->latestPrice?->current_value ?? 0), $item->currency === 'USD' ? 2 : 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</strong>
+                    <strong>{{ number_format((float)($item->latestPrice?->current_value ?? 0), $item->currency === 'USD'
+                        ? 2 : 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</strong>
                     <small>تغییر: {{ $item->latestPrice?->change_percent ?? '—' }}٪</small>
                 </article>
                 @endforeach
@@ -144,7 +322,8 @@
     </main>
 
     <footer>
-        <p>داده‌ها از منبع رسمی اتحادیه طلا تهران دریافت می‌شوند. این صفحات آموزشی و اطلاع‌رسانی هستند، نه مشاوره سرمایه‌گذاری.</p>
+        <p>داده‌ها از منبع رسمی اتحادیه طلا تهران دریافت می‌شوند. این صفحات آموزشی و اطلاع‌رسانی هستند، نه مشاوره
+            سرمایه‌گذاری.</p>
     </footer>
 </div>
 </body>

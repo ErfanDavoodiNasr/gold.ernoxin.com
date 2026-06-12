@@ -664,6 +664,10 @@ body.appReady .seoAppFallback {
     padding: 16px
 }
 
+.latestGuides {
+    margin-top: 12px
+}
+
 .articleCard span {
     color: var(--gold);
     font-size: 12px

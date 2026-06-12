@@ -83,7 +83,7 @@ class PricePageController extends Controller
                 'url' => url("/price/trends/{$range}"),
                 'title' => "روند {$range} روزه قیمت طلا و سکه",
             ])->all(),
-            'jsonLd' => $this->jsonLd($items, $availableRanges, $days, $updatedAt, $goldPrice, $coinPrice),
+            'jsonLd' => $this->jsonLd($items, $availableRanges, $days, $updatedAt),
         ];
     }
 
@@ -105,7 +105,7 @@ class PricePageController extends Controller
         return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
     }
 
-    private function jsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt, string $goldPrice, string $coinPrice): array
+    private function jsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
     {
         $pageUrl = url($days ? "/price/trends/{$days}" : '/price/');
         $pageName = $days
@@ -176,41 +176,6 @@ class PricePageController extends Controller
             ])->all(),
         ];
 
-        $faq = null;
-        if (!$days && $items->isNotEmpty()) {
-            $sourceName = config('gold.source_name');
-            $faq = [
-                '@type' => 'FAQPage',
-                '@id' => url('/price/#faq'),
-                'mainEntity' => array_values(array_filter([
-                    [
-                        '@type' => 'Question',
-                        'name' => 'قیمت طلای ۱۸ عیار امروز چقدر است؟',
-                        'acceptedAnswer' => [
-                            '@type' => 'Answer',
-                            'text' => "بر اساس آخرین داده ثبت‌شده از {$sourceName}، قیمت طلای ۱۸ عیار: {$goldPrice}. این عدد فقط برای اطلاع‌رسانی است و ممکن است با قیمت فروشگاه متفاوت باشد.",
-                        ],
-                    ],
-                    [
-                        '@type' => 'Question',
-                        'name' => 'قیمت سکه امروز چقدر است؟',
-                        'acceptedAnswer' => [
-                            '@type' => 'Answer',
-                            'text' => "بر اساس آخرین داده ثبت‌شده از {$sourceName}، قیمت سکه: {$coinPrice}. برای جزئیات بیشتر به داشبورد قیمت زنده مراجعه کنید.",
-                        ],
-                    ],
-                    [
-                        '@type' => 'Question',
-                        'name' => 'منبع قیمت طلا در این سایت چیست؟',
-                        'acceptedAnswer' => [
-                            '@type' => 'Answer',
-                            'text' => "قیمت‌ها از {$sourceName} (estjt.ir) دریافت و به‌صورت دوره‌ای به‌روزرسانی می‌شوند. این سایت مرجع رسمی اعلام قیمت طلا و سکه در تهران است.",
-                        ],
-                    ],
-                ])),
-            ];
-        }
-
         $breadcrumbItems = [
             ['@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => url('/')],
             ['@type' => 'ListItem', 'position' => 2, 'name' => 'قیمت طلا و سکه', 'item' => url('/price/')],
@@ -264,10 +229,6 @@ class PricePageController extends Controller
             $dataset,
             $marketList,
         ];
-
-        if ($faq) {
-            $graph[] = $faq;
-        }
 
         return [
             '@context' => 'https://schema.org',
