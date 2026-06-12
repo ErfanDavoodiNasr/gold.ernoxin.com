@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 
-Disallow: /api/market/fetch
 Disallow: /blog/search-index.json
 
 Sitemap: https://gold.ernoxin.com/sitemap.xml

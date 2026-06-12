@@ -17,7 +17,6 @@ import '../css/app.css';
 
 const defaultConfig = {
     chartDefaultRange: '1d',
-    chartDefaultRangeDays: 1,
     chartAvailableRanges: ['1h', '2h', '6h', '12h', '1d', '7d', '30d', '90d'],
     autoRefreshSeconds: 60,
     themeDefault: 'system',
@@ -321,7 +320,7 @@ function App() {
             if (!res.ok) throw new Error('summary_failed');
             const data = await res.json();
             const nextConfig = {...defaultConfig, ...(data.config || {})};
-            nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange || nextConfig.chartDefaultRangeDays);
+            nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange);
             nextConfig.chartAvailableRanges = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
             setConfig(nextConfig);
             setRange((current) => current || nextConfig.chartDefaultRange);

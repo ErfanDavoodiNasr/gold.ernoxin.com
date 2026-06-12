@@ -12,8 +12,7 @@ return [
     'timeout_read' => (int)env('ESTJT_TIMEOUT_READ', 5),
     'retry_count' => (int)env('ESTJT_RETRY_COUNT', 1),
     'retry_backoff_milliseconds' => (int)env('ESTJT_RETRY_BACKOFF_MS', 150),
-    'chart_default_range' => env('CHART_DEFAULT_RANGE') ?: ((env('CHART_DEFAULT_RANGE_DAYS') ?: 1) . 'd'),
-    'chart_default_range_days' => (int)env('CHART_DEFAULT_RANGE_DAYS', 1),
+    'chart_default_range' => env('CHART_DEFAULT_RANGE', '1d'),
     'chart_available_ranges' => array_values(array_filter(array_map('trim', explode(',', env('CHART_AVAILABLE_RANGES', '1h,2h,6h,12h,1d,7d,30d,90d,180d,365d'))))),
     'chart_max_points' => (int)env('CHART_MAX_POINTS', 600),
     'history_max_days' => (int)env('HISTORY_MAX_DAYS', 365),
@@ -33,9 +32,7 @@ return [
     ],
     'features' => [
         'dark_mode' => true,
-        'manual_fetch_api' => filter_var(env('MANUAL_FETCH_API', false), FILTER_VALIDATE_BOOLEAN),
     ],
-    'manual_fetch_token' => env('MANUAL_FETCH_TOKEN'),
     'hosting' => [
         'auto_migrate' => true,
         'ensure_writable_paths' => true,

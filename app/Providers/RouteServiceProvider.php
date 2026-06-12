@@ -18,10 +18,6 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->ip());
         });
 
-        RateLimiter::for('manual-fetch', function (Request $request) {
-            return Limit::perMinute(3)->by($request->ip());
-        });
-
         $this->routes(function () {
             Route::prefix('api')->middleware('api')->group(base_path('routes/api.php'));
             Route::middleware('web')->group(base_path('routes/web.php'));

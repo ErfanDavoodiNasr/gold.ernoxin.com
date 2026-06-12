@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\FetchLog;
 use App\Models\MarketItem;
 use App\Models\PricePoint;
-use App\Services\PriceIngestor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +29,6 @@ class MarketController extends Controller
                         'sourceName' => config('gold.source_name'),
                         'sourceUrl' => config('gold.source_url'),
                         'chartDefaultRange' => $this->normalizeRange(config('gold.chart_default_range', '1d'))['key'],
-                        'chartDefaultRangeDays' => config('gold.chart_default_range_days'),
                         'chartAvailableRanges' => config('gold.chart_available_ranges'),
                         'historyMaxDays' => config('gold.history_max_days'),
                         'chartMaxPoints' => config('gold.chart_max_points'),
@@ -277,29 +275,5 @@ class MarketController extends Controller
         return $points
             ->filter(fn($point, $index) => $index % $stride === 0 || $index === $lastIndex)
             ->values();
-    }
-
-    public function fetch(PriceIngestor $ingestor)
-    {
-        if (!config('gold.features.manual_fetch_api')) {
-            return response()->json(['message' => 'دریافت دستی از API غیرفعال است.'], 403);
-        }
-        $token = (string)config('gold.manual_fetch_token');
-        $provided = (string)request()->bearerToken();
-        if ($token === '' || $provided === '' || !hash_equals($token, $provided)) {
-            return response()->json(['message' => 'دسترسی غیرمجاز است.'], 401);
-        }
-        try {
-            $result = $ingestor->fetchAndStore();
-        } catch (Throwable $exception) {
-            Log::error('Manual market fetch failed', [
-                'exception' => get_class($exception),
-                'message' => $exception->getMessage(),
-            ]);
-
-            return $this->serverErrorResponse();
-        }
-
-        return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
     }
 }

@@ -95,10 +95,7 @@ Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
 ```text
 GET  /api/market/summary
 GET  /api/market/items/{id}/history?range=1d
-POST /api/market/fetch
 ```
-
-API دریافت دستی قیمت به صورت پیش‌فرض غیرفعال است و فقط با `MANUAL_FETCH_API=true` و Bearer token کار می‌کند.
 
 ## توسعه محلی
 

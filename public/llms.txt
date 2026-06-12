@@ -46,10 +46,6 @@ Prices are fetched from the official Tehran Gold & Jewelry Union website (estjt.
 - Search: `/blog?q=` — internal search (noindex)
 - API (read-only): `/api/market/summary` — JSON market summary
 
-## Do Not Crawl
-
-- `/api/market/fetch` — write-only manual fetch endpoint
-
 ## Language
 
 All public content is in Persian (fa-IR), RTL layout.
