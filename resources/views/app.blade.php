@@ -205,8 +205,15 @@
             <p>{{ $seo['description'] ?? 'آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه
                 تغییرات.' }}</p>
         </div>
+        @php($seoStats = collect($seoItems ?? []))
         <div class="stats">
-            <div class="metric"><strong>{{ count($seoItems ?? []) }}</strong><span>نماد فعال</span></div>
+            <div class="metric"><strong>{{ $seoStats->count() }}</strong><span>نماد فعال</span></div>
+            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
+                    'asc')->count() }}</strong><span>صعودی</span></div>
+            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
+                    'none')->count() }}</strong><span>بدون تغییر</span></div>
+            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
+                    'desc')->count() }}</strong><span>نزولی</span></div>
         </div>
     </section>
     @if(!empty($seoItems) && count($seoItems) > 0)
@@ -222,7 +229,8 @@
                             <b>{{ $item->name }}</b>
                             <small>{{ number_format((float)($item->latestPrice?->current_value ?? 0), 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</small>
                         </span>
-                <span class="badge {{ $item->latestPrice?->direction === 'desc' ? 'down' : 'up' }}">{{ $item->latestPrice?->change_percent ?? '—' }}٪</span>
+                @php($direction = $item->latestPrice?->direction ?? 'none')
+                <span class="badge {{ $direction === 'desc' ? 'down' : ($direction === 'asc' ? 'up' : 'flat') }}">{{ $item->latestPrice?->change_percent ?? '—' }}٪</span>
             </div>
             @endforeach
         </div>

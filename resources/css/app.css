@@ -17,6 +17,7 @@
     --gold: #d9a441;
     --green: #33d69f;
     --red: #ff647c;
+    --neutral: #8b95a3;
     --blue: #62a8ff;
     --shadow: 0 24px 70px rgba(0, 0, 0, .28)
 }
@@ -225,7 +226,7 @@ button {
 }
 
 .metric {
-    min-width: 104px;
+    min-width: 92px;
     padding: 15px;
     border: 1px solid var(--line);
     border-radius: 14px;
@@ -266,6 +267,10 @@ button {
 
 .metric.down strong {
     color: var(--red)
+}
+
+.metric.flat strong {
+    color: var(--neutral)
 }
 
 .notice {
@@ -399,6 +404,11 @@ button {
 .badge.down, .down {
     color: var(--red);
     background: rgba(255, 100, 124, .12)
+}
+
+.badge.flat, .flat {
+    color: var(--neutral);
+    background: rgba(139, 149, 163, .14)
 }
 
 .up {
@@ -916,7 +926,7 @@ body.appReady .seoAppFallback {
 
     .stats {
         display: grid;
-        grid-template-columns:repeat(3, minmax(0, 1fr));
+        grid-template-columns:repeat(2, minmax(0, 1fr));
         overflow: visible
     }
 

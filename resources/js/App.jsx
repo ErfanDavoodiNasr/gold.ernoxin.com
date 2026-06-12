@@ -5,6 +5,7 @@ import {
     ArrowUp,
     BarChart3,
     Coins,
+    Minus,
     Moon,
     RefreshCw,
     Search,
@@ -97,6 +98,23 @@ function formatAxisPrice(value, item) {
 
 function chartUnitLabel(item) {
     return isUsdItem(item) ? 'قیمت، دلار' : 'قیمت، تومان';
+}
+
+function changeTone(direction, percent = null) {
+    if (direction === 'desc') return 'down';
+    if (direction === 'asc') return 'up';
+    if (direction === 'none') return 'flat';
+    const value = Number(percent);
+    if (Number.isFinite(value) && value < 0) return 'down';
+    if (Number.isFinite(value) && value > 0) return 'up';
+    return 'flat';
+}
+
+function ChangeIcon({direction, percent = null, size = 16, variant = 'arrow'}) {
+    const tone = changeTone(direction, percent);
+    if (tone === 'down') return <ArrowDown size={size}/>;
+    if (tone === 'up') return variant === 'trend' ? <TrendingUp size={size}/> : <ArrowUp size={size}/>;
+    return <Minus size={size}/>;
 }
 
 function chartDomain([dataMin, dataMax]) {
@@ -411,6 +429,7 @@ function App() {
 
     const filtered = useMemo(() => items.filter((item) => item.name.includes(query)), [items, query]);
     const gainers = items.filter((item) => item.direction === 'asc').length;
+    const unchanged = items.filter((item) => item.direction === 'none').length;
     const losers = items.filter((item) => item.direction === 'desc').length;
     const ranges = config.chartAvailableRanges?.length ? config.chartAvailableRanges : defaultConfig.chartAvailableRanges;
     const activeRange = range || config.chartDefaultRange || defaultConfig.chartDefaultRange;
@@ -452,6 +471,7 @@ function App() {
                 <div className="stats">
                     <Metric value={items.length} label="نماد فعال"/>
                     <Metric value={gainers} label="صعودی"/>
+                    <Metric value={unchanged} label="بدون تغییر"/>
                     <Metric value={losers} label="نزولی"/>
                 </div>
             </section>
@@ -489,10 +509,10 @@ function App() {
 
                     <div className="priceLine">
                         <strong>{formatPrice(selected?.current, selected)}</strong>
-                        <span className={selected?.direction === 'desc' ? 'down' : 'up'}>
-              {selected?.direction === 'desc' ? <ArrowDown size={16}/> : <ArrowUp size={16}/>}
+                        <span className={changeTone(selected?.direction, selected?.percent)}>
+                            <ChangeIcon direction={selected?.direction} percent={selected?.percent} size={16}/>
                             {formatPrice(selected?.change, selected)} ({formatNumber(selected?.percent)}٪)
-            </span>
+                        </span>
                     </div>
 
                     <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
@@ -509,7 +529,7 @@ function App() {
                         <Metric value={analytics?.max} item={selected} label="بالاترین قیمت" compact price/>
                         <Metric value={analytics?.min} item={selected} label="پایین‌ترین قیمت" compact price/>
                         <Metric value={analytics?.changePercent} label="تغییرات ٪" compact
-                                tone={analytics?.changePercent < 0 ? 'down' : 'up'}/>
+                                tone={changeTone(null, analytics?.changePercent)}/>
                     </div>
                 </section>
             </section>
@@ -549,13 +569,15 @@ function Metric({value, label, compact = false, tone = '', item = null, price = 
 }
 
 function MarketItem({item, active, onClick}) {
-    const positive = item.direction !== 'desc';
+    const tone = changeTone(item.direction, item.percent);
     return (
         <button className={`marketItem ${active ? 'active' : ''}`} onClick={onClick}>
             <span className="itemIcon">{item.category === 'coin' ? <Coins size={20}/> : <BarChart3 size={20}/>}</span>
             <span className="itemMain"><b>{item.name}</b><small>{formatPrice(item.current, item)}</small></span>
-            <span className={positive ? 'badge up' : 'badge down'}>{positive ? <TrendingUp size={14}/> :
-                <ArrowDown size={14}/>}{formatNumber(item.percent)}٪</span>
+            <span className={`badge ${tone}`}>
+                <ChangeIcon direction={item.direction} percent={item.percent} size={14} variant="trend"/>
+                {formatNumber(item.percent)}٪
+            </span>
         </button>
     );
 }
