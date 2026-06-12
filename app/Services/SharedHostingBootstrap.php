@@ -8,10 +8,24 @@ class SharedHostingBootstrap
 {
     public function run(): void
     {
+        $this->loadEnvBootstrap();
+
         $this->ensureWritableDirectories();
         $this->ensureEnvironmentFile();
         $this->ensureApplicationKey();
         $this->ensureDatabaseSchema();
+    }
+
+    private function loadEnvBootstrap(): void
+    {
+        static $loaded = false;
+
+        if ($loaded) {
+            return;
+        }
+
+        require_once base_path('bootstrap/env-bootstrap.php');
+        $loaded = true;
     }
 
     private function ensureWritableDirectories(): void
@@ -117,13 +131,7 @@ class SharedHostingBootstrap
 
     private function ensureEnvironmentFile(): void
     {
-        $path = base_path('.env');
-        $examplePath = base_path('.env.example');
-
-        if (!file_exists($path) && file_exists($examplePath)) {
-            @rename($examplePath, $path);
-            $this->chmodFile($path);
-        }
+        env_bootstrap_promote_example(base_path());
     }
 
     private function ensureApplicationKey(): void
@@ -133,41 +141,14 @@ class SharedHostingBootstrap
         }
 
         try {
-            $key = 'base64:' . base64_encode(random_bytes(32));
-            config(['app.key' => $key]);
-            $this->writeEnvironmentValue('APP_KEY', $key);
+            $key = env_bootstrap_ensure_app_key(base_path());
+
+            if ($key) {
+                config(['app.key' => $key]);
+            }
         } catch (\Throwable $e) {
             report($e);
         }
-    }
-
-    private function writeEnvironmentValue(string $name, string $value): void
-    {
-        $path = base_path('.env');
-        $line = $name . '=' . $value;
-
-        if (!file_exists($path)) {
-            @file_put_contents($path, $line . PHP_EOL, LOCK_EX);
-            $this->chmodFile($path);
-            return;
-        }
-
-        if (!is_writable($path)) {
-            $this->chmodFile($path);
-        }
-
-        $contents = @file_get_contents($path);
-        if ($contents === false) {
-            return;
-        }
-
-        if (preg_match('/^' . preg_quote($name, '/') . '=.*$/m', $contents)) {
-            $contents = preg_replace('/^' . preg_quote($name, '/') . '=.*$/m', $line, $contents);
-        } else {
-            $contents = rtrim($contents) . PHP_EOL . $line . PHP_EOL;
-        }
-
-        @file_put_contents($path, $contents, LOCK_EX);
     }
 
     private function ensureDatabaseSchema(): void

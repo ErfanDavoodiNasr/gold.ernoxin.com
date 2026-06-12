@@ -1,8 +1,5 @@
 <?php
 
-$envPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
-$examplePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env.example';
+require __DIR__ . '/env-bootstrap.php';
 
-if (!is_file($envPath) && is_file($examplePath)) {
-    @rename($examplePath, $envPath);
-}
+env_bootstrap_run();
