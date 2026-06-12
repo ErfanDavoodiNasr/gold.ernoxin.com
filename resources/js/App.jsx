@@ -432,6 +432,7 @@ function App() {
                         داده‌های {config.sourceName}</p></div>
                 </div>
                 <div className="actions">
+                    <a className="navLink" href="/blog">بلاگ</a>
                     <button className="iconButton" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                             title="تغییر پوسته" aria-label="تغییر پوسته">
                         {theme === 'dark' ? <Sun size={19}/> : <Moon size={19}/>}

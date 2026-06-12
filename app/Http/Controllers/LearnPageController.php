@@ -20,21 +20,28 @@ class LearnPageController extends Controller
         $allPages = $this->pages();
         $query = trim((string)$request->query('q', ''));
         $pages = $query !== '' ? $this->searchPages($allPages, $query) : $allPages;
+        $resultCount = count($pages);
         $title = 'بلاگ طلا و سکه ارنوکسین';
         $description = 'مقاله‌های کاربردی فارسی درباره قیمت طلا، سکه، اجرت، مالیات، فاکتور، اصالت و ریسک‌های خرید.';
         $basePath = config('learn.base_path', '/blog');
+
+        if ($query !== '') {
+            $title = "نتایج جستجو برای «{$query}» | بلاگ طلا و سکه";
+            $description = "{$resultCount} مقاله مرتبط با «{$query}» درباره قیمت طلا، سکه و بازار ایران.";
+        }
 
         return response()->view('learn.index', [
             'pages' => $pages,
             'allPages' => $allPages,
             'basePath' => $basePath,
             'searchQuery' => $query,
-            'resultCount' => count($pages),
+            'resultCount' => $resultCount,
             'searchIndexUrl' => "{$basePath}/search-index.json",
             'seo' => [
                 'title' => $title,
                 'description' => $description,
                 'canonical' => url($basePath),
+                'robots' => $query !== '' ? 'noindex,follow' : 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1',
                 'ogImage' => url(config('learn.default_og_image')),
                 'type' => 'website',
                 'jsonLd' => $this->schema->index($allPages, $title, $description),
@@ -278,6 +285,31 @@ class LearnPageController extends Controller
         }
 
         return Str::limit($page['meta_description'] ?? $page['intro'] ?? '', 230);
+    }
+
+    public function feed(): Response
+    {
+        $basePath = config('learn.base_path', '/blog');
+        $pages = $this->pages();
+        $pubDate = \DateTime::createFromFormat('Y-m-d', config('learn.reviewed_at_iso')) ?: now();
+
+        $items = collect($pages)->map(function ($page, $slug) use ($basePath, $pubDate) {
+            return [
+                'title' => htmlspecialchars($page['title'] ?? $slug, ENT_XML1 | ENT_QUOTES, 'UTF-8'),
+                'url' => url("{$basePath}/{$slug}"),
+                'description' => htmlspecialchars($page['meta_description'] ?? $page['quick_summary'] ?? '', ENT_XML1 | ENT_QUOTES, 'UTF-8'),
+                'category' => htmlspecialchars($page['category'] ?? 'آموزش طلا و سکه', ENT_XML1 | ENT_QUOTES, 'UTF-8'),
+                'pubDate' => $pubDate->format(\DateTimeInterface::RSS),
+            ];
+        })->take(30)->values()->all();
+
+        return response()
+            ->view('learn.feed', [
+                'basePath' => $basePath,
+                'items' => $items,
+                'lastBuildDate' => now()->format(\DateTimeInterface::RSS),
+            ])
+            ->header('Content-Type', 'application/rss+xml; charset=UTF-8');
     }
 
     public function searchIndexJson(): JsonResponse

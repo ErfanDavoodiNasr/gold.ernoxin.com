@@ -4,13 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b0f14">
-    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+    <meta name="robots" content="{{ $seo['robots'] ?? 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1' }}">
     <meta name="description" content="{{ $seo['description'] }}">
     @if(!empty($seo['keywords']))
-    <meta name="keywords" content="{{ implode(',', $seo['keywords']) }}">
+    <meta name="keywords" content="{{ is_array($seo['keywords']) ? implode(',', $seo['keywords']) : $seo['keywords'] }}">
     @endif
     <link rel="canonical" href="{{ $seo['canonical'] }}">
     <link rel="alternate" hreflang="fa-IR" href="{{ $seo['canonical'] }}">
+    <link rel="alternate" hreflang="x-default" href="{{ $seo['canonical'] }}">
+    <link rel="alternate" type="application/rss+xml" title="بلاگ طلا و سکه ارنوکسین"
+          href="{{ url(config('learn.base_path', '/blog') . '/feed.xml') }}">
     <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
     <meta name="author" content="Ernoxin Gold">
     <meta property="og:locale" content="fa_IR">
@@ -30,6 +33,8 @@
     @endif
     @if(!empty($seo['ogImage']))
     <meta property="og:image" content="{{ $seo['ogImage'] }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta name="twitter:image" content="{{ $seo['ogImage'] }}">
     @endif
     <meta name="twitter:card" content="summary_large_image">
@@ -751,6 +756,7 @@
     @yield('content')
     <footer>
         <p>ارنوکسین گلد؛ راهنمای ساده و قابل پیگیری برای خواندن بازار طلا و سکه.</p>
+        <p><a href="/price/">قیمت زنده</a> · <a href="/price/mozaneh">مظنه</a> · <a href="/price/coin-bubble">حباب سکه</a> · <a href="/price/ounce">انس</a> · <a href="{{ config('learn.base_path', '/blog') }}/feed.xml">RSS</a> · <a href="/llms.txt">راهنمای AI</a></p>
     </footer>
 </div>
 </body>

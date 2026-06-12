@@ -76,13 +76,14 @@ class PricePageController extends Controller
             'canonical' => $canonical,
             'robots' => 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1',
             'updatedAt' => $updatedAt,
-            'keywords' => 'قیمت طلا امروز,قیمت سکه امروز,قیمت طلای ۱۸ عیار,نمودار قیمت طلا,قیمت لحظه‌ای طلا,بازار طلا ایران',
+            'keywords' => 'قیمت طلا امروز,قیمت سکه امروز,قیمت طلای ۱۸ عیار,نمودار قیمت طلا,قیمت لحظه‌ای طلا,بازار طلا ایران,قیمت مظنه,حباب سکه,انس جهانی',
+            'ogImage' => url(config('learn.price_og_image', config('learn.default_og_image'))),
             'alternateRanges' => $availableRanges->map(fn($range) => [
                 'days' => $range,
                 'url' => url("/price/trends/{$range}"),
                 'title' => "روند {$range} روزه قیمت طلا و سکه",
             ])->all(),
-            'jsonLd' => $this->jsonLd($items, $availableRanges, $updatedAt),
+            'jsonLd' => $this->jsonLd($items, $availableRanges, $days, $updatedAt, $goldPrice, $coinPrice),
         ];
     }
 
@@ -104,39 +105,52 @@ class PricePageController extends Controller
         return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
     }
 
-    private function jsonLd(Collection $items, Collection $availableRanges, ?string $updatedAt): array
+    private function jsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt, string $goldPrice, string $coinPrice): array
     {
-        $products = $items->map(function (MarketItem $item) use ($updatedAt) {
-            $price = $item->latestPrice;
+        $pageUrl = url($days ? "/price/trends/{$days}" : '/price/');
+        $pageName = $days
+            ? "نمودار {$days} روزه قیمت طلا و سکه"
+            : 'قیمت طلا امروز و قیمت لحظه‌ای سکه';
 
-            return [
-                '@type' => 'Product',
-                '@id' => url('/price/#item-' . $item->id),
-                'name' => $item->name,
-                'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
-                'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
-                'url' => url('/price/'),
-                'brand' => [
-                    '@type' => 'Brand',
-                    'name' => 'Ernoxin Gold',
-                ],
-                'offers' => [
-                    '@type' => 'AggregateOffer',
-                    'priceCurrency' => $this->isUsdItem($item) ? 'USD' : 'IRR',
-                    'lowPrice' => $this->schemaNumber($price?->low_value ?: $price?->current_value),
-                    'highPrice' => $this->schemaNumber($price?->high_value ?: $price?->current_value),
-                    'offerCount' => 1,
-                    'availability' => 'https://schema.org/InStock',
-                    'url' => url('/price/'),
-                    'priceValidUntil' => now()->addDay()->toDateString(),
-                ],
-                'additionalProperty' => [
-                    ['@type' => 'PropertyValue', 'name' => 'currentPrice', 'value' => $this->schemaNumber($price?->current_value), 'unitText' => $this->isUsdItem($item) ? 'USD' : 'IRR'],
-                    ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
-                    ['@type' => 'PropertyValue', 'name' => 'lastUpdated', 'value' => $price?->fetched_at?->toIso8601String() ?: $updatedAt],
-                ],
-            ];
-        })->values()->all();
+        $marketList = [
+            '@type' => 'ItemList',
+            '@id' => url('/price/#market-items'),
+            'name' => 'قیمت لحظه‌ای طلا و سکه ایران',
+            'numberOfItems' => $items->count(),
+            'itemListElement' => $items->values()->map(function (MarketItem $item, int $index) use ($updatedAt, $pageUrl) {
+                $price = $item->latestPrice;
+
+                return [
+                    '@type' => 'ListItem',
+                    'position' => $index + 1,
+                    'item' => [
+                        '@type' => 'FinancialProduct',
+                        '@id' => url('/price/#item-' . $item->id),
+                        'name' => $item->name,
+                        'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
+                        'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
+                        'url' => $pageUrl,
+                        'provider' => [
+                            '@type' => 'Organization',
+                            'name' => config('gold.source_name'),
+                            'url' => config('gold.source_url'),
+                        ],
+                        'offers' => [
+                            '@type' => 'Offer',
+                            'price' => $this->schemaNumber($price?->current_value),
+                            'priceCurrency' => $this->isUsdItem($item) ? 'USD' : 'IRR',
+                            'availability' => 'https://schema.org/InStock',
+                            'url' => $pageUrl,
+                            'priceValidUntil' => now()->addDay()->toDateString(),
+                        ],
+                        'additionalProperty' => [
+                            ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
+                            ['@type' => 'PropertyValue', 'name' => 'lastUpdated', 'value' => $price?->fetched_at?->toIso8601String() ?: $updatedAt],
+                        ],
+                    ],
+                ];
+            })->all(),
+        ];
 
         $dataset = [
             '@type' => 'Dataset',
@@ -162,50 +176,102 @@ class PricePageController extends Controller
             ])->all(),
         ];
 
-        return [
-            '@context' => 'https://schema.org',
-            '@graph' => array_merge([
-                [
-                    '@type' => 'Organization',
-                    '@id' => url('/#organization'),
-                    'name' => 'Ernoxin Gold',
-                    'url' => url('/'),
-                    'logo' => url(config('learn.default_og_image')),
-                ],
-                [
-                    '@type' => 'WebSite',
-                    '@id' => url('/#website'),
-                    'name' => 'Ernoxin Gold',
-                    'url' => url('/'),
-                    'inLanguage' => 'fa-IR',
-                    'publisher' => ['@id' => url('/#organization')],
-                    'potentialAction' => [
-                        '@type' => 'SearchAction',
-                        'target' => url('/price/') . '?q={search_term_string}',
-                        'query-input' => 'required name=search_term_string',
-                    ],
-                ],
-                [
-                    '@type' => 'WebPage',
-                    '@id' => url('/price/#webpage'),
-                    'url' => url('/price/'),
-                    'name' => 'قیمت طلا امروز و قیمت لحظه‌ای سکه',
-                    'description' => 'داشبورد لحظه‌ای و تاریخی بازار طلا و سکه ایران.',
-                    'dateModified' => $updatedAt,
-                    'datePublished' => config('learn.reviewed_at_iso'),
-                    'breadcrumb' => [
-                        '@type' => 'BreadcrumbList',
-                        'itemListElement' => [
-                            ['@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => url('/')],
-                            ['@type' => 'ListItem', 'position' => 2, 'name' => 'قیمت طلا و سکه', 'item' => url('/price/')],
+        $faq = null;
+        if (!$days && $items->isNotEmpty()) {
+            $sourceName = config('gold.source_name');
+            $faq = [
+                '@type' => 'FAQPage',
+                '@id' => url('/price/#faq'),
+                'mainEntity' => array_values(array_filter([
+                    [
+                        '@type' => 'Question',
+                        'name' => 'قیمت طلای ۱۸ عیار امروز چقدر است؟',
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => "بر اساس آخرین داده ثبت‌شده از {$sourceName}، قیمت طلای ۱۸ عیار: {$goldPrice}. این عدد فقط برای اطلاع‌رسانی است و ممکن است با قیمت فروشگاه متفاوت باشد.",
                         ],
                     ],
-                    'isPartOf' => [
-                        '@id' => url('/#website'),
+                    [
+                        '@type' => 'Question',
+                        'name' => 'قیمت سکه امروز چقدر است؟',
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => "بر اساس آخرین داده ثبت‌شده از {$sourceName}، قیمت سکه: {$coinPrice}. برای جزئیات بیشتر به داشبورد قیمت زنده مراجعه کنید.",
+                        ],
                     ],
+                    [
+                        '@type' => 'Question',
+                        'name' => 'منبع قیمت طلا در این سایت چیست؟',
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => "قیمت‌ها از {$sourceName} (estjt.ir) دریافت و به‌صورت دوره‌ای به‌روزرسانی می‌شوند. این سایت مرجع رسمی اعلام قیمت طلا و سکه در تهران است.",
+                        ],
+                    ],
+                ])),
+            ];
+        }
+
+        $breadcrumbItems = [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => url('/')],
+            ['@type' => 'ListItem', 'position' => 2, 'name' => 'قیمت طلا و سکه', 'item' => url('/price/')],
+        ];
+        if ($days) {
+            $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 3, 'name' => "روند {$days} روزه", 'item' => $pageUrl];
+        }
+
+        $graph = [
+            [
+                '@type' => 'Organization',
+                '@id' => url('/#organization'),
+                'name' => 'Ernoxin Gold',
+                'url' => url('/'),
+                'logo' => url(config('learn.default_og_image')),
+                'description' => 'داشبورد قیمت لحظه‌ای طلا و سکه و بلاگ آموزشی بازار طلا ایران',
+            ],
+            [
+                '@type' => 'WebSite',
+                '@id' => url('/#website'),
+                'name' => 'Ernoxin Gold',
+                'url' => url('/'),
+                'inLanguage' => 'fa-IR',
+                'publisher' => ['@id' => url('/#organization')],
+                'potentialAction' => [
+                    '@type' => 'SearchAction',
+                    'target' => url(config('learn.base_path', '/blog')) . '?q={search_term_string}',
+                    'query-input' => 'required name=search_term_string',
                 ],
-                $dataset,
-            ], $products),
+            ],
+            [
+                '@type' => 'WebPage',
+                '@id' => $pageUrl . '#webpage',
+                'url' => $pageUrl,
+                'name' => $pageName,
+                'description' => 'داشبورد لحظه‌ای و تاریخی بازار طلا و سکه ایران.',
+                'dateModified' => $updatedAt,
+                'datePublished' => config('learn.reviewed_at_iso'),
+                'inLanguage' => 'fa-IR',
+                'breadcrumb' => [
+                    '@type' => 'BreadcrumbList',
+                    'itemListElement' => $breadcrumbItems,
+                ],
+                'isPartOf' => ['@id' => url('/#website')],
+                'mainEntity' => $days ? ['@id' => url('/price/#historical-price-dataset')] : ['@id' => url('/price/#market-items')],
+                'speakable' => [
+                    '@type' => 'SpeakableSpecification',
+                    'cssSelector' => ['h1', '.hero p', '.marketItem small'],
+                ],
+            ],
+            $dataset,
+            $marketList,
+        ];
+
+        if ($faq) {
+            $graph[] = $faq;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@graph' => $graph,
         ];
     }
 

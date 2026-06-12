@@ -104,68 +104,73 @@ class LearnSchema
 
     public function article(array $page): array
     {
-        return [
-            '@context' => 'https://schema.org',
-            '@graph' => [
-                [
+        $graph = [
+            [
+                '@type' => 'WebPage',
+                '@id' => $page['url'] . '#webpage',
+                'url' => $page['url'],
+                'name' => $page['meta_title'] ?? $page['title'],
+                'description' => $page['meta_description'],
+                'inLanguage' => 'fa-IR',
+                'dateModified' => config('learn.reviewed_at_iso'),
+                'isPartOf' => ['@id' => url('/#website')],
+                'breadcrumb' => ['@id' => $page['url'] . '#breadcrumb'],
+                'mainEntity' => ['@id' => $page['url'] . '#article'],
+            ],
+            [
+                '@type' => 'BlogPosting',
+                '@id' => $page['url'] . '#article',
+                'mainEntityOfPage' => [
                     '@type' => 'WebPage',
                     '@id' => $page['url'] . '#webpage',
-                    'url' => $page['url'],
-                    'name' => $page['meta_title'] ?? $page['title'],
-                    'description' => $page['meta_description'],
-                    'inLanguage' => 'fa-IR',
-                    'dateModified' => config('learn.reviewed_at_iso'),
-                    'isPartOf' => ['@id' => url('/#website')],
-                    'breadcrumb' => ['@id' => $page['url'] . '#breadcrumb'],
-                    'mainEntity' => ['@id' => $page['url'] . '#article'],
                 ],
-                [
-                    '@type' => 'BlogPosting',
-                    '@id' => $page['url'] . '#article',
-                    'mainEntityOfPage' => [
-                        '@type' => 'WebPage',
-                        '@id' => $page['url'] . '#webpage',
-                    ],
-                    'headline' => $page['title'],
-                    'description' => $page['meta_description'],
-                    'inLanguage' => 'fa-IR',
-                    'dateModified' => config('learn.reviewed_at_iso'),
-                    'datePublished' => config('learn.reviewed_at_iso'),
-                    'author' => config('learn.author'),
-                    'publisher' => config('learn.author'),
-                    'articleSection' => $page['category'] ?? 'آموزش طلا و سکه',
-                    'about' => $page['keywords'] ?? [],
-                    'mentions' => $this->mentions($page),
-                    'keywords' => implode(', ', $page['keywords'] ?? []),
-                    'citation' => collect($page['sources'] ?? [])->pluck('url')->filter()->values()->all(),
-                    'wordCount' => $this->wordCount($page),
-                    'isAccessibleForFree' => true,
-                    'image' => $page['og_image'] ?? url(config('learn.default_og_image')),
-                    'speakable' => [
-                        '@type' => 'SpeakableSpecification',
-                        'cssSelector' => ['h1', '.lead', '.answerBox'],
-                    ],
+                'headline' => $page['title'],
+                'description' => $page['meta_description'],
+                'inLanguage' => 'fa-IR',
+                'dateModified' => config('learn.reviewed_at_iso'),
+                'datePublished' => config('learn.reviewed_at_iso'),
+                'author' => config('learn.author'),
+                'publisher' => config('learn.author'),
+                'articleSection' => $page['category'] ?? 'آموزش طلا و سکه',
+                'about' => $page['keywords'] ?? [],
+                'mentions' => $this->mentions($page),
+                'keywords' => implode(', ', $page['keywords'] ?? []),
+                'citation' => collect($page['sources'] ?? [])->pluck('url')->filter()->values()->all(),
+                'wordCount' => $this->wordCount($page),
+                'isAccessibleForFree' => true,
+                'image' => $page['og_image'] ?? url(config('learn.default_og_image')),
+                'speakable' => [
+                    '@type' => 'SpeakableSpecification',
+                    'cssSelector' => ['h1', '.lead', '.answerBox'],
                 ],
-                [
-                    '@type' => 'FAQPage',
-                    '@id' => $page['url'] . '#faq',
-                    'mainEntity' => collect($page['faqs'])->map(fn($faq) => [
-                        '@type' => 'Question',
-                        'name' => $faq['question'],
-                        'acceptedAnswer' => [
-                            '@type' => 'Answer',
-                            'text' => $faq['answer'],
-                        ],
-                    ])->all(),
-                ],
-                $this->breadcrumb([
-                    ['name' => 'خانه', 'url' => url('/')],
-                    ['name' => 'بلاگ', 'url' => url(config('learn.base_path', '/blog'))],
-                    ['name' => $page['title'], 'url' => $page['url']],
-                ], $page['url'] . '#breadcrumb'),
-                $this->organization(),
-                $this->website(),
             ],
+            $this->breadcrumb([
+                ['name' => 'خانه', 'url' => url('/')],
+                ['name' => 'بلاگ', 'url' => url(config('learn.base_path', '/blog'))],
+                ['name' => $page['title'], 'url' => $page['url']],
+            ], $page['url'] . '#breadcrumb'),
+            $this->organization(),
+            $this->website(),
+        ];
+
+        if (!empty($page['faqs'])) {
+            $graph[] = [
+                '@type' => 'FAQPage',
+                '@id' => $page['url'] . '#faq',
+                'mainEntity' => collect($page['faqs'])->map(fn($faq) => [
+                    '@type' => 'Question',
+                    'name' => $faq['question'],
+                    'acceptedAnswer' => [
+                        '@type' => 'Answer',
+                        'text' => $faq['answer'],
+                    ],
+                ])->all(),
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@graph' => $graph,
         ];
     }
 

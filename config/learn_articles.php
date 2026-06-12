@@ -1685,6 +1685,7 @@ return [
         ],
         'related' => ['gold-bubble', 'gold-coin-guide', 'quarter-vs-half-coin-buying-guide', 'coin-selling-checklist'],
         'market_links' => [
+            ['label' => 'حباب سکه امروز', 'url' => '/price/coin-bubble'],
             ['label' => 'قیمت لحظه‌ای سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه قیمت‌ها', 'url' => '/price/trends/30'],
         ],
@@ -2222,6 +2223,7 @@ return [
         ],
         'related' => ['gold-ounce-mesghal', 'gold-price-today-dollar-ounce', 'gold-price-factors', 'how-gold-price-is-set'],
         'market_links' => [
+            ['label' => 'قیمت انس جهانی امروز', 'url' => '/price/ounce'],
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
         'faqs' => [
@@ -3246,6 +3248,7 @@ return [
     ],
     'gold-mozaneh' => [
         'title' => 'مظنه طلا چیست و چطور خوانده می‌شود؟',
+        'meta_title' => 'قیمت مظنه طلا امروز | مظنه تهران چیست و چطور خوانده می‌شود؟',
         'meta_description' => 'توضیح ساده و دقیق درباره مظنه طلا در بازار ایران، تفاوت آن با قیمت گرم ۱۸ عیار و نکات مهم هنگام تبدیل و مقایسه.',
         'h1' => 'مظنه طلا چیست و چطور خوانده می‌شود؟',
         'short_answer' => 'مظنه یک اصطلاح رایج بازار طلاست که معمولاً برای اعلام قیمت یک واحد مشخص از طلا با عیار مشخص استفاده می‌شود. برای استفاده درست از آن باید واحد، عیار، زمان و منبع قیمت روشن باشد.',
@@ -3308,7 +3311,8 @@ return [
         ],
         'related' => ['gold-ounce-mesghal', 'gold-price-guide', 'how-gold-price-is-set', 'gold-price-calculation'],
         'market_links' => [
-            ['label' => 'قیمت زنده طلا و مظنه', 'url' => '/price/'],
+            ['label' => 'قیمت مظنه امروز', 'url' => '/price/mozaneh'],
+            ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۷ روزه قیمت‌ها', 'url' => '/price/trends/7'],
         ],
         'faqs' => [

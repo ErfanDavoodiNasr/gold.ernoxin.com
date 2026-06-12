@@ -158,6 +158,24 @@ button {
     transform: translateY(-1px)
 }
 
+.navLink {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--text);
+    padding: 10px 14px;
+    font: inherit;
+    font-weight: 750;
+    text-decoration: none;
+    transition: .2s
+}
+
+.navLink:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    text-decoration: none
+}
+
 .spin {
     animation: spin 1s linear infinite
 }
@@ -704,6 +722,29 @@ body.appReady .seoAppFallback {
     background: var(--panel2);
     border-radius: 12px;
     padding: 11px 12px
+}
+
+.faqPreview details.faqItem {
+    border: 1px solid var(--line);
+    background: var(--panel2);
+    border-radius: 12px;
+    padding: 12px 14px
+}
+
+.faqPreview details.faqItem summary {
+    cursor: pointer;
+    font-weight: 800;
+    list-style: none
+}
+
+.faqPreview details.faqItem summary::-webkit-details-marker {
+    display: none
+}
+
+.faqPreview details.faqItem p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    line-height: 1.85
 }
 
 .compactLinks strong, .compactLinks small {

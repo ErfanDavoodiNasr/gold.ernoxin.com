@@ -8,7 +8,8 @@ return [
     'reviewed_at_iso' => '2026-05-19',
     'base_path' => '/blog',
     'disclaimer' => '',
-    'default_og_image' => '/og/learn-gold.svg',
+    'default_og_image' => '/og/og-default.png',
+    'price_og_image' => '/og/og-price.png',
     'author' => [
         '@type' => 'Organization',
         'name' => 'Ernoxin Gold Editorial',

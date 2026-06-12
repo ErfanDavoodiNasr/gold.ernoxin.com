@@ -10,6 +10,12 @@
         <div class="meta">
             <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
         </div>
+        <div class="links" style="margin-top:14px">
+            <a href="/price/mozaneh">قیمت مظنه</a>
+            <a href="/price/coin-bubble">حباب سکه</a>
+            <a href="/price/ounce">انس جهانی</a>
+            <a href="/price/">قیمت زنده</a>
+        </div>
     </section>
 
     <section class="searchPanel" aria-label="جستجوی مقاله‌های بلاگ" data-blog-search

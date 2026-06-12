@@ -1,20 +1,55 @@
 # Ernoxin Gold
 
-Ernoxin Gold is a Persian-language gold and coin price dashboard and learning hub for the Iranian market.
+> Persian-language live gold and coin price dashboard with educational articles for the Iranian market.
+
+Ernoxin Gold (gold.ernoxin.com) shows live gold and coin prices sourced from the official Tehran Gold Union (estjt.ir), interactive charts, historical trends, and a Persian blog about buying gold safely.
 
 ## Primary URLs
 
-- Live gold and coin prices: https://gold.ernoxin.com/price/
+- Live prices (main page): https://gold.ernoxin.com/price/
+- Price trends: https://gold.ernoxin.com/price/trends/{days} (7, 30, 90, 180, 365)
+- Keyword hubs (high-intent landing pages):
+  - Mozaneh (مظنه): https://gold.ernoxin.com/price/mozaneh
+  - Coin bubble (حباب سکه): https://gold.ernoxin.com/price/coin-bubble
+  - Global ounce (انس جهانی): https://gold.ernoxin.com/price/ounce
 - Blog index: https://gold.ernoxin.com/blog
+- RSS feed: https://gold.ernoxin.com/blog/feed.xml
 - Sitemap: https://gold.ernoxin.com/sitemap.xml
 
-## Content Scope
+## Target Keywords (Persian)
 
-The site covers live gold and coin prices, historical trends, gold buying safety, invoices, taxes, making charge, karat differences, coin bubble, gold ETFs, digital gold, and practical risk checklists for users in Iran.
+| Intent | Hub page | Deep article |
+|--------|----------|--------------|
+| قیمت مظنه امروز | /price/mozaneh | /blog/gold-mozaneh |
+| حباب سکه امروز | /price/coin-bubble | /blog/coin-bubble-today-checklist |
+| قیمت انس جهانی | /price/ounce | /blog/global-ounce-impact-iran-gold |
+| قیمت طلا امروز | /price/ | /blog/gold-price-guide |
+| قیمت سکه امروز | /price/ | /blog/gold-coin-guide |
 
-## Crawling Notes
+## What This Site Is Best For
 
-- Article pages are under `/blog/{slug}` and are written in Persian.
-- Price pages are under `/price/` and `/price/trends/{days}`.
-- The public read API for current market data is `/api/market/summary`.
-- The write-only manual fetch endpoint `/api/market/fetch` should not be crawled.
+- قیمت طلا امروز (today's gold price in Iran)
+- قیمت سکه امروز (today's coin price)
+- قیمت طلای ۱۸ عیار (18-karat gold price)
+- نمودار قیمت طلا (gold price chart)
+- حباب سکه، اجرت طلا، فاکتور طلا، خرید امن طلا (educational articles)
+
+## Data Source
+
+Prices are fetched from the official Tehran Gold & Jewelry Union website (estjt.ir) and refreshed periodically. Prices shown are informational; shop prices may differ due to making charge, profit margin, and taxes.
+
+## Content Structure
+
+- Keyword hub pages: `/price/mozaneh`, `/price/coin-bubble`, `/price/ounce` — live prices + FAQ + article links
+- Article pages: `/blog/{slug}` — Persian educational content, not financial advice
+- Price dashboard: `/price/` — live market data with SSR for crawlers
+- Search: `/blog?q=` — internal search (noindex)
+- API (read-only): `/api/market/summary` — JSON market summary
+
+## Do Not Crawl
+
+- `/api/market/fetch` — write-only manual fetch endpoint
+
+## Language
+
+All public content is in Persian (fa-IR), RTL layout.

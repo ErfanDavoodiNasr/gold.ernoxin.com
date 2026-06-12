@@ -3,7 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>صفحه پیدا نشد</title>
+    <meta name="robots" content="noindex,follow">
+    <title>صفحه پیدا نشد | Ernoxin Gold</title>
+    <meta name="description" content="صفحه مورد نظر در سایت قیمت طلا و سکه ارنوکسین پیدا نشد.">
     <style>
         @font-face {
             font-family: Vazirmatn;
@@ -38,14 +40,27 @@
             color: #9aa7b4
         }
 
+        .links {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 16px
+        }
+
         a {
             color: #080b10;
             background: #d9a441;
             border-radius: 12px;
             padding: 10px 18px;
             text-decoration: none;
-            display: inline-block;
-            margin-top: 10px
+            display: inline-block
+        }
+
+        a.secondary {
+            background: transparent;
+            color: #d9a441;
+            border: 1px solid #d9a441
         }
     </style>
 </head>
@@ -53,7 +68,10 @@
 <main>
     <h1>۴۰۴</h1>
     <p>صفحه مورد نظر پیدا نشد.</p>
-    <a href="/">بازگشت به داشبورد</a>
+    <div class="links">
+        <a href="/price/">قیمت زنده طلا و سکه</a>
+        <a class="secondary" href="/blog">بلاگ آموزشی</a>
+    </div>
 </main>
 </body>
 </html>
