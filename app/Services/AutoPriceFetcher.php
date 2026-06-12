@@ -27,12 +27,19 @@ class AutoPriceFetcher
     public function isDue(): bool
     {
         $interval = max(1, (int)config('gold.fetch_interval_minutes', 5));
+        $now = now();
+
+        if ($now->minute % $interval !== 0) {
+            return false;
+        }
+
+        $slotStart = $now->copy()->second(0);
         $lastSuccess = FetchLog::where('status', 'success')
             ->whereNotNull('started_at')
             ->latest('started_at')
             ->first();
 
-        if ($lastSuccess && $lastSuccess->started_at && $lastSuccess->started_at->gt(now()->subMinutes($interval))) {
+        if ($lastSuccess && $lastSuccess->started_at && $lastSuccess->started_at->gte($slotStart)) {
             return false;
         }
 

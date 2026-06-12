@@ -9,6 +9,7 @@ class SharedHostingBootstrap
     public function run(): void
     {
         $this->ensureWritableDirectories();
+        $this->ensureEnvironmentFile();
         $this->ensureApplicationKey();
         $this->ensureDatabaseSchema();
     }
@@ -111,6 +112,17 @@ class SharedHostingBootstrap
 
         if (is_file($file)) {
             $this->chmodFile($file);
+        }
+    }
+
+    private function ensureEnvironmentFile(): void
+    {
+        $path = base_path('.env');
+        $examplePath = base_path('.env.example');
+
+        if (!file_exists($path) && file_exists($examplePath)) {
+            @copy($examplePath, $path);
+            $this->chmodFile($path);
         }
     }
 
