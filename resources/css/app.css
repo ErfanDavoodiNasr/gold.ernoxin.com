@@ -539,11 +539,6 @@ button {
     }
 }
 
-.chartWrap .recharts-wrapper {
-    width: 100% !important;
-    max-width: none
-}
-
 .chartWrap .recharts-surface {
     overflow: visible
 }

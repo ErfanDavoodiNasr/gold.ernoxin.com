@@ -47,38 +47,36 @@ function ChartYAxisTick({x, y, payload, fill, panelFill, item}) {
 }
 
 const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
-    default: function ChartRenderer({data, selected, activeRange, colors}) {
-        const {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} = module;
+    default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
+        const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
         const chartData = data
             .map((point) => ({...point, timeValue: new Date(point.time).getTime()}))
             .filter((point) => Number.isFinite(point.timeValue));
         const yAxisWidth = chartYAxisWidth(selected, chartData.map((point) => point.current));
 
         return (
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{top: 12, right: 2, left: 2, bottom: 8}}>
-                    <defs>
-                        <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
-                            <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
-                    <XAxis dataKey="timeValue" type="number" scale="time" domain={['dataMin', 'dataMax']}
-                           padding={{left: 0, right: 0}} tickLine={false} axisLine={false}
-                           minTickGap={28}
-                           tickFormatter={(value) => formatChartTick(value, activeRange)}/>
-                    <YAxis orientation="right" width={yAxisWidth} tickLine={false} axisLine={false}
-                           domain={chartDomain}
-                           tickCount={5}
-                           tick={<ChartYAxisTick fill={colors.muted} panelFill={colors.panel} item={selected}/>}/>
-                    <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
-                             content={<ChartTooltip item={selected}/>}/>
-                    <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
-                          fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
-                          strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
-                </AreaChart>
-            </ResponsiveContainer>
+            <AreaChart width={width} height={height} data={chartData} margin={{top: 12, right: 2, left: 2, bottom: 8}}>
+                <defs>
+                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
+                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
+                <XAxis dataKey="timeValue" type="number" scale="time" domain={['dataMin', 'dataMax']}
+                       padding={{left: 0, right: 0}} tickLine={false} axisLine={false}
+                       minTickGap={28}
+                       tickFormatter={(value) => formatChartTick(value, activeRange)}/>
+                <YAxis orientation="right" width={yAxisWidth} tickLine={false} axisLine={false}
+                       domain={chartDomain}
+                       tickCount={5}
+                       tick={<ChartYAxisTick fill={colors.muted} panelFill={colors.panel} item={selected}/>}/>
+                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
+                         content={<ChartTooltip item={selected}/>}/>
+                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
+                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
+                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
+            </AreaChart>
         );
     },
 })));
@@ -116,6 +114,20 @@ function formatAxisPrice(value, item) {
     const nextValue = displayValue(value, item);
     if (nextValue === null) return '—';
     return formatNumber(nextValue, {maximumFractionDigits: isUsdItem(item) ? 2 : 0});
+}
+
+function hasPercentValue(percent) {
+    return percent !== null && percent !== undefined && !Number.isNaN(Number(percent));
+}
+
+function formatPercent(value) {
+    if (!hasPercentValue(value)) return '—';
+    return formatNumber(value);
+}
+
+function shouldShowChangeIcon(direction, percent) {
+    const tone = changeTone(direction, percent);
+    return !(tone === 'flat' && !hasPercentValue(percent));
 }
 
 function changeTone(direction, percent = null) {
@@ -528,8 +540,10 @@ function App() {
                     <div className="priceLine">
                         <strong>{formatPrice(selected?.current, selected)}</strong>
                         <span className={changeTone(selected?.direction, selected?.percent)}>
-                            <ChangeIcon direction={selected?.direction} percent={selected?.percent} size={16}/>
-                            {formatPrice(selected?.change, selected)} ({formatNumber(selected?.percent)}٪)
+                            {shouldShowChangeIcon(selected?.direction, selected?.percent) && (
+                                <ChangeIcon direction={selected?.direction} percent={selected?.percent} size={16}/>
+                            )}
+                            {formatPrice(selected?.change, selected)} ({formatPercent(selected?.percent)}٪)
                         </span>
                     </div>
 
@@ -581,7 +595,8 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
     return <div className="chartCanvas" ref={chartRef}>
         {size.width > 0 && size.height > 0 && data.length > 0 && (
             <React.Suspense fallback={<div className="chartSkeleton" aria-hidden="true"/>}>
-                <ChartRenderer data={data} selected={selected} activeRange={activeRange} colors={colors}/>
+                <ChartRenderer width={size.width} height={size.height} data={data} selected={selected}
+                               activeRange={activeRange} colors={colors}/>
             </React.Suspense>
         )}
     </div>;
@@ -599,8 +614,10 @@ function MarketItem({item, active, onClick}) {
             <span className="itemIcon">{item.category === 'coin' ? <Coins size={20}/> : <BarChart3 size={20}/>}</span>
             <span className="itemMain"><b>{item.name}</b><small>{formatPrice(item.current, item)}</small></span>
             <span className={`badge ${tone}`}>
-                <ChangeIcon direction={item.direction} percent={item.percent} size={14} variant="trend"/>
-                {formatNumber(item.percent)}٪
+                {shouldShowChangeIcon(item.direction, item.percent) && (
+                    <ChangeIcon direction={item.direction} percent={item.percent} size={14} variant="trend"/>
+                )}
+                {formatPercent(item.percent)}٪
             </span>
         </button>
     );

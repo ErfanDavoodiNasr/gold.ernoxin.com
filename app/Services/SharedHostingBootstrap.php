@@ -121,7 +121,7 @@ class SharedHostingBootstrap
         $examplePath = base_path('.env.example');
 
         if (!file_exists($path) && file_exists($examplePath)) {
-            @copy($examplePath, $path);
+            @rename($examplePath, $path);
             $this->chmodFile($path);
         }
     }
