@@ -14,11 +14,16 @@ function env_bootstrap_chmod_file(string $file): void
     }
 }
 
-function env_bootstrap_promote_example(?string $basePath = null): bool
+function env_bootstrap_example_path(string $basePath): string
+{
+    return $basePath . DIRECTORY_SEPARATOR . '.env.example';
+}
+
+function env_bootstrap_create_env_from_example(?string $basePath = null): bool
 {
     $basePath ??= env_bootstrap_base_path();
     $envPath = $basePath . DIRECTORY_SEPARATOR . '.env';
-    $examplePath = $basePath . DIRECTORY_SEPARATOR . '.env.example';
+    $examplePath = env_bootstrap_example_path($basePath);
 
     if (is_file($envPath)) {
         return true;
@@ -28,14 +33,7 @@ function env_bootstrap_promote_example(?string $basePath = null): bool
         return false;
     }
 
-    if (@rename($examplePath, $envPath)) {
-        env_bootstrap_chmod_file($envPath);
-
-        return true;
-    }
-
     if (@copy($examplePath, $envPath)) {
-        @unlink($examplePath);
         env_bootstrap_chmod_file($envPath);
 
         return true;
@@ -108,6 +106,6 @@ function env_bootstrap_write_env_value(string $envPath, string $name, string $va
 function env_bootstrap_run(?string $basePath = null): void
 {
     $basePath ??= env_bootstrap_base_path();
-    env_bootstrap_promote_example($basePath);
+    env_bootstrap_create_env_from_example($basePath);
     env_bootstrap_ensure_app_key($basePath);
 }

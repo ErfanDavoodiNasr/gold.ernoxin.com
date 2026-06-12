@@ -131,7 +131,7 @@ class SharedHostingBootstrap
 
     private function ensureEnvironmentFile(): void
     {
-        env_bootstrap_promote_example(base_path());
+        env_bootstrap_create_env_from_example(base_path());
     }
 
     private function ensureApplicationKey(): void
