@@ -55,6 +55,53 @@ class LearnSchema
         ];
     }
 
+    private function website(): array
+    {
+        return [
+            '@type' => 'WebSite',
+            '@id' => url('/#website'),
+            'name' => 'Ernoxin Gold',
+            'url' => url('/'),
+            'inLanguage' => 'fa-IR',
+            'publisher' => ['@id' => url('/#organization')],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => url(config('learn.base_path', '/blog')) . '?q={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
+        ];
+    }
+
+    public function breadcrumb(array $items, ?string $id = null): array
+    {
+        $schema = [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => collect($items)->map(fn($item, $index) => [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $item['name'],
+                'item' => $item['url'],
+            ])->all(),
+        ];
+
+        if ($id) {
+            $schema['@id'] = $id;
+        }
+
+        return $schema;
+    }
+
+    private function organization(): array
+    {
+        return [
+            '@type' => 'Organization',
+            '@id' => url('/#organization'),
+            'name' => 'Ernoxin Gold',
+            'url' => url('/'),
+            'logo' => url(config('learn.default_og_image')),
+        ];
+    }
+
     public function article(array $page): array
     {
         return [
@@ -119,53 +166,6 @@ class LearnSchema
                 $this->organization(),
                 $this->website(),
             ],
-        ];
-    }
-
-    public function breadcrumb(array $items, ?string $id = null): array
-    {
-        $schema = [
-            '@type' => 'BreadcrumbList',
-            'itemListElement' => collect($items)->map(fn($item, $index) => [
-                '@type' => 'ListItem',
-                'position' => $index + 1,
-                'name' => $item['name'],
-                'item' => $item['url'],
-            ])->all(),
-        ];
-
-        if ($id) {
-            $schema['@id'] = $id;
-        }
-
-        return $schema;
-    }
-
-    private function website(): array
-    {
-        return [
-            '@type' => 'WebSite',
-            '@id' => url('/#website'),
-            'name' => 'Ernoxin Gold',
-            'url' => url('/'),
-            'inLanguage' => 'fa-IR',
-            'publisher' => ['@id' => url('/#organization')],
-            'potentialAction' => [
-                '@type' => 'SearchAction',
-                'target' => url(config('learn.base_path', '/blog')) . '?q={search_term_string}',
-                'query-input' => 'required name=search_term_string',
-            ],
-        ];
-    }
-
-    private function organization(): array
-    {
-        return [
-            '@type' => 'Organization',
-            '@id' => url('/#organization'),
-            'name' => 'Ernoxin Gold',
-            'url' => url('/'),
-            'logo' => url(config('learn.default_og_image')),
         ];
     }
 

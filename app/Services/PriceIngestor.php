@@ -12,7 +12,10 @@ use Illuminate\Support\Str;
 
 class PriceIngestor
 {
-    public function __construct(private EstjtScraper $scraper)
+    public function __construct(
+        private EstjtScraper    $scraper,
+        private PriceNormalizer $normalizer,
+    )
     {
     }
 
@@ -46,21 +49,29 @@ class PriceIngestor
         foreach (['gold', 'coin'] as $group) {
             foreach (($payload[$group] ?? []) as $row) {
                 $normalized = PersianNumber::label($row['type']);
+                $existingItem = MarketItem::query()
+                    ->where('source', $source)
+                    ->where('normalized_name', $normalized)
+                    ->first();
+                $referenceToman = $this->referencePrice($existingItem);
+                $isUsd = $this->normalizer->isUsdItem($row['current']['currency'] ?? $existingItem?->currency, $group);
+
+                $row = $this->normalizer->normalizeRow($row, $referenceToman, $isUsd);
+                if ($row === null || !$this->validPrice($row['current']['value'] ?? null)) {
+                    report(new \RuntimeException("Invalid zero or empty price skipped for {$normalized}"));
+                    continue;
+                }
+
                 $item = MarketItem::updateOrCreate(
                     ['source' => $source, 'normalized_name' => $normalized],
                     [
                         'category' => $group,
                         'name' => $row['type'],
-                        'currency' => $row['current']['currency'] ?? null,
+                        'currency' => $isUsd ? '$' : ($row['current']['currency'] ?? $existingItem?->currency),
                         'is_active' => true,
                         'meta' => ['source_url' => config('gold.source_url')],
                     ]
                 );
-
-                if (!$this->validPrice($row['current']['value'] ?? null)) {
-                    report(new \RuntimeException("Invalid zero or empty price skipped for {$row['type']}"));
-                    continue;
-                }
 
                 PricePoint::updateOrCreate(
                     ['market_item_id' => $item->id, 'fetched_at' => $fetchedAt],
@@ -79,6 +90,21 @@ class PriceIngestor
             }
         }
         return $count;
+    }
+
+    private function referencePrice(?MarketItem $item): ?float
+    {
+        if (!$item) {
+            return null;
+        }
+
+        $latest = $item->prices()
+            ->whereNotNull('current_value')
+            ->where('current_value', '>', 0)
+            ->latest('fetched_at')
+            ->value('current_value');
+
+        return $latest !== null ? (float)$latest : null;
     }
 
     private function validPrice($value): bool

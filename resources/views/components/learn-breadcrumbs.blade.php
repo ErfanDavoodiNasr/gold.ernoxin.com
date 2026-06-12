@@ -3,7 +3,7 @@
     <span> / </span>
     <a href="{{ config('learn.base_path', '/blog') }}">بلاگ</a>
     @isset($current)
-        <span> / </span>
-        <span>{{ $current }}</span>
+    <span> / </span>
+    <span>{{ $current }}</span>
     @endisset
 </nav>

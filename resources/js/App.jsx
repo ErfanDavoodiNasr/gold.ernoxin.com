@@ -1,6 +1,17 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {ArrowDown, ArrowUp, BarChart3, Coins, Moon, RefreshCw, Search, Sun, TrendingUp, WalletCards} from 'lucide-react';
+import {
+    ArrowDown,
+    ArrowUp,
+    BarChart3,
+    Coins,
+    Moon,
+    RefreshCw,
+    Search,
+    Sun,
+    TrendingUp,
+    WalletCards
+} from 'lucide-react';
 import '../css/app.css';
 
 const defaultConfig = {
@@ -370,7 +381,10 @@ function App() {
 
             queue.forEach((item) => {
                 fetchHistory(item.id, range, controller.signal)
-                    .then((data) => historyCache.current.set(`${item.id}:${range}`, {...data, points: sanitizeHistory(data.points)}))
+                    .then((data) => historyCache.current.set(`${item.id}:${range}`, {
+                        ...data,
+                        points: sanitizeHistory(data.points)
+                    }))
                     .catch(() => {
                     });
             });
@@ -439,7 +453,9 @@ function App() {
                 </div>
             </section>
 
-            {error && <div className="notice noticeWithAction"><span>{error}</span><button type="button" onClick={() => loadSummary()}><RefreshCw size={16}/>تلاش دوباره</button></div>}
+            {error && <div className="notice noticeWithAction"><span>{error}</span>
+                <button type="button" onClick={() => loadSummary()}><RefreshCw size={16}/>تلاش دوباره</button>
+            </div>}
             {!error && fetchNotice && <div className="notice">{fetchNotice}</div>}
 
             <section className="layout">
@@ -502,9 +518,9 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
     const [chartRef, size] = useElementSize();
     const [colors, setColors] = useState({accent: accent || defaultConfig.themeAccent, line: '#263241'});
     const data = useMemo(() => history
-        .map((point) => ({...point, current: Number(point.current)}))
-        .filter((point) => Number.isFinite(point.current) && point.current > 0 && point.time),
-    [history]);
+            .map((point) => ({...point, current: Number(point.current)}))
+            .filter((point) => Number.isFinite(point.current) && point.current > 0 && point.time),
+        [history]);
 
     useEffect(() => {
         const styles = getComputedStyle(document.documentElement);

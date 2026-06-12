@@ -71,6 +71,25 @@ class MarketController extends Controller
         ];
     }
 
+    private function displayPrice(MarketItem $item): ?PricePoint
+    {
+        $latest = $item->latestPrice;
+        if ($this->isUsablePrice($latest?->current_value)) {
+            return $latest;
+        }
+
+        return $item->prices()
+            ->whereNotNull('current_value')
+            ->where('current_value', '>', 0)
+            ->latest('fetched_at')
+            ->first();
+    }
+
+    private function isUsablePrice($value): bool
+    {
+        return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
     private function fetchLogResource(?FetchLog $log): ?array
     {
         if (!$log) {
@@ -85,18 +104,50 @@ class MarketController extends Controller
         ];
     }
 
-    private function displayPrice(MarketItem $item): ?PricePoint
+    private function normalizeRange($value): array
     {
-        $latest = $item->latestPrice;
-        if ($this->isUsablePrice($latest?->current_value)) {
-            return $latest;
+        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
+        $raw = strtolower(trim((string)$value));
+
+        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
+            $amount = max(1, (int)$matches[1]);
+            $unit = $matches[2];
+        } else {
+            $amount = max(1, (int)$raw);
+            $unit = 'd';
         }
 
-        return $item->prices()
-            ->whereNotNull('current_value')
-            ->where('current_value', '>', 0)
-            ->latest('fetched_at')
-            ->first();
+        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
+        $maxMinutes = $historyMaxDays * 1440;
+        $minutes = min($minutes, $maxMinutes);
+
+        return [
+            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
+            'minutes' => $minutes,
+        ];
+    }
+
+    private function serverErrorResponse()
+    {
+        return response()->json([
+            'message' => 'خطای داخلی سرور رخ داد. لطفاً کمی بعد دوباره تلاش کنید.',
+        ], 500);
+    }
+
+    private function cachedJson($payload, int $ttl)
+    {
+        $response = response()->json($payload);
+        $etag = '"' . sha1((string)$response->getContent()) . '"';
+        $headers = [
+            'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=" . ($ttl * 6),
+            'ETag' => $etag,
+        ];
+
+        if (request()->headers->get('If-None-Match') === $etag) {
+            return response('', 304, $headers);
+        }
+
+        return $response->withHeaders($headers);
     }
 
     public function history(Request $request, MarketItem $item)
@@ -116,13 +167,25 @@ class MarketController extends Controller
             ]);
 
             $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range) {
+                $latestFetchedAt = PricePoint::where('market_item_id', $item->id)->max('fetched_at');
+                if (!$latestFetchedAt) {
+                    return [
+                        'item' => $this->itemResource($item->load('latestPrice')),
+                        'range' => $range['key'],
+                        'analytics' => ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null],
+                        'points' => [],
+                    ];
+                }
+
+                $windowStart = \Illuminate\Support\Carbon::parse($latestFetchedAt)->subMinutes($range['minutes']);
                 $points = PricePoint::where('market_item_id', $item->id)
                     ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
-                    ->where('fetched_at', '>=', now()->subMinutes($range['minutes']))
+                    ->where('fetched_at', '>=', $windowStart)
+                    ->where('current_value', '>', 0)
                     ->orderBy('fetched_at')
                     ->get();
 
-                $points = $this->repairHistoryPoints($points);
+                $points = $this->filterHistoryOutliers($points);
                 $analytics = $this->analytics($points);
                 $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
 
@@ -155,27 +218,30 @@ class MarketController extends Controller
         return $this->cachedJson($payload, $ttl);
     }
 
-    private function normalizeRange($value): array
+    private function filterHistoryOutliers($points)
     {
-        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
-        $raw = strtolower(trim((string)$value));
+        $reference = null;
 
-        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
-            $amount = max(1, (int)$matches[1]);
-            $unit = $matches[2];
-        } else {
-            $amount = max(1, (int)$raw);
-            $unit = 'd';
-        }
+        return $points->values()->filter(function ($point) use (&$reference) {
+            if (!$this->isUsablePrice($point->current_value)) {
+                return false;
+            }
 
-        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
-        $maxMinutes = $historyMaxDays * 1440;
-        $minutes = min($minutes, $maxMinutes);
+            $value = (float)$point->current_value;
+            if ($reference !== null) {
+                $ratio = $value / $reference;
+                if ($ratio >= 8 && $ratio <= 12) {
+                    return false;
+                }
+                if ($ratio >= 0.08 && $ratio <= 0.12) {
+                    return false;
+                }
+            }
 
-        return [
-            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
-            'minutes' => $minutes,
-        ];
+            $reference = $value;
+
+            return true;
+        })->values();
     }
 
     private function analytics($points): array
@@ -213,32 +279,6 @@ class MarketController extends Controller
             ->values();
     }
 
-    private function repairHistoryPoints($points)
-    {
-        $rows = $points->values();
-
-        return $rows->map(function ($point, $index) use ($rows) {
-            if ($this->isUsablePrice($point->current_value)) {
-                return $point;
-            }
-
-            $previous = $rows->slice(0, $index)->reverse()->first(fn($row) => $this->isUsablePrice($row->current_value));
-            $next = $rows->slice($index + 1)->first(fn($row) => $this->isUsablePrice($row->current_value));
-
-            if ($previous && $next) {
-                $point->current_value = round(((float)$previous->current_value + (float)$next->current_value) / 2, 4);
-                return $point;
-            }
-
-            return null;
-        })->filter()->values();
-    }
-
-    private function isUsablePrice($value): bool
-    {
-        return $value !== null && is_numeric($value) && (float)$value > 0;
-    }
-
     public function fetch(PriceIngestor $ingestor)
     {
         if (!config('gold.features.manual_fetch_api')) {
@@ -261,28 +301,5 @@ class MarketController extends Controller
         }
 
         return response()->json(['message' => 'داده‌ها به‌روزرسانی شد.', 'referenceId' => $result['referenceId'], 'items' => $result['items']]);
-    }
-
-    private function serverErrorResponse()
-    {
-        return response()->json([
-            'message' => 'خطای داخلی سرور رخ داد. لطفاً کمی بعد دوباره تلاش کنید.',
-        ], 500);
-    }
-
-    private function cachedJson($payload, int $ttl)
-    {
-        $response = response()->json($payload);
-        $etag = '"' . sha1((string)$response->getContent()) . '"';
-        $headers = [
-            'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=" . ($ttl * 6),
-            'ETag' => $etag,
-        ];
-
-        if (request()->headers->get('If-None-Match') === $etag) {
-            return response('', 304, $headers);
-        }
-
-        return $response->withHeaders($headers);
     }
 }

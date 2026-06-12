@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\FetchLog;
 use App\Models\MarketItem;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PricePageController extends Controller
@@ -43,6 +42,16 @@ class PricePageController extends Controller
         ]);
     }
 
+    private function rangeDays($range): int
+    {
+        $value = strtolower(trim((string)$range));
+        if (str_ends_with($value, 'h')) {
+            return 1;
+        }
+
+        return max(1, (int)$value);
+    }
+
     private function seoPayload(Collection $items, Collection $availableRanges, ?int $days, ?FetchLog $lastFetch): array
     {
         $primaryGold = $items->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
@@ -75,6 +84,24 @@ class PricePageController extends Controller
             ])->all(),
             'jsonLd' => $this->jsonLd($items, $availableRanges, $updatedAt),
         ];
+    }
+
+    private function formatDisplayPrice(?MarketItem $item, $value): string
+    {
+        if ($value === null) {
+            return 'نامشخص';
+        }
+
+        if ($this->isUsdItem($item)) {
+            return number_format((float)$value, 2, '.', ',') . ' دلار';
+        }
+
+        return number_format((float)$value, 0, '.', ',') . ' تومان';
+    }
+
+    private function isUsdItem(?MarketItem $item): bool
+    {
+        return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
     }
 
     private function jsonLd(Collection $items, Collection $availableRanges, ?string $updatedAt): array
@@ -180,34 +207,6 @@ class PricePageController extends Controller
                 $dataset,
             ], $products),
         ];
-    }
-
-    private function formatDisplayPrice(?MarketItem $item, $value): string
-    {
-        if ($value === null) {
-            return 'نامشخص';
-        }
-
-        if ($this->isUsdItem($item)) {
-            return number_format((float)$value, 2, '.', ',') . ' دلار';
-        }
-
-        return number_format((float)$value, 0, '.', ',') . ' تومان';
-    }
-
-    private function isUsdItem(?MarketItem $item): bool
-    {
-        return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
-    }
-
-    private function rangeDays($range): int
-    {
-        $value = strtolower(trim((string)$range));
-        if (str_ends_with($value, 'h')) {
-            return 1;
-        }
-
-        return max(1, (int)$value);
     }
 
     private function schemaNumber($value): ?float

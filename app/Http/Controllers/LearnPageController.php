@@ -42,51 +42,6 @@ class LearnPageController extends Controller
         ]);
     }
 
-    public function searchIndexJson(): JsonResponse
-    {
-        $ttl = 86400;
-        $payload = [
-            'updatedAt' => config('learn.reviewed_at_iso'),
-            'items' => $this->buildSearchIndex($this->pages(), config('learn.base_path', '/blog')),
-        ];
-
-        return response()
-            ->json($payload)
-            ->withHeaders([
-                'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=604800",
-                'X-Robots-Tag' => 'noindex',
-            ]);
-    }
-
-    public function show(string $slug): Response
-    {
-        $pages = $this->pages();
-        abort_unless(isset($pages[$slug]), 404);
-
-        $page = $pages[$slug];
-        $page['slug'] = $slug;
-        $basePath = config('learn.base_path', '/blog');
-        $page['url'] = url("{$basePath}/{$slug}");
-        $page['keywords'] = $page['keywords'] ?? [$page['title'], 'طلا', 'سکه', 'قیمت طلا'];
-
-        return response()->view('learn.show', [
-            'page' => $page,
-            'pages' => $pages,
-            'basePath' => $basePath,
-            'seo' => [
-                'title' => $page['meta_title'] ?? $page['title'],
-                'description' => $page['meta_description'],
-                'canonical' => $page['url'],
-                'keywords' => $page['keywords'],
-                'modifiedTime' => config('learn.reviewed_at_iso'),
-                'publishedTime' => config('learn.reviewed_at_iso'),
-                'ogImage' => $page['og_image'] ?? url(config('learn.default_og_image')),
-                'type' => 'article',
-                'jsonLd' => $this->schema->article($page),
-            ],
-        ]);
-    }
-
     private function pages(): array
     {
         return Cache::remember($this->contentCacheKey('pages:v4'), 86400, function () {
@@ -112,6 +67,42 @@ class LearnPageController extends Controller
         });
     }
 
+    private function contentCacheKey(string $name): string
+    {
+        $files = [
+            config_path('learn.php'),
+            config_path('learn_articles.php'),
+            config_path('learn_extras.php'),
+        ];
+
+        $signature = collect($files)
+            ->map(fn($file) => is_file($file) ? filemtime($file) . ':' . filesize($file) : 'missing')
+            ->implode('|');
+
+        return 'learn:' . $name . ':' . md5($signature);
+    }
+
+    private function pageBodyText(array $page): string
+    {
+        $parts = [];
+        foreach (($page['sections'] ?? []) as $section) {
+            $parts[] = $section['heading'] ?? '';
+            foreach (($section['body'] ?? []) as $paragraph) {
+                if (str_contains($paragraph, 'برای کامل‌تر شدن مسیر مطالعه')) {
+                    continue;
+                }
+                $parts[] = $paragraph;
+            }
+        }
+        foreach (($page['faqs'] ?? []) as $faq) {
+            $parts[] = $faq['question'] ?? '';
+            $parts[] = $faq['answer'] ?? '';
+        }
+        array_push($parts, ...($page['important_notes'] ?? []), ...($page['common_mistakes'] ?? []), ...($page['decision_points'] ?? []));
+
+        return implode(' ', $parts);
+    }
+
     private function enrichPage(array $page, string $slug): array
     {
         $page['sections'] = $page['sections'] ?? [];
@@ -131,6 +122,18 @@ class LearnPageController extends Controller
         ])));
 
         return $page;
+    }
+
+    private function fallbackRelated(string $slug): array
+    {
+        $fallbacks = [
+            'gold-price-guide',
+            'gold-price-calculation',
+            'gold-invoice-guide',
+            'buying-gold-safely',
+        ];
+
+        return array_values(array_filter($fallbacks, fn($item) => $item !== $slug));
     }
 
     private function searchPages(array $pages, string $query): array
@@ -161,65 +164,13 @@ class LearnPageController extends Controller
             ->all();
     }
 
-    private function buildSearchIndex(array $pages, string $basePath): array
+    private function normalizeSearchText(string $text): string
     {
-        return Cache::remember($this->contentCacheKey('search-index:v3'), 86400, fn() => collect($pages)
-                ->map(fn($page, $slug) => [
-                    'slug' => $slug,
-                    'url' => "{$basePath}/{$slug}",
-                    'title' => $page['title'] ?? '',
-                    'category' => $page['category'] ?? 'آموزش طلا و سکه',
-                    'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
-                    'description' => $page['meta_description'] ?? '',
-                    'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
-                    'search' => [
-                        'title' => $this->normalizeSearchText($page['title'] ?? ''),
-                        'category' => $this->normalizeSearchText($page['category'] ?? 'آموزش طلا و سکه'),
-                        'keywords' => $this->normalizeSearchText(implode(' ', $page['keywords'] ?? [])),
-                        'summary' => $this->normalizeSearchText(implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? ''])),
-                        'body' => $this->normalizeSearchText($page['_source_search_text'] ?? $this->pageBodyText($page)),
-                    ],
-                    'plainText' => Str::limit(trim(strip_tags($page['_source_search_text'] ?? $this->pageBodyText($page))), 700),
-                ])
-                ->values()
-                ->all());
-    }
-
-    private function searchScore(array $page, array $tokens, string $query): int
-    {
-        $fields = [
-            'title' => [$page['title'] ?? '', 30],
-            'h1' => [$page['h1'] ?? '', 24],
-            'category' => [$page['category'] ?? '', 12],
-            'keywords' => [implode(' ', $page['keywords'] ?? []), 18],
-            'summary' => [implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? '']), 10],
-            'body' => [$page['_source_search_text'] ?? $this->pageBodyText($page), 3],
-        ];
-
-        $score = 0;
-        foreach ($fields as $fieldName => [$text, $weight]) {
-            $normalized = $this->normalizeSearchText($text);
-            if ($query !== '' && $this->containsSearchToken($normalized, $query)) {
-                $score += $weight * 4;
-                if (in_array($fieldName, ['title', 'h1'], true) && str_starts_with($normalized, $query)) {
-                    $score += $weight * 3;
-                }
-            }
-
-            foreach ($tokens as $token) {
-                if ($this->containsSearchToken($normalized, $token)) {
-                    $score += $weight + min(4, substr_count($normalized, $token));
-                    $score += intdiv($weight, 2);
-                }
-            }
-        }
-
-        return $score;
-    }
-
-    private function containsSearchToken(string $normalizedText, string $token): bool
-    {
-        return preg_match('/(^|\s)' . preg_quote($token, '/') . '/u', $normalizedText) === 1;
+        $text = strip_tags($text);
+        $text = str_replace(['ي', 'ك', 'ۀ', 'ة', 'ؤ', 'إ', 'أ', 'آ'], ['ی', 'ک', 'ه', 'ه', 'و', 'ا', 'ا', 'ا'], $text);
+        $text = mb_strtolower($text, 'UTF-8');
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 
     private function searchTokens(string $normalizedQuery): array
@@ -269,26 +220,41 @@ class LearnPageController extends Controller
             ->all();
     }
 
-    private function matchesSearchTokens(array $page, array $tokens): bool
+    private function searchScore(array $page, array $tokens, string $query): int
     {
-        $corpus = $this->normalizeSearchText(implode(' ', [
-            $page['title'] ?? '',
-            $page['h1'] ?? '',
-            $page['category'] ?? '',
-            implode(' ', $page['keywords'] ?? []),
-            $page['meta_description'] ?? '',
-            $page['quick_summary'] ?? '',
-            $page['intro'] ?? '',
-            $page['_source_search_text'] ?? $this->pageBodyText($page),
-        ]));
+        $fields = [
+            'title' => [$page['title'] ?? '', 30],
+            'h1' => [$page['h1'] ?? '', 24],
+            'category' => [$page['category'] ?? '', 12],
+            'keywords' => [implode(' ', $page['keywords'] ?? []), 18],
+            'summary' => [implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? '']), 10],
+            'body' => [$page['_source_search_text'] ?? $this->pageBodyText($page), 3],
+        ];
 
-        foreach ($tokens as $token) {
-            if (!$this->containsSearchToken($corpus, $token)) {
-                return false;
+        $score = 0;
+        foreach ($fields as $fieldName => [$text, $weight]) {
+            $normalized = $this->normalizeSearchText($text);
+            if ($query !== '' && $this->containsSearchToken($normalized, $query)) {
+                $score += $weight * 4;
+                if (in_array($fieldName, ['title', 'h1'], true) && str_starts_with($normalized, $query)) {
+                    $score += $weight * 3;
+                }
+            }
+
+            foreach ($tokens as $token) {
+                if ($this->containsSearchToken($normalized, $token)) {
+                    $score += $weight + min(4, substr_count($normalized, $token));
+                    $score += intdiv($weight, 2);
+                }
             }
         }
 
-        return true;
+        return $score;
+    }
+
+    private function containsSearchToken(string $normalizedText, string $token): bool
+    {
+        return preg_match('/(^|\s)' . preg_quote($token, '/') . '/u', $normalizedText) === 1;
     }
 
     private function searchExcerpt(array $page, array $tokens): string
@@ -314,49 +280,95 @@ class LearnPageController extends Controller
         return Str::limit($page['meta_description'] ?? $page['intro'] ?? '', 230);
     }
 
-    private function pageBodyText(array $page): string
+    public function searchIndexJson(): JsonResponse
     {
-        $parts = [];
-        foreach (($page['sections'] ?? []) as $section) {
-            $parts[] = $section['heading'] ?? '';
-            foreach (($section['body'] ?? []) as $paragraph) {
-                if (str_contains($paragraph, 'برای کامل‌تر شدن مسیر مطالعه')) {
-                    continue;
-                }
-                $parts[] = $paragraph;
-            }
-        }
-        foreach (($page['faqs'] ?? []) as $faq) {
-            $parts[] = $faq['question'] ?? '';
-            $parts[] = $faq['answer'] ?? '';
-        }
-        array_push($parts, ...($page['important_notes'] ?? []), ...($page['common_mistakes'] ?? []), ...($page['decision_points'] ?? []));
-
-        return implode(' ', $parts);
-    }
-
-    private function normalizeSearchText(string $text): string
-    {
-        $text = strip_tags($text);
-        $text = str_replace(['ي', 'ك', 'ۀ', 'ة', 'ؤ', 'إ', 'أ', 'آ'], ['ی', 'ک', 'ه', 'ه', 'و', 'ا', 'ا', 'ا'], $text);
-        $text = mb_strtolower($text, 'UTF-8');
-        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
-        return trim(preg_replace('/\s+/u', ' ', $text));
-    }
-
-    private function contentCacheKey(string $name): string
-    {
-        $files = [
-            config_path('learn.php'),
-            config_path('learn_articles.php'),
-            config_path('learn_extras.php'),
+        $ttl = 86400;
+        $payload = [
+            'updatedAt' => config('learn.reviewed_at_iso'),
+            'items' => $this->buildSearchIndex($this->pages(), config('learn.base_path', '/blog')),
         ];
 
-        $signature = collect($files)
-            ->map(fn($file) => is_file($file) ? filemtime($file) . ':' . filesize($file) : 'missing')
-            ->implode('|');
+        return response()
+            ->json($payload)
+            ->withHeaders([
+                'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=604800",
+                'X-Robots-Tag' => 'noindex',
+            ]);
+    }
 
-        return 'learn:' . $name . ':' . md5($signature);
+    private function buildSearchIndex(array $pages, string $basePath): array
+    {
+        return Cache::remember($this->contentCacheKey('search-index:v3'), 86400, fn() => collect($pages)
+            ->map(fn($page, $slug) => [
+                'slug' => $slug,
+                'url' => "{$basePath}/{$slug}",
+                'title' => $page['title'] ?? '',
+                'category' => $page['category'] ?? 'آموزش طلا و سکه',
+                'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
+                'description' => $page['meta_description'] ?? '',
+                'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
+                'search' => [
+                    'title' => $this->normalizeSearchText($page['title'] ?? ''),
+                    'category' => $this->normalizeSearchText($page['category'] ?? 'آموزش طلا و سکه'),
+                    'keywords' => $this->normalizeSearchText(implode(' ', $page['keywords'] ?? [])),
+                    'summary' => $this->normalizeSearchText(implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? ''])),
+                    'body' => $this->normalizeSearchText($page['_source_search_text'] ?? $this->pageBodyText($page)),
+                ],
+                'plainText' => Str::limit(trim(strip_tags($page['_source_search_text'] ?? $this->pageBodyText($page))), 700),
+            ])
+            ->values()
+            ->all());
+    }
+
+    public function show(string $slug): Response
+    {
+        $pages = $this->pages();
+        abort_unless(isset($pages[$slug]), 404);
+
+        $page = $pages[$slug];
+        $page['slug'] = $slug;
+        $basePath = config('learn.base_path', '/blog');
+        $page['url'] = url("{$basePath}/{$slug}");
+        $page['keywords'] = $page['keywords'] ?? [$page['title'], 'طلا', 'سکه', 'قیمت طلا'];
+
+        return response()->view('learn.show', [
+            'page' => $page,
+            'pages' => $pages,
+            'basePath' => $basePath,
+            'seo' => [
+                'title' => $page['meta_title'] ?? $page['title'],
+                'description' => $page['meta_description'],
+                'canonical' => $page['url'],
+                'keywords' => $page['keywords'],
+                'modifiedTime' => config('learn.reviewed_at_iso'),
+                'publishedTime' => config('learn.reviewed_at_iso'),
+                'ogImage' => $page['og_image'] ?? url(config('learn.default_og_image')),
+                'type' => 'article',
+                'jsonLd' => $this->schema->article($page),
+            ],
+        ]);
+    }
+
+    private function matchesSearchTokens(array $page, array $tokens): bool
+    {
+        $corpus = $this->normalizeSearchText(implode(' ', [
+            $page['title'] ?? '',
+            $page['h1'] ?? '',
+            $page['category'] ?? '',
+            implode(' ', $page['keywords'] ?? []),
+            $page['meta_description'] ?? '',
+            $page['quick_summary'] ?? '',
+            $page['intro'] ?? '',
+            $page['_source_search_text'] ?? $this->pageBodyText($page),
+        ]));
+
+        foreach ($tokens as $token) {
+            if (!$this->containsSearchToken($corpus, $token)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function iranMarketSection(string $slug, string $topic, array $page): array
@@ -409,18 +421,6 @@ class LearnPageController extends Controller
             ->map(fn($relatedSlug) => '<a href="' . e(config('learn.base_path', '/blog') . '/' . $relatedSlug) . '">' . e($rawPages[$relatedSlug]['title'] ?? $relatedSlug) . '</a>')
             ->values()
             ->all();
-    }
-
-    private function fallbackRelated(string $slug): array
-    {
-        $fallbacks = [
-            'gold-price-guide',
-            'gold-price-calculation',
-            'gold-invoice-guide',
-            'buying-gold-safely',
-        ];
-
-        return array_values(array_filter($fallbacks, fn($item) => $item !== $slug));
     }
 
     private function topicSpecificGuidance(string $slug, string $topic): string

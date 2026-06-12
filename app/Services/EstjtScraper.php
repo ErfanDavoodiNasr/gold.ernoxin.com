@@ -168,14 +168,22 @@ class EstjtScraper
             $type = PersianNumber::clean($cells->item(0)->textContent);
             $currentRaw = PersianNumber::clean($cells->item(1)->textContent);
             $yesterdayRaw = PersianNumber::clean($cells->item(4)->textContent);
-            [$currentValue, $currency] = $gold ? PersianNumber::currencyAndValue($currentRaw) : [PersianNumber::numeric($currentRaw), null];
-            [$yesterdayValue, $yesterdayCurrency] = $gold ? PersianNumber::currencyAndValue($yesterdayRaw) : [PersianNumber::numeric($yesterdayRaw), null];
+            [$currentValue, $currency] = PersianNumber::currencyAndValue($currentRaw);
+            [$yesterdayValue, $yesterdayCurrency] = PersianNumber::currencyAndValue($yesterdayRaw);
+            [$highValue, $highCurrency] = PersianNumber::currencyAndValue(PersianNumber::clean($cells->item(2)->textContent));
+            [$lowValue, $lowCurrency] = PersianNumber::currencyAndValue(PersianNumber::clean($cells->item(3)->textContent));
+            if ($currency === null && $highCurrency !== null) {
+                $currency = $highCurrency;
+            }
+            if ($currency === null && $lowCurrency !== null) {
+                $currency = $lowCurrency;
+            }
             $item = [
                 'type' => $type,
                 'category' => $gold ? 'gold' : 'coin',
                 'current' => ['value' => $currentValue, 'raw' => $currentRaw, 'currency' => $currency],
-                'high' => ['value' => PersianNumber::numeric($cells->item(2)->textContent), 'raw' => PersianNumber::clean($cells->item(2)->textContent)],
-                'low' => ['value' => PersianNumber::numeric($cells->item(3)->textContent), 'raw' => PersianNumber::clean($cells->item(3)->textContent)],
+                'high' => ['value' => $highValue, 'raw' => PersianNumber::clean($cells->item(2)->textContent), 'currency' => $highCurrency ?? $currency],
+                'low' => ['value' => $lowValue, 'raw' => PersianNumber::clean($cells->item(3)->textContent), 'currency' => $lowCurrency ?? $currency],
                 'yesterdayAvg' => ['value' => $yesterdayValue, 'raw' => $yesterdayRaw, 'currency' => $yesterdayCurrency],
                 'change' => PersianNumber::change($cells->item(5)->textContent, $this->direction($cells->item(5))),
             ];

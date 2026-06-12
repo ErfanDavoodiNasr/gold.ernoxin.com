@@ -40,6 +40,8 @@ class MarketItem extends Model
 
     public function latestPrice()
     {
-        return $this->hasOne(PricePoint::class)->latestOfMany('fetched_at');
+        return $this->hasOne(PricePoint::class)
+            ->where('current_value', '>', 0)
+            ->latestOfMany('fetched_at');
     }
 }
