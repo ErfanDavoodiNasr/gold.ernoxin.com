@@ -261,8 +261,10 @@ function App() {
     }, [theme, config.themeAccent]);
 
     useEffect(() => {
-        document.body.classList.add('appReady');
-    }, []);
+        if (items.length > 0) {
+            document.body.classList.add('appReady');
+        }
+    }, [items.length]);
 
     useEffect(() => {
         if (localStorage.getItem('theme') || !window.matchMedia) return undefined;

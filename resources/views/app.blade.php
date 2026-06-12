@@ -65,12 +65,7 @@
         })();
     </script>
     @if(!empty($seo['jsonLd']))
-    <script type="application/ld+json">{
-            !!
-            json_encode($seo[
-            'jsonLd'
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!
-        }</script>
+    <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}</script>
     @endif
     @php($manifestPath = public_path('build/manifest.json'))
     @if(file_exists($manifestPath))
@@ -155,13 +150,14 @@
     </section>
     @endif
 </main>
-@php
+<div id="root"></div>
+<?php
     $faqGold = collect($seoItems ?? [])->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
         ?: collect($seoItems ?? [])->firstWhere('category', 'gold');
     $faqCoin = collect($seoItems ?? [])->firstWhere('category', 'coin');
     $faqGoldPrice = $faqGold ? number_format((float)($faqGold->latestPrice?->current_value ?? 0), 0, '.', ',') . ' تومان' : 'نامشخص';
     $faqCoinPrice = $faqCoin ? number_format((float)($faqCoin->latestPrice?->current_value ?? 0), 0, '.', ',') . ' تومان' : 'نامشخص';
-@endphp
+?>
 @if(!empty($seoItems) && count($seoItems) > 0)
 <section class="homeLearn shell" id="faq" aria-label="سوالات پرتکرار قیمت طلا">
     <div class="homeLearnHeader">
@@ -177,7 +173,7 @@
         </details>
         <details class="faqItem">
             <summary>قیمت سکه امروز چقدر است؟</summary>
-            <p>بر اساس آخرین داده ثبت‌شده، قیمت سکه: {{ $faqCoinPrice }}. برای جزئیات بیشتر به داشبورد قیمت زنده بالا مراجعه کنید.</p>
+            <p>بر اساس آخرین داده ثبت‌شده، قیمت سکه: {{ $faqCoinPrice }}. برای جزئیات بیشتر به داشبورد قیمت زنده در بالای صفحه مراجعه کنید.</p>
         </details>
         <details class="faqItem">
             <summary>منبع قیمت طلا در این سایت چیست؟</summary>
@@ -186,7 +182,6 @@
     </div>
 </section>
 @endif
-<div id="root"></div>
 <?php
 $learnExtras = config('learn_extras', []);
 $learnDefaults = $learnExtras['defaults'] ?? [];
