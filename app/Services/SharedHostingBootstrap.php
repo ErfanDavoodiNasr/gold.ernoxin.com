@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
-
 class SharedHostingBootstrap
 {
     public function run(): void
@@ -13,7 +11,6 @@ class SharedHostingBootstrap
         $this->ensureWritableDirectories();
         $this->ensureEnvironmentFile();
         $this->ensureApplicationKey();
-        $this->ensureDatabaseSchema();
     }
 
     private function loadEnvBootstrap(): void
@@ -124,7 +121,6 @@ class SharedHostingBootstrap
     {
         return [
             storage_path('logs/laravel.log'),
-            storage_path('framework/hosting-bootstrap.lock'),
         ];
     }
 
@@ -166,55 +162,6 @@ class SharedHostingBootstrap
             }
         } catch (\Throwable $e) {
             report($e);
-        }
-    }
-
-    private function ensureDatabaseSchema(): void
-    {
-        if (!config('gold.hosting.auto_migrate')) {
-            return;
-        }
-
-        $migrationFiles = glob(database_path('migrations/*.php')) ?: [];
-        $latestMtime = $migrationFiles ? max(array_map('filemtime', $migrationFiles)) : 0;
-        $statePath = storage_path('framework/hosting-migrations.state');
-        $lastChecked = is_readable($statePath) ? (int)file_get_contents($statePath) : 0;
-
-        if ($lastChecked >= $latestMtime && $lastChecked > 0) {
-            return;
-        }
-
-        $lockPath = storage_path('framework/hosting-bootstrap.lock');
-        $lock = @fopen($lockPath, 'c');
-
-        if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
-            return;
-        }
-
-        try {
-            DB::connection()->getPdo();
-
-            $repository = app('migration.repository');
-
-            if (!$repository->repositoryExists()) {
-                $repository->createRepository();
-            }
-
-            $migrator = app('migrator');
-            $migrationPath = database_path('migrations');
-            $migrationFiles = $migrator->getMigrationFiles($migrationPath);
-            $pendingMigrations = array_diff(array_keys($migrationFiles), $repository->getRan());
-
-            if ($pendingMigrations) {
-                $migrator->run($migrationPath, ['force' => true]);
-            }
-
-            @file_put_contents($statePath, (string)max($latestMtime, time()));
-        } catch (\Throwable $e) {
-            report($e);
-        } finally {
-            flock($lock, LOCK_UN);
-            fclose($lock);
         }
     }
 }

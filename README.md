@@ -30,10 +30,9 @@
 2. فایل `ernoxin-gold.zip` را از بخش Assets دانلود و روی هاست extract کنید.
 3. یک دیتابیس MySQL و user بسازید.
 4. اطلاعات دیتابیس را در `.env.example` وارد کنید.
-5. دامنه را باز کنید؛ برنامه از همان فایل یک `.env` می‌سازد، فقط `APP_KEY` را مقداردهی می‌کند و جدول‌ها را
-   آماده
-   می‌کند.
-6. Cron دریافت قیمت را فعال کنید.
+5. دامنه را باز کنید؛ برنامه از همان فایل یک `.env` می‌سازد و `APP_KEY` را مقداردهی می‌کند.
+6. جدول‌های دیتابیس را در phpMyAdmin اجرا کنید: `database/schema/mysql.sql`
+7. Cron دریافت قیمت را فعال کنید.
 
 هر tag با فرمت `v*` مثل `v1.0.0` در GitHub Actions بیلد می‌شود و فایل آماده‌ی نصب به همان Release اضافه می‌شود.
 
@@ -107,11 +106,13 @@ GET  /api/market/items/{id}/history?range=1d
 
 ## توسعه محلی
 
+1. فایل `database/schema/mysql.sql` را در MySQL import کنید.
+2. سپس:
+
 ```bash
 composer install
 npm install
 npm run build
-php artisan migrate
 php artisan serve
 ```
 

@@ -1,23 +1,3 @@
-CREATE TABLE IF NOT EXISTS `migrations`
-(
-    `id`
-    int
-    unsigned
-    NOT
-    NULL
-    AUTO_INCREMENT,
-    `migration`
-    varchar
-(
-    255
-) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `batch` int NOT NULL,
-    PRIMARY KEY
-(
-    `id`
-)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `market_items`
 (
     `id`
@@ -70,6 +50,11 @@ CREATE TABLE IF NOT EXISTS `market_items`
     KEY `market_items_normalized_name_index`
 (
     `normalized_name`
+),
+    KEY `market_items_is_active_category_index`
+(
+    `is_active`,
+    `category`
 )
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci;
 
@@ -194,12 +179,9 @@ CREATE TABLE IF NOT EXISTS `fetch_logs`
 (
     `status`,
     `started_at`
+),
+    KEY `fetch_logs_finished_at_index`
+(
+    `finished_at`
 )
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci;
-
-INSERT
-IGNORE INTO `migrations` (`migration`, `batch`) VALUES
-('2026_05_08_000001_create_market_items_table', 1),
-('2026_05_08_000002_create_price_points_table', 1),
-('2026_05_08_000003_create_fetch_logs_table', 1),
-('2026_05_19_000001_add_started_at_index_to_fetch_logs_table', 2);

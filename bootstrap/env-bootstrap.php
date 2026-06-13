@@ -7,10 +7,10 @@ function env_bootstrap_base_path(): string
 
 function env_bootstrap_chmod_file(string $file): void
 {
-    @chmod($file, 0664);
+    @chmod($file, 0600);
 
     if (!is_writable($file)) {
-        @chmod($file, 0666);
+        @chmod($file, 0640);
     }
 }
 

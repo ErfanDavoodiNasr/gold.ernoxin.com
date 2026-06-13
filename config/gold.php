@@ -38,7 +38,6 @@ return [
         'dark_mode' => true,
     ],
     'hosting' => [
-        'auto_migrate' => true,
         'ensure_writable_paths' => true,
     ],
     'theme_default' => env('THEME_DEFAULT') ?: 'system',

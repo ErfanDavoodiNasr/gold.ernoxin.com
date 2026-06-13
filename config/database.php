@@ -29,5 +29,4 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
     ],
-    'migrations' => 'migrations',
 ];
