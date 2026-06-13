@@ -10,17 +10,21 @@ class AutoPriceFetcher
     {
     }
 
-    public function fetchIfDue(bool $force = false): ?array
+    public function fetchIfDue(bool $force = false): array
     {
-        try {
-            if (!$force && !$this->isDue()) {
-                return null;
-            }
+        if (!$force && !$this->isDue()) {
+            return ['status' => 'skipped'];
+        }
 
-            return $this->ingestor->fetchAndStore();
+        try {
+            $result = $this->ingestor->fetchAndStore();
+
+            return array_merge(['status' => 'success'], $result);
         } catch (\Throwable $e) {
-            report($e);
-            return null;
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
         }
     }
 

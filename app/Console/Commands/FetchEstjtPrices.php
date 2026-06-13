@@ -13,9 +13,15 @@ class FetchEstjtPrices extends Command
     public function handle(AutoPriceFetcher $fetcher): int
     {
         $result = $fetcher->fetchIfDue((bool)$this->option('force'));
-        if (!$result) {
+
+        if (($result['status'] ?? null) === 'skipped') {
             $this->line('زمان دریافت بعدی هنوز نرسیده است.');
             return self::SUCCESS;
+        }
+
+        if (($result['status'] ?? null) === 'failed') {
+            $this->error('دریافت قیمت ناموفق بود: ' . ($result['error'] ?? 'خطای نامشخص'));
+            return self::FAILURE;
         }
 
         $this->info("{$result['items']} مورد ذخیره شد. شناسه: {$result['referenceId']}");

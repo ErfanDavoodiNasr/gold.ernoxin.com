@@ -8,6 +8,7 @@ use App\Models\PricePoint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PriceIngestor
@@ -22,23 +23,26 @@ class PriceIngestor
     public function fetchAndStore(): array
     {
         $reference = (string)Str::uuid();
-        $log = FetchLog::create([
-            'source' => config('gold.source_key', 'estjt'),
-            'status' => 'running',
-            'reference_id' => $reference,
-            'started_at' => now(),
-        ]);
+        $source = config('gold.source_key', 'estjt');
+        $log = null;
+
         try {
+            $log = FetchLog::create([
+                'source' => $source,
+                'status' => 'running',
+                'reference_id' => $reference,
+                'started_at' => now(),
+            ]);
+
             $payload = $this->scraper->fetch();
             $count = DB::transaction(fn() => $this->store($payload));
             $log->update(['status' => 'success', 'items_count' => $count, 'finished_at' => now()]);
-            Cache::forget('gold:market-summary:data');
-            Cache::forget('gold:market-summary');
+            $this->clearSummaryCache();
             Cache::increment('gold:price-data-version');
+
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
-            $log->update(['status' => 'failed', 'message' => 'Price fetch failed.', 'finished_at' => now()]);
-            report($e);
+            $this->markFetchFailed($log, $reference, $source, $e);
             throw $e;
         }
     }
@@ -52,17 +56,12 @@ class PriceIngestor
             ->where('source', $source)
             ->get()
             ->keyBy('normalized_name');
-        $latestPrices = $this->latestPricesByItemId($existingItems->pluck('id'));
 
         foreach (['gold', 'coin'] as $group) {
             foreach (($payload[$group] ?? []) as $row) {
                 $normalized = PersianNumber::label($row['type']);
                 $existingItem = $existingItems->get($normalized);
-                $referenceToman = $existingItem
-                    ? ($latestPrices->get($existingItem->id)?->current_value !== null
-                        ? (float)$latestPrices->get($existingItem->id)->current_value
-                        : null)
-                    : null;
+                $referenceToman = $this->referencePrice($existingItem);
                 $isUsd = $this->normalizer->isUsdItem($row['current']['currency'] ?? $existingItem?->currency, $group);
 
                 $row = $this->normalizer->normalizeRow($row, $referenceToman, $isUsd);
@@ -83,7 +82,7 @@ class PriceIngestor
                 );
                 $existingItems->put($normalized, $item);
 
-                $point = PricePoint::updateOrCreate(
+                PricePoint::updateOrCreate(
                     ['market_item_id' => $item->id, 'fetched_at' => $fetchedAt],
                     [
                         'current_value' => $row['current']['value'],
@@ -96,30 +95,60 @@ class PriceIngestor
                         'raw_payload' => $row,
                     ]
                 );
-                $latestPrices->put($item->id, $point);
                 $count++;
             }
         }
         return $count;
     }
 
-    private function latestPricesByItemId($itemIds)
+    private function referencePrice(?MarketItem $item): ?float
     {
-        if ($itemIds->isEmpty()) {
-            return collect();
+        if (!$item) {
+            return null;
         }
 
-        return PricePoint::query()
-            ->whereIn('market_item_id', $itemIds)
+        $latest = $item->prices()
+            ->whereNotNull('current_value')
             ->where('current_value', '>', 0)
-            ->orderByDesc('fetched_at')
-            ->get()
-            ->unique('market_item_id')
-            ->keyBy('market_item_id');
+            ->latest('fetched_at')
+            ->value('current_value');
+
+        return $latest !== null ? (float)$latest : null;
     }
 
     private function validPrice($value): bool
     {
         return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
+    private function clearSummaryCache(): void
+    {
+        Cache::forget('gold:market-summary:data');
+        Cache::forget('gold:market-summary');
+    }
+
+    private function markFetchFailed(?FetchLog $log, string $reference, string $source, \Throwable $e): void
+    {
+        $message = Str::limit($e->getMessage(), 500);
+
+        if ($log) {
+            $log->update([
+                'status' => 'failed',
+                'message' => $message,
+                'finished_at' => now(),
+            ]);
+        }
+
+        $this->clearSummaryCache();
+
+        Log::error('Gold price fetch failed', [
+            'reference_id' => $reference,
+            'source' => $source,
+            'fetch_log_id' => $log?->id,
+            'exception' => get_class($e),
+            'message' => $e->getMessage(),
+        ]);
+
+        report($e);
     }
 }

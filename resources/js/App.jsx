@@ -141,6 +141,27 @@ function getInitialTheme() {
     return localStorage.getItem('theme') || resolveSystemTheme();
 }
 
+const chartRangeStorageKey = 'chartRange';
+
+function getStoredChartRange(availableRanges, fallback) {
+    const normalizedAvailable = (availableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    const fallbackRange = rangeKey(fallback || defaultConfig.chartDefaultRange);
+
+    try {
+        const stored = localStorage.getItem(chartRangeStorageKey);
+        if (stored) {
+            const key = rangeKey(stored);
+            if (normalizedAvailable.includes(key)) {
+                return key;
+            }
+        }
+    } catch {
+        // localStorage may be unavailable in restricted contexts
+    }
+
+    return normalizedAvailable.includes(fallbackRange) ? fallbackRange : normalizedAvailable[0];
+}
+
 function isUsdItem(item) {
     return item?.name?.includes('انس') || String(item?.currency || '').toUpperCase() === 'USD';
 }
@@ -347,7 +368,10 @@ function App() {
     const [history, setHistory] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [query, setQuery] = useState('');
-    const [range, setRange] = useState(() => embeddedSummary ? buildConfigFromSummary(embeddedSummary).chartDefaultRange : null);
+    const [range, setRange] = useState(() => {
+        const initialConfig = embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig;
+        return getStoredChartRange(initialConfig.chartAvailableRanges, initialConfig.chartDefaultRange);
+    });
     const [status, setStatus] = useState(() => (embeddedSummary?.items?.length ? 'ready' : 'loading'));
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(() => embeddedSummary?.lastFetch || null);
@@ -361,6 +385,15 @@ function App() {
         document.documentElement.style.setProperty('--gold', config.themeAccent || defaultConfig.themeAccent);
         localStorage.setItem('theme', theme);
     }, [theme, config.themeAccent]);
+
+    useEffect(() => {
+        if (!range) return;
+        try {
+            localStorage.setItem(chartRangeStorageKey, rangeKey(range));
+        } catch {
+            // ignore storage failures
+        }
+    }, [range]);
 
     useEffect(() => {
         if (items.length > 0) {
@@ -391,7 +424,15 @@ function App() {
             const data = result.data;
             const nextConfig = buildConfigFromSummary(data);
             setConfig(nextConfig);
-            setRange((current) => current || nextConfig.chartDefaultRange);
+            setRange((current) => {
+                const available = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+                const key = rangeKey(current);
+                if (key && available.includes(key)) {
+                    return key;
+                }
+
+                return getStoredChartRange(nextConfig.chartAvailableRanges, nextConfig.chartDefaultRange);
+            });
             setItems(data.items || []);
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
