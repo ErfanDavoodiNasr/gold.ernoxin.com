@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\FetchLog;
 use App\Models\MarketItem;
+use App\Services\MarketSummaryService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PricePageController extends Controller
 {
+    public function __construct(private MarketSummaryService $summaryService)
+    {
+    }
+
     public function __invoke($days = null)
     {
         $availableRanges = collect(config('gold.chart_available_ranges', ['1d', '7d', '30d', '90d', '180d', '365d']))
@@ -21,12 +27,8 @@ class PricePageController extends Controller
         $requestedDays = filter_var($days, FILTER_VALIDATE_INT) ?: null;
         $days = $requestedDays ? $availableRanges->first(fn($range) => $range === $requestedDays) : null;
         try {
-            $items = MarketItem::with('latestPrice')
-                ->where('is_active', true)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get();
-            $lastFetch = FetchLog::latest('finished_at')->first();
+            $items = $this->summaryService->items();
+            $lastFetch = $this->summaryService->lastFetch();
         } catch (Throwable $exception) {
             Log::error('Price page query failed', [
                 'exception' => get_class($exception),
@@ -39,6 +41,7 @@ class PricePageController extends Controller
         return view('app', [
             'seo' => $this->seoPayload($items, $availableRanges, $days, $lastFetch),
             'seoItems' => $items,
+            'marketSummary' => $this->embeddedMarketSummary(),
         ]);
     }
 
@@ -83,7 +86,7 @@ class PricePageController extends Controller
                 'url' => url("/price/trends/{$range}"),
                 'title' => "روند {$range} روزه قیمت طلا و سکه",
             ])->all(),
-            'jsonLd' => $this->jsonLd($items, $availableRanges, $days, $updatedAt),
+            'jsonLd' => $this->cachedJsonLd($items, $availableRanges, $days, $updatedAt),
         ];
     }
 
@@ -103,6 +106,18 @@ class PricePageController extends Controller
     private function isUsdItem(?MarketItem $item): bool
     {
         return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
+    }
+
+    private function cachedJsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
+    {
+        $version = (int)Cache::get('gold:price-data-version', 0);
+        $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
+
+        return Cache::remember(
+            'gold:price-jsonld:v1:' . $version . ':' . ($days ?? 0),
+            $ttl,
+            fn() => $this->jsonLd($items, $availableRanges, $days, $updatedAt)
+        );
     }
 
     private function jsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
@@ -239,5 +254,19 @@ class PricePageController extends Controller
     private function schemaNumber($value): ?float
     {
         return $value === null ? null : (float)$value;
+    }
+
+    private function embeddedMarketSummary(): ?array
+    {
+        try {
+            return $this->summaryService->apiPayload();
+        } catch (Throwable $exception) {
+            Log::warning('Embedded market summary failed', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }

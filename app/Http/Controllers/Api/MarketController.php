@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\FetchLog;
 use App\Models\MarketItem;
-use App\Models\PricePoint;
+use App\Services\MarketSummaryService;
+use App\Services\PriceHistoryQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -13,32 +13,19 @@ use Throwable;
 
 class MarketController extends Controller
 {
+    public function __construct(
+        private PriceHistoryQuery    $historyQuery,
+        private MarketSummaryService $summaryService,
+    )
+    {
+    }
+
     public function summary()
     {
         $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
         try {
-            $payload = Cache::remember('gold:market-summary', $ttl, function () {
-                $items = MarketItem::with('latestPrice')->where('is_active', true)->orderBy('category')->get();
-                $lastFetch = FetchLog::latest('finished_at')->first();
-
-                return [
-                    'items' => $items->map(fn($item) => $this->itemResource($item)),
-                    'lastFetch' => $this->fetchLogResource($lastFetch),
-                    'config' => [
-                        'sourceName' => config('gold.source_name'),
-                        'sourceUrl' => config('gold.source_url'),
-                        'chartDefaultRange' => $this->normalizeRange(config('gold.chart_default_range', '1d'))['key'],
-                        'chartAvailableRanges' => config('gold.chart_available_ranges'),
-                        'historyMaxDays' => config('gold.history_max_days'),
-                        'chartMaxPoints' => config('gold.chart_max_points'),
-                        'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
-                        'themeDefault' => config('gold.theme_default'),
-                        'themeAccent' => config('gold.theme_accent'),
-                        'features' => config('gold.features'),
-                    ],
-                ];
-            });
+            $payload = $this->summaryService->apiPayload();
         } catch (Throwable $exception) {
             Log::error('Market summary query failed', [
                 'exception' => get_class($exception),
@@ -49,80 +36,6 @@ class MarketController extends Controller
         }
 
         return $this->cachedJson($payload, $ttl);
-    }
-
-    private function itemResource(MarketItem $item): array
-    {
-        $p = $this->displayPrice($item);
-        return [
-            'id' => $item->id,
-            'name' => $item->name,
-            'category' => $item->category,
-            'currency' => $item->currency,
-            'current' => $p?->current_value,
-            'high' => $p?->high_value,
-            'low' => $p?->low_value,
-            'change' => $p?->change_value,
-            'percent' => $p?->change_percent,
-            'direction' => $p?->direction ?? 'none',
-            'fetchedAt' => $p?->fetched_at?->toIso8601String(),
-        ];
-    }
-
-    private function displayPrice(MarketItem $item): ?PricePoint
-    {
-        $latest = $item->latestPrice;
-        if ($this->isUsablePrice($latest?->current_value)) {
-            return $latest;
-        }
-
-        return $item->prices()
-            ->whereNotNull('current_value')
-            ->where('current_value', '>', 0)
-            ->latest('fetched_at')
-            ->first();
-    }
-
-    private function isUsablePrice($value): bool
-    {
-        return $value !== null && is_numeric($value) && (float)$value > 0;
-    }
-
-    private function fetchLogResource(?FetchLog $log): ?array
-    {
-        if (!$log) {
-            return null;
-        }
-
-        return [
-            'status' => $log->status,
-            'items_count' => $log->items_count,
-            'started_at' => $log->started_at?->toIso8601String(),
-            'finished_at' => $log->finished_at?->toIso8601String(),
-        ];
-    }
-
-    private function normalizeRange($value): array
-    {
-        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
-        $raw = strtolower(trim((string)$value));
-
-        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
-            $amount = max(1, (int)$matches[1]);
-            $unit = $matches[2];
-        } else {
-            $amount = max(1, (int)$raw);
-            $unit = 'd';
-        }
-
-        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
-        $maxMinutes = $historyMaxDays * 1440;
-        $minutes = min($minutes, $maxMinutes);
-
-        return [
-            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
-            'minutes' => $minutes,
-        ];
     }
 
     private function serverErrorResponse()
@@ -151,44 +64,45 @@ class MarketController extends Controller
     public function history(Request $request, MarketItem $item)
     {
         $range = $this->normalizeRange($request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d'));
-        $ttl = max(10, (int)config('gold.history_cache_seconds', 45));
+        $ttl = $this->historyCacheTtl($range);
 
         try {
-            $latestFetchedAt = PricePoint::where('market_item_id', $item->id)->max('fetched_at') ?: 'empty';
+            $latestFetchedAtKey = $this->cachedLatestFetchedAt($item->id);
             $cacheKey = implode(':', [
                 'gold',
                 'market-history',
-                'v3',
+                'v5',
                 $item->getKey(),
                 $range['key'],
-                md5((string)$latestFetchedAt),
+                md5($latestFetchedAtKey),
             ]);
 
-            $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range) {
-                $latestFetchedAt = PricePoint::where('market_item_id', $item->id)->max('fetched_at');
+            $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range, $latestFetchedAtKey) {
+                $latestFetchedAt = $latestFetchedAtKey === 'empty'
+                    ? null
+                    : \Illuminate\Support\Carbon::parse($latestFetchedAtKey);
+
                 if (!$latestFetchedAt) {
                     return [
-                        'item' => $this->itemResource($item->load('latestPrice')),
                         'range' => $range['key'],
                         'analytics' => ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null],
                         'points' => [],
                     ];
                 }
 
-                $windowStart = \Illuminate\Support\Carbon::parse($latestFetchedAt)->subMinutes($range['minutes']);
-                $points = PricePoint::where('market_item_id', $item->id)
-                    ->select(['current_value', 'high_value', 'low_value', 'change_value', 'change_percent', 'direction', 'fetched_at'])
-                    ->where('fetched_at', '>=', $windowStart)
-                    ->where('current_value', '>', 0)
-                    ->orderBy('fetched_at')
-                    ->get();
+                $windowStart = $latestFetchedAt->copy()->subMinutes($range['minutes']);
+                $maxPoints = (int)config('gold.chart_max_points', 600);
+                $useSqlBuckets = $range['minutes'] > max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
+                $points = $this->historyQuery->fetchChartPoints($item->id, $windowStart, $range['minutes'], $maxPoints);
 
-                $points = $this->filterHistoryOutliers($points);
-                $analytics = $this->analytics($points);
-                $points = $this->samplePoints($points, (int)config('gold.chart_max_points', 600));
+                if (!$useSqlBuckets) {
+                    $points = $this->filterHistoryOutliers($points);
+                    $points = $this->samplePoints($points, $maxPoints);
+                }
+
+                $analytics = $this->historyQuery->fetchAnalytics($item->id, $windowStart, $points, $useSqlBuckets);
 
                 return [
-                    'item' => $this->itemResource($item->load('latestPrice')),
                     'range' => $range['key'],
                     'analytics' => $analytics,
                     'points' => $points->map(fn($p) => [
@@ -214,6 +128,55 @@ class MarketController extends Controller
         }
 
         return $this->cachedJson($payload, $ttl);
+    }
+
+    private function normalizeRange($value): array
+    {
+        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
+        $raw = strtolower(trim((string)$value));
+
+        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
+            $amount = max(1, (int)$matches[1]);
+            $unit = $matches[2];
+        } else {
+            $amount = max(1, (int)$raw);
+            $unit = 'd';
+        }
+
+        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
+        $maxMinutes = $historyMaxDays * 1440;
+        $minutes = min($minutes, $maxMinutes);
+
+        return [
+            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
+            'minutes' => $minutes,
+        ];
+    }
+
+    private function historyCacheTtl(array $range): int
+    {
+        $minutes = $range['minutes'];
+
+        if ($minutes >= 43200) {
+            return max(60, (int)config('gold.history_cache_seconds_long', 300));
+        }
+
+        if ($minutes >= 10080) {
+            return max(30, (int)config('gold.history_cache_seconds_medium', 120));
+        }
+
+        return max(10, (int)config('gold.history_cache_seconds', 45));
+    }
+
+    private function cachedLatestFetchedAt(int $marketItemId): string
+    {
+        $version = (int)Cache::get('gold:price-data-version', 0);
+
+        return (string)Cache::remember(
+            "gold:item-latest-fetch:{$marketItemId}:v{$version}",
+            max(5, (int)config('gold.latest_fetch_cache_seconds', 10)),
+            fn() => $this->historyQuery->latestFetchedAt($marketItemId)?->toIso8601String() ?: 'empty'
+        );
     }
 
     private function filterHistoryOutliers($points)
@@ -242,24 +205,9 @@ class MarketController extends Controller
         })->values();
     }
 
-    private function analytics($points): array
+    private function isUsablePrice($value): bool
     {
-        $values = $points->pluck('current_value')->filter(fn($value) => $this->isUsablePrice($value))->values();
-        if ($values->isEmpty()) {
-            return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
-        }
-
-        $first = (float)$values->first();
-        $last = (float)$values->last();
-        $change = $last - $first;
-
-        return [
-            'min' => (float)$values->min(),
-            'max' => (float)$values->max(),
-            'avg' => round((float)$values->avg(), 4),
-            'change' => $change,
-            'changePercent' => $first == 0.0 ? null : round(($change / $first) * 100, 4),
-        ];
+        return $value !== null && is_numeric($value) && (float)$value > 0;
     }
 
     private function samplePoints($points, int $maxPoints)

@@ -34,6 +34,10 @@ class SharedHostingBootstrap
             return;
         }
 
+        if ($this->maintenanceRecentlyChecked('hosting-writable.ts', 3600)) {
+            return;
+        }
+
         foreach ($this->writableDirectories() as $directory) {
             $this->ensureWritableDirectory($directory);
         }
@@ -41,6 +45,15 @@ class SharedHostingBootstrap
         foreach ($this->writableFiles() as $file) {
             $this->ensureWritableFile($file);
         }
+
+        $this->touchMaintenanceMarker('hosting-writable.ts');
+    }
+
+    private function maintenanceRecentlyChecked(string $filename, int $seconds): bool
+    {
+        $path = storage_path('framework/' . $filename);
+
+        return is_file($path) && (time() - filemtime($path)) < $seconds;
     }
 
     private function writableDirectories(): array
@@ -129,6 +142,11 @@ class SharedHostingBootstrap
         }
     }
 
+    private function touchMaintenanceMarker(string $filename): void
+    {
+        @touch(storage_path('framework/' . $filename));
+    }
+
     private function ensureEnvironmentFile(): void
     {
         env_bootstrap_create_env_from_example(base_path());
@@ -157,6 +175,15 @@ class SharedHostingBootstrap
             return;
         }
 
+        $migrationFiles = glob(database_path('migrations/*.php')) ?: [];
+        $latestMtime = $migrationFiles ? max(array_map('filemtime', $migrationFiles)) : 0;
+        $statePath = storage_path('framework/hosting-migrations.state');
+        $lastChecked = is_readable($statePath) ? (int)file_get_contents($statePath) : 0;
+
+        if ($lastChecked >= $latestMtime && $lastChecked > 0) {
+            return;
+        }
+
         $lockPath = storage_path('framework/hosting-bootstrap.lock');
         $lock = @fopen($lockPath, 'c');
 
@@ -181,6 +208,8 @@ class SharedHostingBootstrap
             if ($pendingMigrations) {
                 $migrator->run($migrationPath, ['force' => true]);
             }
+
+            @file_put_contents($statePath, (string)max($latestMtime, time()));
         } catch (\Throwable $e) {
             report($e);
         } finally {

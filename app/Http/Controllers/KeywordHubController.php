@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FetchLog;
 use App\Models\MarketItem;
+use App\Services\MarketSummaryService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -11,18 +11,18 @@ use Throwable;
 
 class KeywordHubController extends Controller
 {
+    public function __construct(private MarketSummaryService $summaryService)
+    {
+    }
+
     public function __invoke(string $hub): Response
     {
         $config = config("seo_hubs.hubs.{$hub}");
         abort_unless($config, 404);
 
         try {
-            $items = MarketItem::with('latestPrice')
-                ->where('is_active', true)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get();
-            $lastFetch = FetchLog::latest('finished_at')->first();
+            $items = $this->summaryService->items();
+            $lastFetch = $this->summaryService->lastFetch();
         } catch (Throwable $exception) {
             Log::error('Keyword hub query failed', [
                 'hub' => $hub,

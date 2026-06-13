@@ -16,8 +16,8 @@
           href="{{ url(config('learn.base_path', '/blog') . '/feed.xml') }}">
     <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
     @php($manifestPath = public_path('build/manifest.json'))
-    @if(file_exists($manifestPath))
-    @php($manifest = json_decode(file_get_contents($manifestPath), true))
+    @php($manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : null)
+    @if($manifest)
     @php($appCss = $manifest['resources/js/App.jsx']['css'][0] ?? null)
     @if($appCss)
     <link rel="preload" href="{{ asset('build/'.$appCss) }}" as="style">
@@ -146,9 +146,7 @@
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!
         }</script>
     @endif
-    @php($manifestPath = public_path('build/manifest.json'))
-    @if(file_exists($manifestPath))
-    @php($manifest = json_decode(file_get_contents($manifestPath), true))
+    @if($manifest)
     @foreach(($manifest['resources/js/App.jsx']['css'] ?? []) as $css)
     <link rel="stylesheet" href="{{ asset('build/'.$css) }}">
     @endforeach
@@ -237,6 +235,16 @@
     </section>
     @endif
 </main>
+@if(!empty($marketSummary))
+<script type="application/json" id="market-summary">{
+        !!
+        json_encode($marketSummary,
+        JSON_UNESCAPED_UNICODE
+        |
+        JSON_UNESCAPED_SLASHES)
+        !!
+    }</script>
+@endif
 <div id="root"></div>
 <?php
 $learnExtras = config('learn_extras', []);

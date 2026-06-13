@@ -25,6 +25,53 @@ const defaultConfig = {
     sourceUrl: 'https://www.estjt.ir/price/',
 };
 
+const etagStore = new Map();
+
+function readEmbeddedSummary() {
+    const node = document.getElementById('market-summary');
+    if (!node?.textContent) return null;
+    try {
+        return JSON.parse(node.textContent);
+    } catch {
+        return null;
+    }
+}
+
+const embeddedSummary = readEmbeddedSummary();
+
+function buildConfigFromSummary(data) {
+    const nextConfig = {...defaultConfig, ...(data?.config || {})};
+    nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange);
+    nextConfig.chartAvailableRanges = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    return nextConfig;
+}
+
+async function fetchJsonWithEtag(url, {signal, etagKey} = {}) {
+    const headers = {Accept: 'application/json'};
+    if (etagKey) {
+        const etag = etagStore.get(etagKey);
+        if (etag) headers['If-None-Match'] = etag;
+    }
+
+    const res = await fetch(url, {headers, signal});
+    if (res.status === 304) return {notModified: true};
+    if (!res.ok) throw new Error('fetch_failed');
+
+    const etag = res.headers.get('ETag');
+    if (etagKey && etag) etagStore.set(etagKey, etag);
+
+    return {notModified: false, data: await res.json()};
+}
+
+function historyClientTtlMs(range) {
+    const key = rangeKey(range);
+    const amount = parseInt(key, 10) || 1;
+    if (key.endsWith('h')) return 45_000;
+    if (amount >= 30) return 300_000;
+    if (amount >= 7) return 120_000;
+    return 45_000;
+}
+
 function chartYAxisWidth(item, values) {
     if (!values.length) return 72;
     const labels = values.map((value) => formatAxisPrice(value, item));
@@ -219,18 +266,27 @@ function setMeta(name, content) {
 
 function sanitizeHistory(points) {
     const rows = (points || []).map((point) => ({...point}));
+    let lastGood = null;
+
     for (let index = 0; index < rows.length; index += 1) {
         const current = Number(rows[index].current);
         if (Number.isFinite(current) && current > 0) {
             rows[index].current = current;
+            lastGood = current;
             continue;
         }
 
-        const previous = [...rows.slice(0, index)].reverse().find((point) => Number(point.current) > 0);
-        const next = rows.slice(index + 1).find((point) => Number(point.current) > 0);
+        let nextGood = null;
+        for (let j = index + 1; j < rows.length; j += 1) {
+            const candidate = Number(rows[j].current);
+            if (Number.isFinite(candidate) && candidate > 0) {
+                nextGood = candidate;
+                break;
+            }
+        }
 
-        if (previous && next) {
-            rows[index].current = (Number(previous.current) + Number(next.current)) / 2;
+        if (lastGood !== null && nextGood !== null) {
+            rows[index].current = (lastGood + nextGood) / 2;
             rows[index].isInterpolated = true;
         } else {
             rows[index].current = null;
@@ -277,30 +333,28 @@ function useElementSize() {
 }
 
 async function fetchHistory(itemId, range, signal) {
-    const res = await fetch(`/api/market/items/${itemId}/history?range=${encodeURIComponent(rangeKey(range))}`, {
-        headers: {Accept: 'application/json'},
-        signal,
-    });
-    if (!res.ok) throw new Error('history_failed');
-    return res.json();
+    const url = `/api/market/items/${itemId}/history?range=${encodeURIComponent(rangeKey(range))}`;
+    const result = await fetchJsonWithEtag(url, {signal, etagKey: `history:${itemId}:${rangeKey(range)}`});
+    if (result.notModified) return {notModified: true};
+    return {notModified: false, data: result.data};
 }
 
 function App() {
-    const [config, setConfig] = useState(defaultConfig);
+    const [config, setConfig] = useState(() => embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig);
     const [theme, setTheme] = useState(getInitialTheme);
-    const [items, setItems] = useState([]);
-    const [selectedId, setSelectedId] = useState(null);
+    const [items, setItems] = useState(() => embeddedSummary?.items || []);
+    const [selectedId, setSelectedId] = useState(() => embeddedSummary?.items?.[0]?.id ?? null);
     const [history, setHistory] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [query, setQuery] = useState('');
-    const [range, setRange] = useState(null);
-    const [status, setStatus] = useState('loading');
+    const [range, setRange] = useState(() => embeddedSummary ? buildConfigFromSummary(embeddedSummary).chartDefaultRange : null);
+    const [status, setStatus] = useState(() => (embeddedSummary?.items?.length ? 'ready' : 'loading'));
     const [error, setError] = useState('');
-    const [lastFetch, setLastFetch] = useState(null);
+    const [lastFetch, setLastFetch] = useState(() => embeddedSummary?.lastFetch || null);
     const [historyLoading, setHistoryLoading] = useState(false);
     const historyCache = useRef(new Map());
     const refreshTimer = useRef(null);
-    const lastFetchKey = useRef(null);
+    const lastFetchKey = useRef(embeddedSummary?.lastFetch?.finished_at || null);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -323,17 +377,19 @@ function App() {
     }, []);
 
     const loadSummary = useCallback(async ({silent = false} = {}) => {
-        if (!silent) {
+        if (!silent && !embeddedSummary) {
             setStatus('loading');
         }
         setError('');
         try {
-            const res = await fetch('/api/market/summary', {headers: {Accept: 'application/json'}});
-            if (!res.ok) throw new Error('summary_failed');
-            const data = await res.json();
-            const nextConfig = {...defaultConfig, ...(data.config || {})};
-            nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange);
-            nextConfig.chartAvailableRanges = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+            const result = await fetchJsonWithEtag('/api/market/summary', {etagKey: 'summary'});
+            if (result.notModified) {
+                if (!silent) setStatus('ready');
+                return;
+            }
+
+            const data = result.data;
+            const nextConfig = buildConfigFromSummary(data);
             setConfig(nextConfig);
             setRange((current) => current || nextConfig.chartDefaultRange);
             setItems(data.items || []);
@@ -356,7 +412,7 @@ function App() {
     }, []);
 
     useEffect(() => {
-        loadSummary();
+        loadSummary({silent: Boolean(embeddedSummary)});
     }, [loadSummary]);
 
     useEffect(() => {
@@ -387,6 +443,7 @@ function App() {
         const cacheKey = `${selected.id}:${range}`;
         const cached = historyCache.current.get(cacheKey);
         const controller = new AbortController();
+        const cacheFresh = cached && (Date.now() - (cached.cachedAt || 0) < historyClientTtlMs(range));
 
         if (cached) {
             setHistory(cached.points || []);
@@ -396,9 +453,23 @@ function App() {
             setHistoryLoading(true);
         }
 
+        if (cacheFresh) {
+            return () => controller.abort();
+        }
+
         fetchHistory(selected.id, range, controller.signal)
-            .then((data) => {
-                const normalized = {...data, points: sanitizeHistory(data.points)};
+            .then((result) => {
+                if (result.notModified && cached) {
+                    setHistoryLoading(false);
+                    return;
+                }
+
+                const data = result.data;
+                const normalized = {
+                    ...data,
+                    points: sanitizeHistory(data.points),
+                    cachedAt: Date.now(),
+                };
                 historyCache.current.set(cacheKey, normalized);
                 setHistory(normalized.points || []);
                 setAnalytics(data.analytics || null);
@@ -424,17 +495,26 @@ function App() {
         var timerId = null;
 
         const warmHistoryCache = () => {
+            const shortRanges = new Set(['1h', '2h', '6h', '12h', '1d']);
+            if (!shortRanges.has(range)) {
+                return;
+            }
+
             const queue = items
                 .filter((item) => item.id !== selected?.id)
-                .slice(0, 6)
+                .slice(0, 2)
                 .filter((item) => !historyCache.current.has(`${item.id}:${range}`));
 
             queue.forEach((item) => {
                 fetchHistory(item.id, range, controller.signal)
-                    .then((data) => historyCache.current.set(`${item.id}:${range}`, {
-                        ...data,
-                        points: sanitizeHistory(data.points)
-                    }))
+                    .then((result) => {
+                        if (result.notModified) return;
+                        historyCache.current.set(`${item.id}:${range}`, {
+                            ...result.data,
+                            points: sanitizeHistory(result.data.points),
+                            cachedAt: Date.now(),
+                        });
+                    })
                     .catch(() => {
                     });
             });
@@ -458,9 +538,11 @@ function App() {
     }, [items, selected?.id, range]);
 
     const filtered = useMemo(() => items.filter((item) => item.name.includes(query)), [items, query]);
-    const gainers = items.filter((item) => item.direction === 'asc').length;
-    const unchanged = items.filter((item) => item.direction === 'none').length;
-    const losers = items.filter((item) => item.direction === 'desc').length;
+    const {gainers, unchanged, losers} = useMemo(() => ({
+        gainers: items.filter((item) => item.direction === 'asc').length,
+        unchanged: items.filter((item) => item.direction === 'none').length,
+        losers: items.filter((item) => item.direction === 'desc').length,
+    }), [items]);
     const ranges = config.chartAvailableRanges?.length ? config.chartAvailableRanges : defaultConfig.chartAvailableRanges;
     const activeRange = range || config.chartDefaultRange || defaultConfig.chartDefaultRange;
     const fetchNotice = fetchStatusMessage(lastFetch, items.length);

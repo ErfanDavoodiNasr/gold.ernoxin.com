@@ -32,7 +32,9 @@ class PriceIngestor
             $payload = $this->scraper->fetch();
             $count = DB::transaction(fn() => $this->store($payload));
             $log->update(['status' => 'success', 'items_count' => $count, 'finished_at' => now()]);
+            Cache::forget('gold:market-summary:data');
             Cache::forget('gold:market-summary');
+            Cache::increment('gold:price-data-version');
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'message' => 'Price fetch failed.', 'finished_at' => now()]);
@@ -46,14 +48,21 @@ class PriceIngestor
         $count = 0;
         $source = $payload['source']['key'] ?? config('gold.source_key', 'estjt');
         $fetchedAt = isset($payload['source']['fetchedAt']) ? Carbon::parse($payload['source']['fetchedAt']) : now();
+        $existingItems = MarketItem::query()
+            ->where('source', $source)
+            ->get()
+            ->keyBy('normalized_name');
+        $latestPrices = $this->latestPricesByItemId($existingItems->pluck('id'));
+
         foreach (['gold', 'coin'] as $group) {
             foreach (($payload[$group] ?? []) as $row) {
                 $normalized = PersianNumber::label($row['type']);
-                $existingItem = MarketItem::query()
-                    ->where('source', $source)
-                    ->where('normalized_name', $normalized)
-                    ->first();
-                $referenceToman = $this->referencePrice($existingItem);
+                $existingItem = $existingItems->get($normalized);
+                $referenceToman = $existingItem
+                    ? ($latestPrices->get($existingItem->id)?->current_value !== null
+                        ? (float)$latestPrices->get($existingItem->id)->current_value
+                        : null)
+                    : null;
                 $isUsd = $this->normalizer->isUsdItem($row['current']['currency'] ?? $existingItem?->currency, $group);
 
                 $row = $this->normalizer->normalizeRow($row, $referenceToman, $isUsd);
@@ -72,8 +81,9 @@ class PriceIngestor
                         'meta' => ['source_url' => config('gold.source_url')],
                     ]
                 );
+                $existingItems->put($normalized, $item);
 
-                PricePoint::updateOrCreate(
+                $point = PricePoint::updateOrCreate(
                     ['market_item_id' => $item->id, 'fetched_at' => $fetchedAt],
                     [
                         'current_value' => $row['current']['value'],
@@ -86,25 +96,26 @@ class PriceIngestor
                         'raw_payload' => $row,
                     ]
                 );
+                $latestPrices->put($item->id, $point);
                 $count++;
             }
         }
         return $count;
     }
 
-    private function referencePrice(?MarketItem $item): ?float
+    private function latestPricesByItemId($itemIds)
     {
-        if (!$item) {
-            return null;
+        if ($itemIds->isEmpty()) {
+            return collect();
         }
 
-        $latest = $item->prices()
-            ->whereNotNull('current_value')
+        return PricePoint::query()
+            ->whereIn('market_item_id', $itemIds)
             ->where('current_value', '>', 0)
-            ->latest('fetched_at')
-            ->value('current_value');
-
-        return $latest !== null ? (float)$latest : null;
+            ->orderByDesc('fetched_at')
+            ->get()
+            ->unique('market_item_id')
+            ->keyBy('market_item_id');
     }
 
     private function validPrice($value): bool
