@@ -13,8 +13,6 @@ class MarketItem
         public string      $category,
         public ?string     $currency,
         public ?PricePoint $latestPrice = null,
-        public bool        $derived = false,
-        public ?string     $disclaimer = null,
     )
     {
     }
@@ -22,10 +20,5 @@ class MarketItem
     public function isUsd(): bool
     {
         return str_contains($this->name, 'انس') || strtoupper((string)$this->currency) === 'USD' || $this->currency === '$';
-    }
-
-    public function isDerived(): bool
-    {
-        return $this->derived;
     }
 }

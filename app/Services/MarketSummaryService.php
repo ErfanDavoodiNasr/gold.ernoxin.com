@@ -70,8 +70,6 @@ class MarketSummaryService
             'name' => $item->name,
             'category' => $item->category,
             'currency' => $item->currency,
-            'derived' => $item->isDerived(),
-            'disclaimer' => $item->disclaimer,
             'current' => $price?->current_value,
             'high' => $price?->high_value,
             'low' => $price?->low_value,

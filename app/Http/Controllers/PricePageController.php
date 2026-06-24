@@ -137,14 +137,8 @@ class PricePageController extends Controller
                         '@type' => 'FinancialProduct',
                         '@id' => url('/price/#item-' . $item->id),
                         'name' => $item->name,
-                        'category' => match ($item->category) {
-                            'coin' => 'سکه طلا',
-                            'derived' => 'نرخ ارز محاسباتی',
-                            default => 'طلا',
-                        },
-                        'description' => $item->isDerived()
-                            ? ($item->disclaimer ?: "برآورد محاسباتی {$item->name} بر اساس داده‌های " . config('gold.source_name') . '.')
-                            : "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
+                        'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
+                        'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
                         'url' => $pageUrl,
                         'provider' => [
                             '@type' => 'Organization',

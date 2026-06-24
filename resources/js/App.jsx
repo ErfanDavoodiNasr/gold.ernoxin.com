@@ -5,7 +5,6 @@ import {
     ArrowUp,
     BarChart3,
     Coins,
-    DollarSign,
     Minus,
     Moon,
     RefreshCw,
@@ -279,7 +278,6 @@ function fetchStatusMessage(lastFetch, itemsCount) {
 
 function categoryLabel(category) {
     if (category === 'coin') return 'سکه';
-    if (category === 'derived') return 'محاسباتی';
     return 'طلا';
 }
 
@@ -679,12 +677,6 @@ function App() {
                         </span>
                     </div>
 
-                    {selected?.derived && selected?.disclaimer && (
-                        <div className="derivedNotice" role="note">
-                            <strong>توجه:</strong> {selected.disclaimer}
-                        </div>
-                    )}
-
                     <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
                         {history.length > 0 ? (
                             <PriceChart history={history} selected={selected} activeRange={activeRange}
@@ -747,7 +739,7 @@ function Metric({value, label, compact = false, tone = '', item = null, price = 
 
 function MarketItem({item, active, onClick}) {
     const tone = changeTone(item.direction, item.percent);
-    const Icon = item.category === 'coin' ? Coins : (item.derived ? DollarSign : BarChart3);
+    const Icon = item.category === 'coin' ? Coins : BarChart3;
     return (
         <button className={`marketItem ${active ? 'active' : ''}`} onClick={onClick}>
             <span className="itemIcon"><Icon size={20}/></span>
