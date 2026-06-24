@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\MarketItem;
+use App\Support\MarketItem;
 use App\Services\MarketSummaryService;
 use App\Services\PriceHistoryQuery;
 use Illuminate\Http\Request;
@@ -67,12 +67,12 @@ class MarketController extends Controller
         $ttl = $this->historyCacheTtl($range);
 
         try {
-            $latestFetchedAtKey = $this->cachedLatestFetchedAt($item->id);
+            $latestFetchedAtKey = $this->cachedLatestFetchedAt($item->key);
             $cacheKey = implode(':', [
                 'gold',
                 'market-history',
-                'v5',
-                $item->getKey(),
+                'v6',
+                $item->key,
                 $range['key'],
                 md5($latestFetchedAtKey),
             ]);
@@ -93,14 +93,14 @@ class MarketController extends Controller
                 $windowStart = $latestFetchedAt->copy()->subMinutes($range['minutes']);
                 $maxPoints = (int)config('gold.chart_max_points', 600);
                 $useSqlBuckets = $range['minutes'] > max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
-                $points = $this->historyQuery->fetchChartPoints($item->id, $windowStart, $range['minutes'], $maxPoints);
+                $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
 
                 if (!$useSqlBuckets) {
                     $points = $this->filterHistoryOutliers($points);
                     $points = $this->samplePoints($points, $maxPoints);
                 }
 
-                $analytics = $this->historyQuery->fetchAnalytics($item->id, $windowStart, $points, $useSqlBuckets);
+                $analytics = $this->historyQuery->fetchAnalytics($item->key, $windowStart, $points, $useSqlBuckets);
 
                 return [
                     'range' => $range['key'],
@@ -118,7 +118,7 @@ class MarketController extends Controller
             });
         } catch (Throwable $exception) {
             Log::error('Market history query failed', [
-                'market_item_id' => $item->id,
+                'item_key' => $item->key,
                 'range' => $range['key'],
                 'exception' => get_class($exception),
                 'message' => $exception->getMessage(),
@@ -168,14 +168,14 @@ class MarketController extends Controller
         return max(10, (int)config('gold.history_cache_seconds', 45));
     }
 
-    private function cachedLatestFetchedAt(int $marketItemId): string
+    private function cachedLatestFetchedAt(string $itemKey): string
     {
         $version = (int)Cache::get('gold:price-data-version', 0);
 
         return (string)Cache::remember(
-            "gold:item-latest-fetch:{$marketItemId}:v{$version}",
+            'gold:item-latest-fetch:' . md5($itemKey) . ":v{$version}",
             max(5, (int)config('gold.latest_fetch_cache_seconds', 10)),
-            fn() => $this->historyQuery->latestFetchedAt($marketItemId)?->toIso8601String() ?: 'empty'
+            fn() => $this->historyQuery->latestFetchedAt($itemKey)?->toIso8601String() ?: 'empty'
         );
     }
 

@@ -19,29 +19,29 @@ class PriceHistoryQuery
         'fetched_at',
     ];
 
-    public function latestFetchedAt(int $marketItemId): ?Carbon
+    public function latestFetchedAt(string $itemKey): ?Carbon
     {
-        $value = PricePoint::where('market_item_id', $marketItemId)->max('fetched_at');
+        $value = PricePoint::where('item_key', $itemKey)->max('fetched_at');
 
         return $value ? Carbon::parse($value) : null;
     }
 
-    public function fetchChartPoints(int $marketItemId, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
+    public function fetchChartPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
     {
         $maxPoints = max(20, $maxPoints);
         $threshold = max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
 
         if ($rangeMinutes <= $threshold) {
-            return $this->fetchRawPoints($marketItemId, $windowStart);
+            return $this->fetchRawPoints($itemKey, $windowStart);
         }
 
-        return $this->fetchBucketedPoints($marketItemId, $windowStart, $rangeMinutes, $maxPoints);
+        return $this->fetchBucketedPoints($itemKey, $windowStart, $rangeMinutes, $maxPoints);
     }
 
-    private function fetchRawPoints(int $marketItemId, Carbon $windowStart): Collection
+    private function fetchRawPoints(string $itemKey, Carbon $windowStart): Collection
     {
         return PricePoint::query()
-            ->where('market_item_id', $marketItemId)
+            ->where('item_key', $itemKey)
             ->select(self::SELECT_COLUMNS)
             ->where('fetched_at', '>=', $windowStart)
             ->where('current_value', '>', 0)
@@ -49,13 +49,13 @@ class PriceHistoryQuery
             ->get();
     }
 
-    private function fetchBucketedPoints(int $marketItemId, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
+    private function fetchBucketedPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
     {
         $bucketSeconds = max(60, (int)ceil(($rangeMinutes * 60) / $maxPoints));
 
         $bucketQuery = DB::table('price_points')
             ->selectRaw('MAX(fetched_at) as bucket_fetched_at')
-            ->where('market_item_id', $marketItemId)
+            ->where('item_key', $itemKey)
             ->where('fetched_at', '>=', $windowStart)
             ->where('current_value', '>', 0)
             ->groupByRaw('FLOOR(UNIX_TIMESTAMP(fetched_at) / ' . $bucketSeconds . ')');
@@ -64,25 +64,25 @@ class PriceHistoryQuery
             ->joinSub($bucketQuery, 'buckets', function ($join) {
                 $join->on('price_points.fetched_at', '=', 'buckets.bucket_fetched_at');
             })
-            ->where('price_points.market_item_id', $marketItemId)
+            ->where('price_points.item_key', $itemKey)
             ->select(array_map(fn($column) => "price_points.{$column}", self::SELECT_COLUMNS))
             ->orderBy('price_points.fetched_at')
             ->get();
     }
 
-    public function fetchAnalytics(int $marketItemId, Carbon $windowStart, Collection $points, bool $fromFullRange): array
+    public function fetchAnalytics(string $itemKey, Carbon $windowStart, Collection $points, bool $fromFullRange): array
     {
         if ($fromFullRange) {
-            return $this->analyticsFromSql($marketItemId, $windowStart);
+            return $this->analyticsFromSql($itemKey, $windowStart);
         }
 
         return $this->analyticsFromPoints($points);
     }
 
-    private function analyticsFromSql(int $marketItemId, Carbon $windowStart): array
+    private function analyticsFromSql(string $itemKey, Carbon $windowStart): array
     {
         $row = PricePoint::query()
-            ->where('market_item_id', $marketItemId)
+            ->where('item_key', $itemKey)
             ->where('fetched_at', '>=', $windowStart)
             ->where('current_value', '>', 0)
             ->selectRaw('

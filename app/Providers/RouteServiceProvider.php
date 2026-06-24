@@ -6,6 +6,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Services\MarketCatalog;
+use App\Support\MarketItem;
 use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
@@ -14,6 +16,13 @@ class RouteServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        Route::bind('item', function ($value): MarketItem {
+            $item = app(MarketCatalog::class)->find((int)$value);
+            abort_unless($item, 404);
+
+            return $item;
+        });
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->ip());
         });

@@ -2,14 +2,20 @@
 
 namespace App\Services;
 
-use App\Models\FetchLog;
-use App\Models\MarketItem;
 use App\Models\PricePoint;
+use App\Support\LastFetch;
+use App\Support\MarketItem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class MarketSummaryService
 {
+    public function __construct(
+        private MarketCatalog $catalog,
+        private FetchStatusStore $fetchStatus,
+    ) {
+    }
+
     public function items(): Collection
     {
         return $this->cached()['items'];
@@ -21,17 +27,13 @@ class MarketSummaryService
 
         return Cache::remember('gold:market-summary:data', $ttl, function () {
             return [
-                'items' => MarketItem::with('latestPrice')
-                    ->where('is_active', true)
-                    ->orderBy('category')
-                    ->orderBy('name')
-                    ->get(),
-                'lastFetch' => FetchLog::latest('finished_at')->first(),
+                'items' => $this->catalog->allWithLatestPrices(),
+                'lastFetch' => $this->fetchStatus->last(),
             ];
         });
     }
 
-    public function lastFetch(): ?FetchLog
+    public function lastFetch(): ?LastFetch
     {
         return $this->cached()['lastFetch'];
     }
@@ -41,8 +43,8 @@ class MarketSummaryService
         $data = $this->cached();
 
         return [
-            'items' => $data['items']->map(fn($item) => $this->itemResource($item)),
-            'lastFetch' => $this->fetchLogResource($data['lastFetch']),
+            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item)),
+            'lastFetch' => $data['lastFetch']?->toArray(),
             'config' => [
                 'sourceName' => config('gold.source_name'),
                 'sourceUrl' => config('gold.source_url'),
@@ -84,7 +86,8 @@ class MarketSummaryService
             return $latest;
         }
 
-        return $item->prices()
+        return PricePoint::query()
+            ->where('item_key', $item->key)
             ->whereNotNull('current_value')
             ->where('current_value', '>', 0)
             ->latest('fetched_at')
@@ -94,20 +97,6 @@ class MarketSummaryService
     private function isUsablePrice($value): bool
     {
         return $value !== null && is_numeric($value) && (float)$value > 0;
-    }
-
-    private function fetchLogResource(?FetchLog $log): ?array
-    {
-        if (!$log) {
-            return null;
-        }
-
-        return [
-            'status' => $log->status,
-            'items_count' => $log->items_count,
-            'started_at' => $log->started_at?->toIso8601String(),
-            'finished_at' => $log->finished_at?->toIso8601String(),
-        ];
     }
 
     private function normalizeRangeKey($value): string

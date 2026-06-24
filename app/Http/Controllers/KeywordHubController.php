@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MarketItem;
+use App\Support\MarketItem;
 use App\Services\MarketSummaryService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
@@ -94,7 +94,7 @@ class KeywordHubController extends Controller
             return 'نامشخص';
         }
 
-        if ($item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD')) {
+        if ($item?->isUsd()) {
             return number_format((float)$value, 2, '.', ',') . ' دلار';
         }
 

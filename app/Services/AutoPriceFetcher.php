@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\FetchLog;
-
 class AutoPriceFetcher
 {
-    public function __construct(private PriceIngestor $ingestor)
-    {
+    public function __construct(
+        private PriceIngestor $ingestor,
+        private FetchStatusStore $fetchStatus,
+    ) {
     }
 
     public function fetchIfDue(bool $force = false): array
@@ -38,12 +38,9 @@ class AutoPriceFetcher
         }
 
         $slotStart = $now->copy()->second(0);
-        $lastSuccess = FetchLog::where('status', 'success')
-            ->whereNotNull('started_at')
-            ->latest('started_at')
-            ->first();
+        $lastSuccess = $this->fetchStatus->lastSuccessStartedAt();
 
-        if ($lastSuccess && $lastSuccess->started_at && $lastSuccess->started_at->gte($slotStart)) {
+        if ($lastSuccess && $lastSuccess->gte($slotStart)) {
             return false;
         }
 

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FetchLog;
-use App\Models\MarketItem;
+use App\Support\LastFetch;
+use App\Support\MarketItem;
 use App\Services\MarketSummaryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -55,7 +55,7 @@ class PricePageController extends Controller
         return max(1, (int)$value);
     }
 
-    private function seoPayload(Collection $items, Collection $availableRanges, ?int $days, ?FetchLog $lastFetch): array
+    private function seoPayload(Collection $items, Collection $availableRanges, ?int $days, ?LastFetch $lastFetch): array
     {
         $primaryGold = $items->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
             ?: $items->firstWhere('category', 'gold');
@@ -96,16 +96,11 @@ class PricePageController extends Controller
             return 'نامشخص';
         }
 
-        if ($this->isUsdItem($item)) {
+        if ($item?->isUsd()) {
             return number_format((float)$value, 2, '.', ',') . ' دلار';
         }
 
         return number_format((float)$value, 0, '.', ',') . ' تومان';
-    }
-
-    private function isUsdItem(?MarketItem $item): bool
-    {
-        return $item && (str_contains($item->name, 'انس') || strtoupper((string)$item->currency) === 'USD');
     }
 
     private function cachedJsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
@@ -153,7 +148,7 @@ class PricePageController extends Controller
                         'offers' => [
                             '@type' => 'Offer',
                             'price' => $this->schemaNumber($price?->current_value),
-                            'priceCurrency' => $this->isUsdItem($item) ? 'USD' : 'IRR',
+                            'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
                             'availability' => 'https://schema.org/InStock',
                             'url' => $pageUrl,
                             'priceValidUntil' => now()->addDay()->toDateString(),

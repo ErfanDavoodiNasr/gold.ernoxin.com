@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 class PricePoint extends Model
 {
     protected $fillable = [
-        'market_item_id',
+        'item_key',
         'current_value',
         'high_value',
         'low_value',
@@ -48,10 +48,5 @@ class PricePoint extends Model
     public function getKeyType()
     {
         return config('database.default') === 'pgsql' ? 'string' : 'int';
-    }
-
-    public function item()
-    {
-        return $this->belongsTo(MarketItem::class, 'market_item_id');
     }
 }
