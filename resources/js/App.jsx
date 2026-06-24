@@ -256,6 +256,23 @@ function formatDate(value) {
     return new Intl.DateTimeFormat('fa-IR', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value));
 }
 
+function formatChartTooltipDate(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const datePart = new Intl.DateTimeFormat('fa-IR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    }).format(date);
+    const timePart = new Intl.DateTimeFormat('fa-IR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).format(date);
+    return {datePart, timePart};
+}
+
 function fetchStatusMessage(lastFetch, itemsCount) {
     if (!lastFetch && itemsCount === 0) {
         return 'هنوز هیچ دریافت موفقی ثبت نشده است. لطفاً کمی بعد دوباره تلاش کنید.';
@@ -756,8 +773,17 @@ function MarketItem({item, active, onClick}) {
 
 function ChartTooltip({active, payload, label, item}) {
     if (!active || !payload?.length) return null;
+    const formatted = formatChartTooltipDate(label);
     return <div className="tooltip">
-        <span>{formatDate(label)}</span><strong>{formatPrice(payload[0].value, item)}</strong>
+        {formatted ? (
+            <>
+                <span>{formatted.datePart}</span>
+                <span>ساعت {formatted.timePart}</span>
+            </>
+        ) : (
+            <span>—</span>
+        )}
+        <strong>{formatPrice(payload[0].value, item)}</strong>
     </div>;
 }
 
