@@ -63,7 +63,7 @@ class PricePageController extends Controller
         $goldPrice = $this->formatDisplayPrice($primaryGold, $primaryGold?->latestPrice?->current_value);
         $coinPrice = $this->formatDisplayPrice($primaryCoin, $primaryCoin?->latestPrice?->current_value);
         $canonical = url($days ? "/price/trends/{$days}" : '/price/');
-        $updatedAt = optional($lastFetch?->finished_at ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
+        $updatedAt = optional($lastFetch?->finishedAt ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
         $title = $days
             ? "نمودار {$days} روزه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران"
             : 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';

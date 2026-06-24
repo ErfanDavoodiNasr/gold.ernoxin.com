@@ -28,6 +28,12 @@ const defaultConfig = {
 
 const etagStore = new Map();
 
+function normalizeItems(items) {
+    if (Array.isArray(items)) return items;
+    if (items && typeof items === 'object') return Object.values(items);
+    return [];
+}
+
 function readEmbeddedSummary() {
     const node = document.getElementById('market-summary');
     if (!node?.textContent) return null;
@@ -366,8 +372,8 @@ async function fetchHistory(itemId, range, signal) {
 function App() {
     const [config, setConfig] = useState(() => embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig);
     const [theme, setTheme] = useState(getInitialTheme);
-    const [items, setItems] = useState(() => embeddedSummary?.items || []);
-    const [selectedId, setSelectedId] = useState(() => embeddedSummary?.items?.[0]?.id ?? null);
+    const [items, setItems] = useState(() => normalizeItems(embeddedSummary?.items));
+    const [selectedId, setSelectedId] = useState(() => normalizeItems(embeddedSummary?.items)[0]?.id ?? null);
     const [history, setHistory] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [query, setQuery] = useState('');
@@ -375,7 +381,7 @@ function App() {
         const initialConfig = embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig;
         return getStoredChartRange(initialConfig.chartAvailableRanges, initialConfig.chartDefaultRange);
     });
-    const [status, setStatus] = useState(() => (embeddedSummary?.items?.length ? 'ready' : 'loading'));
+    const [status, setStatus] = useState(() => (normalizeItems(embeddedSummary?.items).length ? 'ready' : 'loading'));
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(() => embeddedSummary?.lastFetch || null);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -436,14 +442,14 @@ function App() {
 
                 return getStoredChartRange(nextConfig.chartAvailableRanges, nextConfig.chartDefaultRange);
             });
-            setItems(data.items || []);
+            setItems(normalizeItems(data.items));
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
                 historyCache.current.clear();
             }
             lastFetchKey.current = nextFetchKey;
             setLastFetch(data.lastFetch || null);
-            setSelectedId((current) => current || data.items?.[0]?.id || null);
+            setSelectedId((current) => current || normalizeItems(data.items)[0]?.id || null);
             setStatus('ready');
         } catch {
             setError('در حال حاضر امکان دریافت اطلاعات بازار وجود ندارد. لطفاً کمی بعد دوباره تلاش کنید.');

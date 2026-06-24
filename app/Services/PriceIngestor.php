@@ -107,7 +107,7 @@ class PriceIngestor
                     ->on('price_points.fetched_at', '=', 'latest.max_fetched_at');
             })
             ->whereIn('price_points.item_key', $keys)
-            ->pluck('current_value', 'item_key')
+            ->pluck('price_points.current_value', 'price_points.item_key')
             ->map(fn($value) => (float)$value)
             ->all();
     }

@@ -36,7 +36,7 @@ class KeywordHubController extends Controller
         $featuredItems = $this->featuredItems($items, $config);
         $primaryItem = $featuredItems->first();
         $primaryPrice = $this->formatDisplayPrice($primaryItem, $primaryItem?->latestPrice?->current_value);
-        $updatedAt = optional($lastFetch?->finished_at ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
+        $updatedAt = optional($lastFetch?->finishedAt ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
         $canonical = url($config['path']);
         $blogPath = config('learn.base_path', '/blog');
 

@@ -225,7 +225,7 @@
                 <span class="itemIcon">{{ $item->category === 'coin' ? 'س' : 'ط' }}</span>
                 <span class="itemMain">
                             <b>{{ $item->name }}</b>
-                            <small>{{ number_format((float)($item->latestPrice?->current_value ?? 0), 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</small>
+                            <small>{{ number_format((float)($item->latestPrice?->current_value ?? 0), $item->isUsd() ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}</small>
                         </span>
                 @php($direction = $item->latestPrice?->direction ?? 'none')
                 <span class="badge {{ $direction === 'desc' ? 'down' : ($direction === 'asc' ? 'up' : 'flat') }}">{{ $item->latestPrice?->change_percent ?? '—' }}٪</span>

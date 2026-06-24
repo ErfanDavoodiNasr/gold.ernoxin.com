@@ -44,7 +44,7 @@ class MarketSummaryService
         $data = $this->cached();
 
         return [
-            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item)),
+            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item))->values(),
             'lastFetch' => $data['lastFetch']?->toArray(),
             'config' => [
                 'sourceName' => config('gold.source_name'),
