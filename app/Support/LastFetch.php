@@ -7,11 +7,12 @@ use Illuminate\Support\Carbon;
 class LastFetch
 {
     public function __construct(
-        public string $status,
-        public int $itemsCount = 0,
+        public string  $status,
+        public int     $itemsCount = 0,
         public ?Carbon $startedAt = null,
         public ?Carbon $finishedAt = null,
-    ) {
+    )
+    {
     }
 
     public function toArray(): array

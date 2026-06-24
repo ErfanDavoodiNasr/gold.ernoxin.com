@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\Cache;
 class MarketSummaryService
 {
     public function __construct(
-        private MarketCatalog $catalog,
+        private MarketCatalog    $catalog,
         private FetchStatusStore $fetchStatus,
-    ) {
+    )
+    {
     }
 
     public function items(): Collection

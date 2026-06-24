@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\MarketSummaryService;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
-use App\Services\MarketSummaryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;

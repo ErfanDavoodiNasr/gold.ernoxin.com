@@ -5,9 +5,10 @@ namespace App\Services;
 class AutoPriceFetcher
 {
     public function __construct(
-        private PriceIngestor $ingestor,
+        private PriceIngestor    $ingestor,
         private FetchStatusStore $fetchStatus,
-    ) {
+    )
+    {
     }
 
     public function fetchIfDue(bool $force = false): array

@@ -11,6 +11,13 @@ class MarketCatalog
     /** @var array<int, array{id:int,key:string,name:string,category:string,currency:?string}>|null */
     private ?array $definitions = null;
 
+    public function find(int $id): ?MarketItem
+    {
+        $definition = $this->definitions()[$id] ?? null;
+
+        return $definition ? $this->makeItem($definition) : null;
+    }
+
     public function definitions(): array
     {
         if ($this->definitions !== null) {
@@ -37,16 +44,16 @@ class MarketCatalog
         return $this->definitions = $definitions;
     }
 
-    public function keys(): array
+    private function makeItem(array $definition, ?PricePoint $latestPrice = null): MarketItem
     {
-        return array_column($this->definitions(), 'key');
-    }
-
-    public function find(int $id): ?MarketItem
-    {
-        $definition = $this->definitions()[$id] ?? null;
-
-        return $definition ? $this->makeItem($definition) : null;
+        return new MarketItem(
+            id: $definition['id'],
+            key: $definition['key'],
+            name: $definition['name'],
+            category: $definition['category'],
+            currency: $definition['currency'],
+            latestPrice: $latestPrice,
+        );
     }
 
     public function findByKey(string $key): ?MarketItem
@@ -95,15 +102,8 @@ class MarketCatalog
             ->keyBy('item_key');
     }
 
-    private function makeItem(array $definition, ?PricePoint $latestPrice = null): MarketItem
+    public function keys(): array
     {
-        return new MarketItem(
-            id: $definition['id'],
-            key: $definition['key'],
-            name: $definition['name'],
-            category: $definition['category'],
-            currency: $definition['currency'],
-            latestPrice: $latestPrice,
-        );
+        return array_column($this->definitions(), 'key');
     }
 }

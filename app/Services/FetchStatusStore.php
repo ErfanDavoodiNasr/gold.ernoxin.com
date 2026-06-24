@@ -67,18 +67,6 @@ class FetchStatusStore
         );
     }
 
-    public function lastSuccessStartedAt(): ?Carbon
-    {
-        $last = Cache::get(self::CACHE_KEY);
-        if (is_array($last) && ($last['status'] ?? null) === 'success' && !empty($last['started_at'])) {
-            return Carbon::parse($last['started_at']);
-        }
-
-        $fallback = $this->fallbackFromPricePoints();
-
-        return $fallback?->finishedAt;
-    }
-
     private function fallbackFromPricePoints(): ?LastFetch
     {
         $finishedAt = \App\Models\PricePoint::max('fetched_at');
@@ -91,5 +79,17 @@ class FetchStatusStore
             itemsCount: count(app(MarketCatalog::class)->keys()),
             finishedAt: Carbon::parse($finishedAt),
         );
+    }
+
+    public function lastSuccessStartedAt(): ?Carbon
+    {
+        $last = Cache::get(self::CACHE_KEY);
+        if (is_array($last) && ($last['status'] ?? null) === 'success' && !empty($last['started_at'])) {
+            return Carbon::parse($last['started_at']);
+        }
+
+        $fallback = $this->fallbackFromPricePoints();
+
+        return $fallback?->finishedAt;
     }
 }

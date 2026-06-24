@@ -189,7 +189,7 @@
 <main class="seoAppFallback shell" aria-label="خلاصه سریع بازار طلا و سکه">
     <header class="topbar">
         <div class="brand">
-            <span class="logo">Au</span>
+            <span class="logo"><img src="/favicon.svg" alt="Ernoxin Gold" width="48" height="48"></span>
             <div>
                 <strong class="brandTitle">سکه و طلای ارنوکسین</strong>
                 <p>قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران</p>

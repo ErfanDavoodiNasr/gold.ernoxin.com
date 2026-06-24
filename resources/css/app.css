@@ -112,7 +112,15 @@ button {
 
 .logo {
     width: 48px;
-    height: 48px
+    height: 48px;
+    background: none
+}
+
+.logo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 14px
 }
 
 .brandTitle {

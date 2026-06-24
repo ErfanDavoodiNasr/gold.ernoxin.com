@@ -12,11 +12,12 @@ use Illuminate\Support\Str;
 class PriceIngestor
 {
     public function __construct(
-        private EstjtScraper $scraper,
-        private PriceNormalizer $normalizer,
-        private MarketCatalog $catalog,
+        private EstjtScraper     $scraper,
+        private PriceNormalizer  $normalizer,
+        private MarketCatalog    $catalog,
         private FetchStatusStore $fetchStatus,
-    ) {
+    )
+    {
     }
 
     public function fetchAndStore(): array

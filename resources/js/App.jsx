@@ -601,7 +601,7 @@ function App() {
         <main className="shell">
             <header className="topbar">
                 <div className="brand">
-                    <span className="logo"><Coins size={25}/></span>
+                    <span className="logo"><img src="/favicon.svg" alt="Ernoxin Gold" width={48} height={48}/></span>
                     <div><strong className="brandTitle">سکه و طلای ارنوکسین</strong><p>پایش قیمت طلا و سکه با
                         داده‌های {config.sourceName}</p></div>
                 </div>

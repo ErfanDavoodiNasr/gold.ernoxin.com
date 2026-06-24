@@ -7,13 +7,14 @@ use App\Models\PricePoint;
 class MarketItem
 {
     public function __construct(
-        public int $id,
-        public string $key,
-        public string $name,
-        public string $category,
-        public ?string $currency,
+        public int         $id,
+        public string      $key,
+        public string      $name,
+        public string      $category,
+        public ?string     $currency,
         public ?PricePoint $latestPrice = null,
-    ) {
+    )
+    {
     }
 
     public function isUsd(): bool

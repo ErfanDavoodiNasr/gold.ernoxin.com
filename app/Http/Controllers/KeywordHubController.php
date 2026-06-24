@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\MarketItem;
 use App\Services\MarketSummaryService;
+use App\Support\MarketItem;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;

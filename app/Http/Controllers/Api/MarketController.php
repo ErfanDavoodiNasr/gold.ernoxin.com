@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Support\MarketItem;
 use App\Services\MarketSummaryService;
 use App\Services\PriceHistoryQuery;
+use App\Support\MarketItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
