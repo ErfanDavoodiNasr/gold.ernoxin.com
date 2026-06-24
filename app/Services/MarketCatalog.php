@@ -8,8 +8,12 @@ use Illuminate\Support\Collection;
 
 class MarketCatalog
 {
-    /** @var array<int, array{id:int,key:string,name:string,category:string,currency:?string}>|null */
+    /** @var array<int, array{id:int,key:string,name:string,category:string,currency:?string,derived:bool,disclaimer:?string}>|null */
     private ?array $definitions = null;
+
+    public function __construct(private ImpliedDollarService $impliedDollar)
+    {
+    }
 
     public function find(int $id): ?MarketItem
     {
@@ -36,10 +40,23 @@ class MarketCatalog
                     'name' => $name,
                     'category' => $category,
                     'currency' => $key === 'انس طلا' ? '$' : null,
+                    'derived' => false,
+                    'disclaimer' => null,
                 ];
                 $id++;
             }
         }
+
+        $derivedKey = PersianNumber::label(config('gold.implied_dollar.key', 'دلار محاسباتی'));
+        $definitions[$id] = [
+            'id' => $id,
+            'key' => $derivedKey,
+            'name' => config('gold.implied_dollar.name', 'دلار محاسباتی (از طلا)'),
+            'category' => 'derived',
+            'currency' => null,
+            'derived' => true,
+            'disclaimer' => config('gold.implied_dollar.disclaimer'),
+        ];
 
         return $this->definitions = $definitions;
     }
@@ -53,6 +70,8 @@ class MarketCatalog
             category: $definition['category'],
             currency: $definition['currency'],
             latestPrice: $latestPrice,
+            derived: (bool)($definition['derived'] ?? false),
+            disclaimer: $definition['disclaimer'] ?? null,
         );
     }
 
@@ -74,7 +93,13 @@ class MarketCatalog
         $latestByKey = $this->latestPricesByKey();
 
         return collect($this->definitions())
-            ->map(fn(array $definition) => $this->makeItem($definition, $latestByKey->get($definition['key'])));
+            ->map(function (array $definition) use ($latestByKey) {
+                $latestPrice = ($definition['derived'] ?? false)
+                    ? $this->impliedDollar->latestPricePoint()
+                    : $latestByKey->get($definition['key']);
+
+                return $this->makeItem($definition, $latestPrice);
+            });
     }
 
     /** @return Collection<string, PricePoint> */
@@ -104,6 +129,9 @@ class MarketCatalog
 
     public function keys(): array
     {
-        return array_column($this->definitions(), 'key');
+        return collect($this->definitions())
+            ->reject(fn(array $definition) => $definition['derived'] ?? false)
+            ->pluck('key')
+            ->all();
     }
 }

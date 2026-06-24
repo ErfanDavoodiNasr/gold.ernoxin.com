@@ -5,6 +5,7 @@ import {
     ArrowUp,
     BarChart3,
     Coins,
+    DollarSign,
     Minus,
     Moon,
     RefreshCw,
@@ -271,7 +272,9 @@ function fetchStatusMessage(lastFetch, itemsCount) {
 }
 
 function categoryLabel(category) {
-    return category === 'coin' ? 'سکه' : 'طلا';
+    if (category === 'coin') return 'سکه';
+    if (category === 'derived') return 'محاسباتی';
+    return 'طلا';
 }
 
 function setMeta(name, content) {
@@ -642,7 +645,7 @@ function App() {
                     </div>
                     <div className="search"><Search size={18}/><input value={query}
                                                                       onChange={(e) => setQuery(e.target.value)}
-                                                                      placeholder="جستجوی طلا یا سکه"/></div>
+                                                                      placeholder="جستجوی طلا، سکه یا دلار"/></div>
                     <div className="itemList">
                         {filtered.map((item) => <MarketItem key={item.id} item={item} active={selected?.id === item.id}
                                                             onClick={() => setSelectedId(item.id)}/>)}
@@ -669,6 +672,12 @@ function App() {
                             {formatPrice(selected?.change, selected)} ({formatPercent(selected?.percent)}٪)
                         </span>
                     </div>
+
+                    {selected?.derived && selected?.disclaimer && (
+                        <div className="derivedNotice" role="note">
+                            <strong>توجه:</strong> {selected.disclaimer}
+                        </div>
+                    )}
 
                     <div className={`chartWrap ${historyLoading ? 'loading' : ''}`}>
                         {history.length > 0 ? (
@@ -732,9 +741,10 @@ function Metric({value, label, compact = false, tone = '', item = null, price = 
 
 function MarketItem({item, active, onClick}) {
     const tone = changeTone(item.direction, item.percent);
+    const Icon = item.category === 'coin' ? Coins : (item.derived ? DollarSign : BarChart3);
     return (
         <button className={`marketItem ${active ? 'active' : ''}`} onClick={onClick}>
-            <span className="itemIcon">{item.category === 'coin' ? <Coins size={20}/> : <BarChart3 size={20}/>}</span>
+            <span className="itemIcon"><Icon size={20}/></span>
             <span className="itemMain"><b>{item.name}</b><small>{formatPrice(item.current, item)}</small></span>
             <span className={`badge ${tone}`}>
                 {shouldShowChangeIcon(item.direction, item.percent) && (

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ImpliedDollarService;
 use App\Services\MarketSummaryService;
 use App\Services\PriceHistoryQuery;
 use App\Support\MarketItem;
@@ -16,6 +17,7 @@ class MarketController extends Controller
     public function __construct(
         private PriceHistoryQuery    $historyQuery,
         private MarketSummaryService $summaryService,
+        private ImpliedDollarService $impliedDollar,
     )
     {
     }
@@ -67,11 +69,13 @@ class MarketController extends Controller
         $ttl = $this->historyCacheTtl($range);
 
         try {
-            $latestFetchedAtKey = $this->cachedLatestFetchedAt($item->key);
+            $latestFetchedAtKey = $item->isDerived()
+                ? ($this->impliedDollar->latestFetchedAt()?->toIso8601String() ?: 'empty')
+                : $this->cachedLatestFetchedAt($item->key);
             $cacheKey = implode(':', [
                 'gold',
                 'market-history',
-                'v6',
+                'v7',
                 $item->key,
                 $range['key'],
                 md5($latestFetchedAtKey),
@@ -93,14 +97,21 @@ class MarketController extends Controller
                 $windowStart = $latestFetchedAt->copy()->subMinutes($range['minutes']);
                 $maxPoints = (int)config('gold.chart_max_points', 600);
                 $useSqlBuckets = $range['minutes'] > max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
-                $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
 
-                if (!$useSqlBuckets) {
-                    $points = $this->filterHistoryOutliers($points);
-                    $points = $this->samplePoints($points, $maxPoints);
+                if ($item->isDerived()) {
+                    $points = $this->impliedDollar->fetchChartPoints($windowStart, $range['minutes'], $maxPoints);
+                } else {
+                    $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
+
+                    if (!$useSqlBuckets) {
+                        $points = $this->filterHistoryOutliers($points);
+                        $points = $this->samplePoints($points, $maxPoints);
+                    }
                 }
 
-                $analytics = $this->historyQuery->fetchAnalytics($item->key, $windowStart, $points, $useSqlBuckets);
+                $analytics = $item->isDerived()
+                    ? $this->impliedDollar->fetchAnalytics($windowStart, $points, $useSqlBuckets)
+                    : $this->historyQuery->fetchAnalytics($item->key, $windowStart, $points, $useSqlBuckets);
 
                 return [
                     'range' => $range['key'],
