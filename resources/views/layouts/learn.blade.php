@@ -47,13 +47,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
     <title>{{ $seo['title'] }}</title>
-    <script>
-        (function () {
-            var saved = localStorage.getItem('theme');
-            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.dataset.theme = theme;
-        })();
-    </script>
+    @include('components.theme-bootstrap')
     @if(!empty($seo['jsonLd']))
     <script type="application/ld+json">{
             !!

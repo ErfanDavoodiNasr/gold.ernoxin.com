@@ -17,7 +17,7 @@ import '../css/app.css';
 
 const defaultConfig = {
     chartDefaultRange: '1d',
-    chartAvailableRanges: ['1h', '2h', '6h', '12h', '1d', '7d', '30d', '90d'],
+    chartAvailableRanges: ['1h', '2h', '6h', '12h', '1d', '7d', '30d', '90d', '180d', '365d'],
     autoRefreshSeconds: 60,
     themeDefault: 'system',
     themeAccent: '#d9a441',
@@ -143,29 +143,71 @@ function resolveSystemTheme() {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function getInitialTheme() {
-    return localStorage.getItem('theme') || resolveSystemTheme();
+function resolveThemeDefault(value) {
+    if (value === 'light' || value === 'dark') {
+        return value;
+    }
+
+    return resolveSystemTheme();
 }
 
-const chartRangeStorageKey = 'chartRange';
-
-function getStoredChartRange(availableRanges, fallback) {
-    const normalizedAvailable = (availableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
-    const fallbackRange = rangeKey(fallback || defaultConfig.chartDefaultRange);
-
+function getInitialTheme(themeDefault) {
     try {
-        const stored = localStorage.getItem(chartRangeStorageKey);
+        const stored = localStorage.getItem('theme');
         if (stored) {
-            const key = rangeKey(stored);
-            if (normalizedAvailable.includes(key)) {
-                return key;
-            }
+            return stored;
         }
     } catch {
         // localStorage may be unavailable in restricted contexts
     }
 
-    return normalizedAvailable.includes(fallbackRange) ? fallbackRange : normalizedAvailable[0];
+    return resolveThemeDefault(themeDefault || defaultConfig.themeDefault);
+}
+
+function persistTheme(theme) {
+    try {
+        localStorage.setItem('theme', theme);
+    } catch {
+        // ignore storage failures
+    }
+}
+
+const chartRangeStorageKey = 'chartRange:v2';
+
+function hasStoredChartRange() {
+    try {
+        return Boolean(localStorage.getItem(chartRangeStorageKey));
+    } catch {
+        return false;
+    }
+}
+
+function persistChartRange(range) {
+    try {
+        localStorage.setItem(chartRangeStorageKey, rangeKey(range));
+    } catch {
+        // ignore storage failures
+    }
+}
+
+function resolveChartRange(availableRanges, serverDefault, {preferStored = true} = {}) {
+    const available = (availableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    if (preferStored) {
+        try {
+            const stored = localStorage.getItem(chartRangeStorageKey);
+            if (stored) {
+                const key = rangeKey(stored);
+                if (available.includes(key)) {
+                    return key;
+                }
+            }
+        } catch {
+            // localStorage may be unavailable in restricted contexts
+        }
+    }
+
+    const fallback = rangeKey(serverDefault || defaultConfig.chartDefaultRange);
+    return available.includes(fallback) ? fallback : available[0];
 }
 
 function isUsdItem(item) {
@@ -386,7 +428,10 @@ async function fetchHistory(itemId, range, signal) {
 
 function App() {
     const [config, setConfig] = useState(() => embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig);
-    const [theme, setTheme] = useState(getInitialTheme);
+    const [theme, setTheme] = useState(() => {
+        const initialConfig = embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig;
+        return getInitialTheme(initialConfig.themeDefault);
+    });
     const [items, setItems] = useState(() => normalizeItems(embeddedSummary?.items));
     const [selectedId, setSelectedId] = useState(() => normalizeItems(embeddedSummary?.items)[0]?.id ?? null);
     const [history, setHistory] = useState([]);
@@ -394,7 +439,7 @@ function App() {
     const [query, setQuery] = useState('');
     const [range, setRange] = useState(() => {
         const initialConfig = embeddedSummary ? buildConfigFromSummary(embeddedSummary) : defaultConfig;
-        return getStoredChartRange(initialConfig.chartAvailableRanges, initialConfig.chartDefaultRange);
+        return resolveChartRange(initialConfig.chartAvailableRanges, initialConfig.chartDefaultRange);
     });
     const [status, setStatus] = useState(() => (normalizeItems(embeddedSummary?.items).length ? 'ready' : 'loading'));
     const [error, setError] = useState('');
@@ -407,17 +452,7 @@ function App() {
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.setProperty('--gold', config.themeAccent || defaultConfig.themeAccent);
-        localStorage.setItem('theme', theme);
     }, [theme, config.themeAccent]);
-
-    useEffect(() => {
-        if (!range) return;
-        try {
-            localStorage.setItem(chartRangeStorageKey, rangeKey(range));
-        } catch {
-            // ignore storage failures
-        }
-    }, [range]);
 
     useEffect(() => {
         if (items.length > 0) {
@@ -426,12 +461,12 @@ function App() {
     }, [items.length]);
 
     useEffect(() => {
-        if (localStorage.getItem('theme') || !window.matchMedia) return undefined;
+        if (localStorage.getItem('theme') || config.themeDefault !== 'system' || !window.matchMedia) return undefined;
         const media = window.matchMedia('(prefers-color-scheme: dark)');
         const syncTheme = () => setTheme(resolveSystemTheme());
         media.addEventListener?.('change', syncTheme);
         return () => media.removeEventListener?.('change', syncTheme);
-    }, []);
+    }, [config.themeDefault]);
 
     const loadSummary = useCallback(async ({silent = false} = {}) => {
         if (!silent && !embeddedSummary) {
@@ -448,15 +483,14 @@ function App() {
             const data = result.data;
             const nextConfig = buildConfigFromSummary(data);
             setConfig(nextConfig);
-            setRange((current) => {
-                const available = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
-                const key = rangeKey(current);
-                if (key && available.includes(key)) {
-                    return key;
-                }
-
-                return getStoredChartRange(nextConfig.chartAvailableRanges, nextConfig.chartDefaultRange);
-            });
+            if (!localStorage.getItem('theme')) {
+                setTheme(resolveThemeDefault(nextConfig.themeDefault));
+            }
+            setRange(resolveChartRange(
+                nextConfig.chartAvailableRanges,
+                nextConfig.chartDefaultRange,
+                {preferStored: hasStoredChartRange()},
+            ));
             setItems(normalizeItems(data.items));
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
@@ -631,7 +665,11 @@ function App() {
                 </div>
                 <div className="actions">
                     <a className="navLink" href="/blog">بلاگ</a>
-                    <button className="iconButton" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    <button className="iconButton" onClick={() => {
+                        const nextTheme = theme === 'dark' ? 'light' : 'dark';
+                        setTheme(nextTheme);
+                        persistTheme(nextTheme);
+                    }}
                             title="تغییر پوسته" aria-label="تغییر پوسته">
                         {theme === 'dark' ? <Sun size={19}/> : <Moon size={19}/>}
                     </button>
@@ -681,7 +719,11 @@ function App() {
                             <h2>{selected?.name ? `نمودار قیمت ${selected.name}` : 'نمودار قیمت طلا و سکه'}</h2></div>
                         <div className="range">{ranges.map((nextRange) => <button key={nextRange}
                                                                                   className={rangeKey(activeRange) === rangeKey(nextRange) ? 'active' : ''}
-                                                                                  onClick={() => setRange(rangeKey(nextRange))}>{rangeLabel(nextRange)}</button>)}</div>
+                                                                                  onClick={() => {
+                                                                                      const key = rangeKey(nextRange);
+                                                                                      setRange(key);
+                                                                                      persistChartRange(key);
+                                                                                  }}>{rangeLabel(nextRange)}</button>)}</div>
                     </div>
 
                     <div className="priceLine">

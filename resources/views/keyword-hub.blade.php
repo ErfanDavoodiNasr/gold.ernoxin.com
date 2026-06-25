@@ -32,13 +32,7 @@
     <meta name="twitter:image" content="{{ $seo['ogImage'] }}">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title>{{ $seo['title'] }}</title>
-    <script>
-        (function () {
-            var saved = localStorage.getItem('theme');
-            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.dataset.theme = theme;
-        })();
-    </script>
+    @include('components.theme-bootstrap')
     @if(!empty($seo['jsonLd']))
     <script type="application/ld+json">{
             !!
