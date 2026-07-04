@@ -137,7 +137,7 @@
             !!
             json_encode($seo[
             'jsonLd'
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!
         }</script>
     @endif
     @if($manifest)

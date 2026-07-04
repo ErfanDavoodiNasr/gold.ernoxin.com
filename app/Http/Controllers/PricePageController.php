@@ -126,40 +126,45 @@ class PricePageController extends Controller
             '@type' => 'ItemList',
             '@id' => url('/price/#market-items'),
             'name' => 'قیمت لحظه‌ای طلا و سکه ایران',
+            // Inline the primary items only (18k gold + a coin + USD ounce when
+            // available). The full table is rendered in the visible <noscript>
+            // fallback, so listing every market item here only inflated the
+            // inlined JSON-LD without adding SEO value.
             'numberOfItems' => $items->count(),
-            'itemListElement' => $items->values()->map(function (MarketItem $item, int $index) use ($updatedAt, $pageUrl) {
-                $price = $item->latestPrice;
+            'itemListElement' => $this
+                ->primaryJsonLdItems($items)
+                ->map(function (MarketItem $item, int $index) use ($pageUrl) {
+                    $price = $item->latestPrice;
 
-                return [
-                    '@type' => 'ListItem',
-                    'position' => $index + 1,
-                    'item' => [
-                        '@type' => 'FinancialProduct',
-                        '@id' => url('/price/#item-' . $item->id),
-                        'name' => $item->name,
-                        'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
-                        'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
-                        'url' => $pageUrl,
-                        'provider' => [
-                            '@type' => 'Organization',
-                            'name' => config('gold.source_name'),
-                            'url' => config('gold.source_url'),
-                        ],
-                        'offers' => [
-                            '@type' => 'Offer',
-                            'price' => $this->schemaNumber($price?->current_value),
-                            'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
-                            'availability' => 'https://schema.org/InStock',
+                    return [
+                        '@type' => 'ListItem',
+                        'position' => $index + 1,
+                        'item' => [
+                            '@type' => 'FinancialProduct',
+                            '@id' => url('/price/#item-' . $item->id),
+                            'name' => $item->name,
+                            'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
+                            'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
                             'url' => $pageUrl,
-                            'priceValidUntil' => now()->addDay()->toDateString(),
+                            'provider' => [
+                                '@type' => 'Organization',
+                                'name' => config('gold.source_name'),
+                                'url' => config('gold.source_url'),
+                            ],
+                            'offers' => [
+                                '@type' => 'Offer',
+                                'price' => $this->schemaNumber($price?->current_value),
+                                'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
+                                'availability' => 'https://schema.org/InStock',
+                                'url' => $pageUrl,
+                                'priceValidUntil' => now()->addDay()->toDateString(),
+                            ],
+                            'additionalProperty' => [
+                                ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
+                            ],
                         ],
-                        'additionalProperty' => [
-                            ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
-                            ['@type' => 'PropertyValue', 'name' => 'lastUpdated', 'value' => $price?->fetched_at?->toIso8601String() ?: $updatedAt],
-                        ],
-                    ],
-                ];
-            })->all(),
+                    ];
+                })->values()->all(),
         ];
 
         $dataset = [
@@ -244,6 +249,22 @@ class PricePageController extends Controller
             '@context' => 'https://schema.org',
             '@graph' => $graph,
         ];
+    }
+
+    /**
+     * The subset of market items surfaced in the inline JSON-LD ItemList.
+     * Keeps the inlined payload small (one gold + one coin + USD ounce when
+     * present) while the full list stays available in the rendered table.
+     */
+    private function primaryJsonLdItems(Collection $items): Collection
+    {
+        $primary = collect()
+            ->push($items->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18')))
+            ->push($items->firstWhere('category', 'coin'))
+            ->push($items->first(fn($item) => $item->isUsd()))
+            ->filter();
+
+        return $primary->isNotEmpty() ? $primary : $items->take(3);
     }
 
     private function schemaNumber($value): ?float

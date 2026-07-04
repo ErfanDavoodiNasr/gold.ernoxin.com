@@ -20,6 +20,10 @@ return [
     'chart_available_ranges' => array_values(array_filter(array_map('trim', explode(',', env('CHART_AVAILABLE_RANGES', '1h,2h,6h,12h,1d,7d,30d,90d,180d,365d'))))),
     'chart_max_points' => (int)env('CHART_MAX_POINTS', 600),
     'history_max_days' => (int)env('HISTORY_MAX_DAYS', 365),
+    'outlier' => [
+        'spike_min' => (float)env('OUTLIER_SPIKE_MIN', 8.0),
+        'spike_max' => (float)env('OUTLIER_SPIKE_MAX', 12.0),
+    ],
     'http_headers' => [
         'user_agent' => env('ESTJT_USER_AGENT', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'),
         'accept_language' => env('ESTJT_ACCEPT_LANGUAGE', 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'),

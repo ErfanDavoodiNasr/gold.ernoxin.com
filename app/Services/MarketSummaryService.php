@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\PricePoint;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
 use Illuminate\Support\Collection;
@@ -13,6 +12,7 @@ class MarketSummaryService
     public function __construct(
         private MarketCatalog    $catalog,
         private FetchStatusStore $fetchStatus,
+        private RangeParser      $rangeParser,
     )
     {
     }
@@ -49,7 +49,7 @@ class MarketSummaryService
             'config' => [
                 'sourceName' => config('gold.source_name'),
                 'sourceUrl' => config('gold.source_url'),
-                'chartDefaultRange' => $this->normalizeRangeKey(config('gold.chart_default_range', '1d')),
+                'chartDefaultRange' => $this->rangeParser->canonicalKey(config('gold.chart_default_range', '1d')),
                 'chartAvailableRanges' => config('gold.chart_available_ranges'),
                 'historyMaxDays' => config('gold.history_max_days'),
                 'chartMaxPoints' => config('gold.chart_max_points'),
@@ -63,7 +63,14 @@ class MarketSummaryService
 
     public function itemResource(MarketItem $item): array
     {
-        $price = $this->displayPrice($item);
+        // MarketCatalog::allWithLatestPrices() already resolves the latest row
+        // with a usable current_value (filtered via current_value > 0) in a
+        // single batched query, so latestPrice is either the latest usable
+        // PricePoint or null. The previous per-item fallback query here was
+        // redundant and triggered an N+1 on every uncached summary build.
+        $price = $this->isUsablePrice($item->latestPrice?->current_value)
+            ? $item->latestPrice
+            : null;
 
         return [
             'id' => $item->id,
@@ -80,35 +87,8 @@ class MarketSummaryService
         ];
     }
 
-    private function displayPrice(MarketItem $item): ?PricePoint
-    {
-        $latest = $item->latestPrice;
-        if ($this->isUsablePrice($latest?->current_value)) {
-            return $latest;
-        }
-
-        return PricePoint::query()
-            ->where('item_key', $item->key)
-            ->whereNotNull('current_value')
-            ->where('current_value', '>', 0)
-            ->latest('fetched_at')
-            ->first();
-    }
-
     private function isUsablePrice($value): bool
     {
         return $value !== null && is_numeric($value) && (float)$value > 0;
-    }
-
-    private function normalizeRangeKey($value): string
-    {
-        $raw = strtolower(trim((string)$value));
-
-        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
-            $amount = max(1, (int)$matches[1]);
-            return $matches[2] === 'h' ? "{$amount}h" : "{$amount}d";
-        }
-
-        return max(1, (int)$raw) . 'd';
     }
 }

@@ -4,8 +4,14 @@ namespace App\Services;
 
 class PriceNormalizer
 {
-    private const RIAL_RATIO_MIN = 8.0;
-    private const RIAL_RATIO_MAX = 12.0;
+    private float $rialRatioMin;
+    private float $rialRatioMax;
+
+    public function __construct()
+    {
+        $this->rialRatioMin = (float)config('gold.outlier.spike_min', 8.0);
+        $this->rialRatioMax = (float)config('gold.outlier.spike_max', 12.0);
+    }
 
     public function isUsdItem(?string $currency, ?string $category = null): bool
     {
@@ -24,7 +30,7 @@ class PriceNormalizer
 
         $ratio = $value / $referenceToman;
 
-        return $ratio >= self::RIAL_RATIO_MIN && $ratio <= self::RIAL_RATIO_MAX;
+        return $ratio >= $this->rialRatioMin && $ratio <= $this->rialRatioMax;
     }
 
     public function looksLikeTomanDip(float $value, float $referenceToman): bool
@@ -35,7 +41,7 @@ class PriceNormalizer
 
         $ratio = $value / $referenceToman;
 
-        return $ratio >= (1 / self::RIAL_RATIO_MAX) && $ratio <= (1 / self::RIAL_RATIO_MIN);
+        return $ratio >= (1 / $this->rialRatioMax) && $ratio <= (1 / $this->rialRatioMin);
     }
 
     /**
@@ -94,10 +100,10 @@ class PriceNormalizer
 
         if ($referenceToman !== null && $referenceToman > 0) {
             $ratio = $value / $referenceToman;
-            if ($ratio >= self::RIAL_RATIO_MIN && $ratio <= self::RIAL_RATIO_MAX) {
+            if ($ratio >= $this->rialRatioMin && $ratio <= $this->rialRatioMax) {
                 return round($value / 10, 4);
             }
-            if ($ratio >= (1 / self::RIAL_RATIO_MAX) && $ratio <= (1 / self::RIAL_RATIO_MIN)) {
+            if ($ratio >= (1 / $this->rialRatioMax) && $ratio <= (1 / $this->rialRatioMin)) {
                 return round($value * 10, 4);
             }
         }

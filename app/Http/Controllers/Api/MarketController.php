@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\MarketSummaryService;
+use App\Services\OutlierFilter;
 use App\Services\PriceHistoryQuery;
+use App\Services\RangeParser;
 use App\Support\MarketItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,6 +18,8 @@ class MarketController extends Controller
     public function __construct(
         private PriceHistoryQuery    $historyQuery,
         private MarketSummaryService $summaryService,
+        private RangeParser          $rangeParser,
+        private OutlierFilter        $outlierFilter,
     )
     {
     }
@@ -63,7 +67,9 @@ class MarketController extends Controller
 
     public function history(Request $request, MarketItem $item)
     {
-        $range = $this->normalizeRange($request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d'));
+        $range = $this->rangeParser->parse(
+            $request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d')
+        );
         $ttl = $this->historyCacheTtl($range);
 
         try {
@@ -131,29 +137,6 @@ class MarketController extends Controller
         return $this->cachedJson($payload, $ttl);
     }
 
-    private function normalizeRange($value): array
-    {
-        $historyMaxDays = max(1, (int)config('gold.history_max_days', 365));
-        $raw = strtolower(trim((string)$value));
-
-        if (preg_match('/^(\d+)\s*([hd])$/', $raw, $matches)) {
-            $amount = max(1, (int)$matches[1]);
-            $unit = $matches[2];
-        } else {
-            $amount = max(1, (int)$raw);
-            $unit = 'd';
-        }
-
-        $minutes = $unit === 'h' ? $amount * 60 : $amount * 1440;
-        $maxMinutes = $historyMaxDays * 1440;
-        $minutes = min($minutes, $maxMinutes);
-
-        return [
-            'key' => $unit === 'h' ? "{$amount}h" : "{$amount}d",
-            'minutes' => $minutes,
-        ];
-    }
-
     private function historyCacheTtl(array $range): int
     {
         $minutes = $range['minutes'];
@@ -182,33 +165,10 @@ class MarketController extends Controller
 
     private function filterHistoryOutliers($points)
     {
-        $reference = null;
-
-        return $points->values()->filter(function ($point) use (&$reference) {
-            if (!$this->isUsablePrice($point->current_value)) {
-                return false;
-            }
-
-            $value = (float)$point->current_value;
-            if ($reference !== null) {
-                $ratio = $value / $reference;
-                if ($ratio >= 8 && $ratio <= 12) {
-                    return false;
-                }
-                if ($ratio >= 0.08 && $ratio <= 0.12) {
-                    return false;
-                }
-            }
-
-            $reference = $value;
-
-            return true;
-        })->values();
-    }
-
-    private function isUsablePrice($value): bool
-    {
-        return $value !== null && is_numeric($value) && (float)$value > 0;
+        return $this->outlierFilter->filter(
+            $points,
+            fn($point) => $point->current_value,
+        );
     }
 
     private function samplePoints($points, int $maxPoints)

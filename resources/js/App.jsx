@@ -102,10 +102,17 @@ function ChartYAxisTick({x, y, payload, fill, panelFill, item}) {
 const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
     default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
         const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
-        const chartData = data
-            .map((point) => ({...point, timeValue: new Date(point.time).getTime()}))
-            .filter((point) => Number.isFinite(point.timeValue));
-        const yAxisWidth = chartYAxisWidth(selected, chartData.map((point) => point.current));
+
+        const chartData = React.useMemo(
+            () => data
+                .map((point) => ({...point, timeValue: new Date(point.time).getTime()}))
+                .filter((point) => Number.isFinite(point.timeValue)),
+            [data],
+        );
+        const yAxisWidth = React.useMemo(
+            () => chartYAxisWidth(selected, chartData.map((point) => point.current)),
+            [selected, chartData],
+        );
 
         return (
             <AreaChart width={width} height={height} data={chartData} margin={{top: 12, right: 2, left: 2, bottom: 8}}>
@@ -445,6 +452,12 @@ function App() {
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(() => embeddedSummary?.lastFetch || null);
     const [historyLoading, setHistoryLoading] = useState(false);
+    // historyTick bumps on every successful background summary refresh so the
+    // history effect re-runs and refetches the currently selected range.
+    // Without it, the auto-refresh loop only updated the summary and left the
+    // chart stale until the client-side history cache TTL (up to 5 min for
+    // long ranges) expired on its own.
+    const [historyTick, setHistoryTick] = useState(0);
     const historyCache = useRef(new Map());
     const refreshTimer = useRef(null);
     const lastFetchKey = useRef(embeddedSummary?.lastFetch?.finished_at || null);
@@ -495,6 +508,7 @@ function App() {
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
                 historyCache.current.clear();
+                setHistoryTick((tick) => tick + 1);
             }
             lastFetchKey.current = nextFetchKey;
             setLastFetch(data.lastFetch || null);
@@ -585,7 +599,7 @@ function App() {
             });
 
         return () => controller.abort();
-    }, [selected?.id, range]);
+    }, [selected?.id, range, historyTick]);
 
     useEffect(() => {
         if (items.length === 0 || !range) return;
