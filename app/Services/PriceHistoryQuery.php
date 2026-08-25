@@ -70,28 +70,69 @@ class PriceHistoryQuery
             ->get();
     }
 
-    public function fetchAnalytics(Collection $points): array
+    /**
+     * @param Collection $points Filtered series (min/max/avg).
+     * @param float|null $open Window-open anchor (near windowStart); defaults to first point.
+     * @param float|null $close Window-close anchor (latest valid); defaults to last point.
+     */
+    public function fetchAnalytics(Collection $points, ?float $open = null, ?float $close = null): array
     {
         $values = $points->pluck('current_value')->filter(fn($value) => $this->isUsablePrice($value))->values();
-        if ($values->isEmpty()) {
+        if ($values->isEmpty() && $open === null && $close === null) {
             return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
         }
 
-        $first = (float)$values->first();
-        $last = (float)$values->last();
-        $change = $last - $first;
+        $first = $open ?? ($values->isEmpty() ? null : (float)$values->first());
+        $last = $close ?? ($values->isEmpty() ? null : (float)$values->last());
+        $change = ($first !== null && $last !== null) ? ($last - $first) : null;
 
         return [
-            'min' => (float)$values->min(),
-            'max' => (float)$values->max(),
-            'avg' => round((float)$values->avg(), 4),
+            'min' => $values->isEmpty() ? null : (float)$values->min(),
+            'max' => $values->isEmpty() ? null : (float)$values->max(),
+            'avg' => $values->isEmpty() ? null : round((float)$values->avg(), 4),
             'change' => $change,
-            'changePercent' => $first == 0.0 ? null : round(($change / $first) * 100, 4),
+            'changePercent' => ($first === null || $first == 0.0 || $change === null)
+                ? null
+                : round(($change / $first) * 100, 4),
         ];
     }
 
     private function isUsablePrice($value): bool
     {
         return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
+    /**
+     * Nearest usable price to window start (open) and last usable (close), before sampling.
+     *
+     * @return array{0: ?float, 1: ?float}
+     */
+    public function windowAnchors(Collection $points, Carbon $windowStart): array
+    {
+        $usable = $points
+            ->filter(fn($point) => $this->isUsablePrice($point->current_value ?? null))
+            ->values();
+
+        if ($usable->isEmpty()) {
+            return [null, null];
+        }
+
+        $open = $usable
+            ->sortBy(function ($point) use ($windowStart) {
+                $at = $point->fetched_at;
+                if (!$at) {
+                    return PHP_INT_MAX;
+                }
+
+                return abs($at->diffInSeconds($windowStart));
+            })
+            ->first();
+
+        $close = $usable->last();
+
+        return [
+            $open ? (float)$open->current_value : null,
+            $close ? (float)$close->current_value : null,
+        ];
     }
 }

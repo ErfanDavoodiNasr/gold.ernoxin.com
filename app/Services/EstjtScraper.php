@@ -13,6 +13,15 @@ class EstjtScraper
     private const GOLD_TYPES = ['انس طلا', 'مظنه تهران', 'طلای ۱۸ عیار', 'طلای ۲۴ عیار'];
     private const COIN_TYPES = ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'];
 
+    private const COLUMN_ALIASES = [
+        'type' => ['نوع طلا', 'نوع سکه', 'نوع'],
+        'current' => ['لحظه‌ای', 'قیمت لحظه‌ای', 'جاری'],
+        'high' => ['بیشترین', 'بیشینه', 'سقف'],
+        'low' => ['کمترین', 'کمینه', 'کف'],
+        'yesterday' => ['دیروز', 'میانگین دیروز'],
+        'change' => ['تغییر', 'درصد تغییر'],
+    ];
+
     public function fetch(): array
     {
         $html = $this->fetchHtml();
@@ -25,7 +34,7 @@ class EstjtScraper
             'timeout' => config('gold.timeout_connect') + config('gold.timeout_read'),
             'connect_timeout' => config('gold.timeout_connect'),
             'http_errors' => false,
-            'verify' => false,
+            // TLS verify on (Guzzle default). Do not disable — fix CA bundle if host SSL fails.
             'headers' => [
                 'User-Agent' => config('gold.http_headers.user_agent'),
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -83,9 +92,6 @@ class EstjtScraper
         }
         $goldRows = $this->orderedRows($this->extractRows($goldTable, $xpath, true), $this->knownGoldTypes(), 'طلا');
         $coinRows = $this->orderedRows($this->extractRows($coinTable, $xpath, false), $this->knownCoinTypes(), 'سکه');
-        if (!$goldRows || !$coinRows) {
-            throw new RuntimeException('ساختار جدول قیمت‌ها تغییر کرده است.');
-        }
 
         return [
             'source' => [
@@ -155,45 +161,86 @@ class EstjtScraper
             $key = PersianNumber::label($type);
             if (isset($rows[$key])) {
                 $ordered[] = $rows[$key];
-                unset($rows[$key]);
             }
         }
-        return array_merge($ordered, array_values($rows));
+        if ($ordered === []) {
+            throw new RuntimeException("هیچ نماد شناخته‌شده‌ای در جدول {$fallbackCategory} پیدا نشد.");
+        }
+
+        return $ordered;
     }
 
     private function extractRows(DOMElement $table, DOMXPath $xpath, bool $gold): array
     {
+        $map = $this->columnMap($table, $xpath);
+        $needed = max($map) + 1;
         $rows = [];
         foreach ($xpath->query('.//tr', $table) as $tr) {
             $cells = $xpath->query('.//td', $tr);
-            if ($cells->length < 6) {
+            if ($cells->length < $needed) {
                 continue;
             }
-            $type = PersianNumber::clean($cells->item(0)->textContent);
-            $currentRaw = PersianNumber::clean($cells->item(1)->textContent);
-            $yesterdayRaw = PersianNumber::clean($cells->item(4)->textContent);
+            $type = PersianNumber::clean($cells->item($map['type'])->textContent);
+            $currentRaw = PersianNumber::clean($cells->item($map['current'])->textContent);
+            $yesterdayRaw = PersianNumber::clean($cells->item($map['yesterday'])->textContent);
+            $highRaw = PersianNumber::clean($cells->item($map['high'])->textContent);
+            $lowRaw = PersianNumber::clean($cells->item($map['low'])->textContent);
             [$currentValue, $currency] = PersianNumber::currencyAndValue($currentRaw);
             [$yesterdayValue, $yesterdayCurrency] = PersianNumber::currencyAndValue($yesterdayRaw);
-            [$highValue, $highCurrency] = PersianNumber::currencyAndValue(PersianNumber::clean($cells->item(2)->textContent));
-            [$lowValue, $lowCurrency] = PersianNumber::currencyAndValue(PersianNumber::clean($cells->item(3)->textContent));
+            [$highValue, $highCurrency] = PersianNumber::currencyAndValue($highRaw);
+            [$lowValue, $lowCurrency] = PersianNumber::currencyAndValue($lowRaw);
             if ($currency === null && $highCurrency !== null) {
                 $currency = $highCurrency;
             }
             if ($currency === null && $lowCurrency !== null) {
                 $currency = $lowCurrency;
             }
+            $changeCell = $cells->item($map['change']);
             $item = [
                 'type' => $type,
                 'category' => $gold ? 'gold' : 'coin',
                 'current' => ['value' => $currentValue, 'raw' => $currentRaw, 'currency' => $currency],
-                'high' => ['value' => $highValue, 'raw' => PersianNumber::clean($cells->item(2)->textContent), 'currency' => $highCurrency ?? $currency],
-                'low' => ['value' => $lowValue, 'raw' => PersianNumber::clean($cells->item(3)->textContent), 'currency' => $lowCurrency ?? $currency],
+                'high' => ['value' => $highValue, 'raw' => $highRaw, 'currency' => $highCurrency ?? $currency],
+                'low' => ['value' => $lowValue, 'raw' => $lowRaw, 'currency' => $lowCurrency ?? $currency],
                 'yesterdayAvg' => ['value' => $yesterdayValue, 'raw' => $yesterdayRaw, 'currency' => $yesterdayCurrency],
-                'change' => PersianNumber::change($cells->item(5)->textContent, $this->direction($cells->item(5))),
+                'change' => PersianNumber::change($changeCell->textContent, $this->direction($changeCell)),
             ];
             $rows[PersianNumber::label($type)] = $item;
         }
         return $rows;
+    }
+
+    /** @return array{type:int,current:int,high:int,low:int,yesterday:int,change:int} */
+    private function columnMap(DOMElement $table, DOMXPath $xpath): array
+    {
+        $headers = [];
+        foreach ($xpath->query('.//th', $table) as $index => $th) {
+            $headers[$index] = PersianNumber::label($th->textContent);
+        }
+        if ($headers === []) {
+            throw new RuntimeException('هدر جدول قیمت پیدا نشد.');
+        }
+
+        $map = [];
+        foreach (self::COLUMN_ALIASES as $field => $aliases) {
+            foreach ($headers as $index => $header) {
+                foreach ($aliases as $alias) {
+                    $needle = PersianNumber::label($alias);
+                    if ($header === $needle || str_contains($header, $needle)) {
+                        $map[$field] = $index;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        foreach (array_keys(self::COLUMN_ALIASES) as $field) {
+            if (!isset($map[$field])) {
+                throw new RuntimeException('هدر جدول قیمت با قرارداد مورد انتظار جور نیست: ' . $field);
+            }
+        }
+
+        return $map;
     }
 
     private function direction(DOMElement $cell): string

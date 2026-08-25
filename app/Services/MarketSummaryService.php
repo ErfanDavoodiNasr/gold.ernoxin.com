@@ -120,6 +120,9 @@ class MarketSummaryService
         }
 
         $direction = $price?->direction ?? 'none';
+        $fetchedAt = $price?->fetched_at;
+        $ageSeconds = $fetchedAt ? (int)$fetchedAt->diffInSeconds(now()) : null;
+        $staleAfter = max(120, (int)config('gold.fetch_interval_minutes', 1) * 60 * 2);
 
         return [
             'id' => $item->id,
@@ -127,13 +130,25 @@ class MarketSummaryService
             'name' => $item->name,
             'category' => $item->category,
             'currency' => $item->currency,
+            'unitLabel' => $this->unitLabel($item),
             'current' => $price?->current_value,
             'high' => $this->isUsablePrice($high) ? $high : null,
             'low' => $this->isUsablePrice($low) ? $low : null,
             'change' => PersianNumber::signedByDirection($price?->change_value, $direction),
             'percent' => PersianNumber::signedByDirection($price?->change_percent, $direction),
             'direction' => $direction,
-            'fetchedAt' => $price?->fetched_at?->toIso8601String(),
+            'fetchedAt' => $fetchedAt?->toIso8601String(),
+            'ageSeconds' => $ageSeconds,
+            'stale' => $ageSeconds !== null && $ageSeconds > $staleAfter,
         ];
+    }
+
+    private function unitLabel(MarketItem $item): string
+    {
+        if ($item->slug === 'mozaneh') {
+            return (string)config('gold.mozaneh_unit_label', 'مظنه / مثقال');
+        }
+
+        return $item->isUsd() ? 'دلار' : 'تومان';
     }
 }

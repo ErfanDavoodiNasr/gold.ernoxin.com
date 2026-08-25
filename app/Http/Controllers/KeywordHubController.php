@@ -44,9 +44,9 @@ class KeywordHubController extends Controller
         $primaryItem = $featuredItems->first();
         $primaryPrice = $this->formatDisplayPrice($primaryItem, $primaryItem?->latestPrice?->current_value);
         $primaryBubble = $primaryItem ? ($bubbles[$primaryItem->key] ?? null) : null;
-        $primaryBubbleLabel = $primaryBubble
+        $primaryBubbleLabel = ($primaryBubble && ($primaryBubble['bubble'] ?? null) !== null)
             ? number_format($primaryBubble['bubble'], 0, '.', ',') . ' تومان (' . number_format($primaryBubble['bubble_percent'], 1, '.', ',') . '٪)'
-            : 'نامشخص';
+            : (($primaryBubble['unavailable_reason'] ?? null) ?: 'نامشخص');
         $updatedAt = optional($lastFetch?->finishedAt ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
         $canonical = url($config['path']);
         $blogPath = config('learn.base_path', '/blog');
@@ -67,6 +67,7 @@ class KeywordHubController extends Controller
                 'bubbles' => $bubbles,
                 'primaryPrice' => $primaryPrice,
                 'primaryBubbleLabel' => $primaryBubbleLabel,
+                'mozanehUnitLabel' => config('gold.mozaneh_unit_label', 'مظنه / مثقال'),
                 'blogPath' => $blogPath,
                 'updatedAt' => $updatedAt,
                 'seo' => [
@@ -113,6 +114,10 @@ class KeywordHubController extends Controller
 
         if ($item?->isUsd()) {
             return number_format((float)$value, 2, '.', ',') . ' دلار';
+        }
+
+        if ($item?->slug === 'mozaneh') {
+            return number_format((float)$value, 0, '.', ',') . ' ' . config('gold.mozaneh_unit_label', 'مظنه / مثقال');
         }
 
         return number_format((float)$value, 0, '.', ',') . ' تومان';

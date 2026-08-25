@@ -11,6 +11,7 @@ class LastFetch
         public int     $itemsCount = 0,
         public ?Carbon $startedAt = null,
         public ?Carbon $finishedAt = null,
+        public ?string $message = null,
     )
     {
     }
@@ -22,6 +23,7 @@ class LastFetch
             'items_count' => $this->itemsCount,
             'started_at' => $this->startedAt?->toIso8601String(),
             'finished_at' => $this->finishedAt?->toIso8601String(),
+            'message' => $this->message,
         ];
     }
 }

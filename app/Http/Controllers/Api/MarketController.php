@@ -85,7 +85,7 @@ class MarketController extends Controller
             $cacheKey = implode(':', [
                 'gold',
                 'market-history',
-                'v10',
+                'v11',
                 $item->key,
                 $range['key'],
                 md5($latestFetchedAtKey),
@@ -108,11 +108,13 @@ class MarketController extends Controller
                 $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
                 $points = $this->filterHistoryOutliers($points);
 
+                // Open/close of the window — before sample. Sample is draw-only.
+                [$open, $close] = $this->historyQuery->windowAnchors($points, $windowStart);
+                $analytics = $this->historyQuery->fetchAnalytics($points, $open, $close);
+
                 if (!$useSqlBuckets) {
                     $points = $this->samplePoints($points, $maxPoints);
                 }
-
-                $analytics = $this->historyQuery->fetchAnalytics($points);
 
                 return [
                     'range' => $range['key'],

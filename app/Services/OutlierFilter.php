@@ -4,41 +4,62 @@ namespace App\Services;
 
 use Illuminate\Support\Collection;
 
+/**
+ * Chart-history spike filter. Uses local neighbor median — not the rial/toman
+ * 8–12× band (that belongs only in PriceNormalizer at ingest).
+ */
 final class OutlierFilter
 {
-    private float $spikeMin;
-    private float $spikeMax;
+    private int $neighborRadius;
+    private float $maxRelativeDeviation;
 
     public function __construct()
     {
-        $this->spikeMin = (float)config('gold.outlier.spike_min', 8.0);
-        $this->spikeMax = (float)config('gold.outlier.spike_max', 12.0);
+        $this->neighborRadius = max(1, (int)config('gold.outlier.chart_neighbor_radius', 2));
+        $this->maxRelativeDeviation = max(0.01, (float)config('gold.outlier.chart_max_relative_deviation', 0.15));
     }
 
     public function filter(Collection $points, callable $accessor): Collection
     {
-        $reference = null;
+        $values = $points->values();
+        $count = $values->count();
+        if ($count === 0) {
+            return $values;
+        }
 
-        return $points->values()->filter(function ($point) use ($accessor, &$reference) {
+        $nums = [];
+        foreach ($values as $index => $point) {
             $value = $accessor($point);
-            if (!$this->isUsable($value)) {
+            $nums[$index] = $this->isUsable($value) ? (float)$value : null;
+        }
+
+        return $values->filter(function ($point, $index) use ($nums, $count) {
+            $value = $nums[$index];
+            if ($value === null) {
                 return false;
             }
 
-            $value = (float)$value;
-            if ($reference !== null) {
-                $ratio = $value / $reference;
-                if ($ratio >= $this->spikeMin && $ratio <= $this->spikeMax) {
-                    return false;
+            $neighbors = [];
+            $from = max(0, $index - $this->neighborRadius);
+            $to = min($count - 1, $index + $this->neighborRadius);
+            for ($j = $from; $j <= $to; $j++) {
+                if ($j === $index || $nums[$j] === null) {
+                    continue;
                 }
-                if ($ratio >= 1 / $this->spikeMax && $ratio <= 1 / $this->spikeMin) {
-                    return false;
-                }
+                $neighbors[] = $nums[$j];
             }
 
-            $reference = $value;
+            if ($neighbors === []) {
+                return true;
+            }
 
-            return true;
+            sort($neighbors);
+            $median = $neighbors[(int)floor((count($neighbors) - 1) / 2)];
+            if ($median <= 0) {
+                return true;
+            }
+
+            return (abs($value - $median) / $median) <= $this->maxRelativeDeviation;
         })->values();
     }
 

@@ -202,6 +202,10 @@ function persistChartRange(range) {
 
 function resolveChartRange(availableRanges, serverDefault, {preferStored = true} = {}) {
     const available = (availableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    const fromTrend = rangeFromTrendPath(available);
+    if (fromTrend) {
+        return fromTrend;
+    }
     if (preferStored) {
         try {
             const stored = localStorage.getItem(chartRangeStorageKey);
@@ -220,6 +224,36 @@ function resolveChartRange(availableRanges, serverDefault, {preferStored = true}
     return available.includes(fallback) ? fallback : available[0];
 }
 
+function trendDaysFromPath(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
+    const match = String(pathname).match(/\/price\/trends\/(\d+)/);
+    return match ? Number(match[1]) : null;
+}
+
+function rangeFromTrendPath(availableRanges) {
+    const days = trendDaysFromPath();
+    if (!days) return null;
+    const key = `${days}d`;
+    const available = (availableRanges || []).map(rangeKey);
+    return available.includes(key) ? key : null;
+}
+
+function syncTrendUrl(range) {
+    if (typeof window === 'undefined' || !window.history?.replaceState) return;
+    const key = rangeKey(range);
+    if (!key.endsWith('d')) {
+        if (/\/price\/trends\/\d+/.test(window.location.pathname)) {
+            window.history.replaceState(null, '', '/price/');
+        }
+        return;
+    }
+    const days = parseInt(key, 10);
+    if (!Number.isFinite(days) || days < 1) return;
+    const next = `/price/trends/${days}`;
+    if (window.location.pathname === next) return;
+    if (!window.location.pathname.startsWith('/price')) return;
+    window.history.replaceState(null, '', next);
+}
+
 function isUsdItem(item) {
     const currency = String(item?.currency || '').trim();
     return item?.name?.includes('انس')
@@ -233,11 +267,16 @@ function displayValue(value, item) {
     return Number(value);
 }
 
+function priceUnitLabel(item) {
+    if (item?.unitLabel) return item.unitLabel;
+    if (item?.slug === 'mozaneh') return 'مظنه / مثقال';
+    return isUsdItem(item) ? 'دلار' : 'تومان';
+}
+
 function formatPrice(value, item, options = {}) {
     const nextValue = displayValue(value, item);
     if (nextValue === null) return '—';
-    const unit = isUsdItem(item) ? 'دلار' : 'تومان';
-    return `${formatNumber(nextValue, options)} ${unit}`;
+    return `${formatNumber(nextValue, options)} ${priceUnitLabel(item)}`;
 }
 
 function formatAxisPrice(value, item) {
@@ -335,11 +374,15 @@ function fetchStatusMessage(lastFetch, itemsCount) {
     }
 
     if (lastFetch?.status === 'failed') {
-        return 'آخرین دریافت قیمت‌ها ناموفق بود.';
+        return lastFetch?.message || 'آخرین دریافت قیمت‌ها ناموفق بود.';
     }
 
     if (lastFetch?.status === 'running' && itemsCount === 0) {
         return 'دریافت قیمت‌ها هنوز در حال اجراست و داده‌ای ذخیره نشده است.';
+    }
+
+    if (lastFetch?.status === 'partial') {
+        return lastFetch?.message || 'آخرین دریافت ناقص بود؛ بعضی نمادها ممکن است قدیمی باشند.';
     }
 
     if (lastFetch?.status === 'success' && Number(lastFetch.items_count || 0) === 0) {
@@ -647,12 +690,18 @@ function App() {
 
     useEffect(() => {
         if (items.length === 0) return;
+        const days = trendDaysFromPath();
+        if (days) {
+            document.title = `نمودار ${days} روزه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران`;
+            setMeta('description', `بررسی روند ${days} روزه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران.`);
+            return;
+        }
         const primaryGold = items.find((item) => item.name.includes('۱۸') || item.name.includes('18')) || items.find((item) => item.category === 'gold');
         const primaryCoin = items.find((item) => item.category === 'coin');
         const description = `قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: ${formatPrice(primaryGold?.current, primaryGold)}، سکه: ${formatPrice(primaryCoin?.current, primaryCoin)}. مشاهده تغییرات زنده و نمودار تاریخی.`;
         document.title = 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';
         setMeta('description', description);
-    }, [items]);
+    }, [items, range]);
 
     return (
         <main className="shell">
@@ -722,6 +771,7 @@ function App() {
                                                                                       const key = rangeKey(nextRange);
                                                                                       setRange(key);
                                                                                       persistChartRange(key);
+                                                                                      syncTrendUrl(key);
                                                                                   }}>{rangeLabel(nextRange)}</button>)}</div>
                     </div>
 
@@ -805,9 +855,12 @@ function MarketItem({item, active, onClick}) {
     const tone = changeTone(item.direction, item.percent);
     const Icon = item.category === 'coin' ? Coins : BarChart3;
     return (
-        <button className={`marketItem ${active ? 'active' : ''}`} onClick={onClick}>
+        <button className={`marketItem ${active ? 'active' : ''} ${item.stale ? 'stale' : ''}`} onClick={onClick}>
             <span className="itemIcon"><Icon size={20}/></span>
-            <span className="itemMain"><b>{item.name}</b><small>{formatPrice(item.current, item)}</small></span>
+            <span className="itemMain">
+                <b>{item.name}{item.stale ? <span className="staleBadge">قدیمی</span> : null}</b>
+                <small>{formatPrice(item.current, item)}</small>
+            </span>
             <span className={`badge ${tone}`}>
                 {shouldShowChangeIcon(item.direction, item.percent) && (
                     <ChangeIcon direction={item.direction} percent={item.percent} size={14} variant="trend"/>

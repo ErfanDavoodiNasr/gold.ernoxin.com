@@ -24,32 +24,32 @@ class FetchStatusStore
 
     public function succeed(int $itemsCount): void
     {
-        $current = Cache::get(self::CACHE_KEY, []);
-        $startedAt = $current['started_at'] ?? now()->toIso8601String();
-
-        Cache::put(self::CACHE_KEY, [
-            'status' => 'success',
-            'items_count' => $itemsCount,
-            'reference_id' => $current['reference_id'] ?? null,
-            'started_at' => $startedAt,
-            'finished_at' => now()->toIso8601String(),
-            'message' => null,
-        ], now()->addDays(7));
+        $this->finish('success', $itemsCount);
     }
 
-    public function fail(string $message): void
+    private function finish(string $status, int $itemsCount, ?string $message = null): void
     {
         $current = Cache::get(self::CACHE_KEY, []);
         $startedAt = $current['started_at'] ?? now()->toIso8601String();
 
         Cache::put(self::CACHE_KEY, [
-            'status' => 'failed',
-            'items_count' => 0,
+            'status' => $status,
+            'items_count' => $itemsCount,
             'reference_id' => $current['reference_id'] ?? null,
             'started_at' => $startedAt,
             'finished_at' => now()->toIso8601String(),
             'message' => $message,
         ], now()->addDays(7));
+    }
+
+    public function partial(int $itemsCount, string $message): void
+    {
+        $this->finish('partial', $itemsCount, $message);
+    }
+
+    public function fail(string $message): void
+    {
+        $this->finish('failed', 0, $message);
     }
 
     public function last(): ?LastFetch
@@ -64,6 +64,7 @@ class FetchStatusStore
             itemsCount: (int)($value['items_count'] ?? 0),
             startedAt: !empty($value['started_at']) ? Carbon::parse($value['started_at']) : null,
             finishedAt: !empty($value['finished_at']) ? Carbon::parse($value['finished_at']) : null,
+            message: isset($value['message']) ? (string)$value['message'] : null,
         );
     }
 
@@ -84,7 +85,7 @@ class FetchStatusStore
     public function lastSuccessStartedAt(): ?Carbon
     {
         $last = Cache::get(self::CACHE_KEY);
-        if (is_array($last) && ($last['status'] ?? null) === 'success' && !empty($last['started_at'])) {
+        if (is_array($last) && in_array($last['status'] ?? null, ['success', 'partial'], true) && !empty($last['started_at'])) {
             return Carbon::parse($last['started_at']);
         }
 

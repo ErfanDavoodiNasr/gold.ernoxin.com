@@ -30,7 +30,15 @@ class PriceIngestor
 
             $payload = $this->scraper->fetch();
             $count = DB::transaction(fn() => $this->store($payload));
-            $this->fetchStatus->succeed($count);
+            $expected = count($this->catalog->keys());
+            if ($count === 0) {
+                throw new \RuntimeException('هیچ قیمت معتبری ذخیره نشد.');
+            }
+            if ($expected > 0 && $count < $expected) {
+                $this->fetchStatus->partial($count, "فقط {$count} از {$expected} نماد به‌روزرسانی شد.");
+            } else {
+                $this->fetchStatus->succeed($count);
+            }
             $this->clearSummaryCache();
             Cache::increment('gold:price-data-version');
 

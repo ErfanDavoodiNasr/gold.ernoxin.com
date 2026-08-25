@@ -21,8 +21,12 @@ return [
     'chart_max_points' => (int)env('CHART_MAX_POINTS', 600),
     'history_max_days' => (int)env('HISTORY_MAX_DAYS', 365),
     'outlier' => [
+        // Rial/toman unit spike band — PriceNormalizer only (ingest).
         'spike_min' => (float)env('OUTLIER_SPIKE_MIN', 8.0),
         'spike_max' => (float)env('OUTLIER_SPIKE_MAX', 12.0),
+        // Chart history: drop points far from local neighbor median (±15% default).
+        'chart_neighbor_radius' => (int)env('OUTLIER_CHART_NEIGHBOR_RADIUS', 2),
+        'chart_max_relative_deviation' => (float)env('OUTLIER_CHART_MAX_REL_DEV', 0.15),
     ],
     'http_headers' => [
         'user_agent' => env('ESTJT_USER_AGENT', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'),
@@ -38,7 +42,7 @@ return [
     'known_items' => [
         'gold' => [
             ['id' => 1, 'slug' => 'ounce', 'name' => 'انس طلا'],
-            ['id' => 2, 'slug' => 'mozaneh', 'name' => 'مظنه تهران'],
+            ['id' => 2, 'slug' => 'mozaneh', 'name' => 'مظنه تهران'], // unit: مظنه / مثقال — نه گرم ۱۸ عیار
             ['id' => 3, 'slug' => '18k', 'name' => 'طلای ۱۸ عیار'],
             ['id' => 4, 'slug' => '24k', 'name' => 'طلای ۲۴ عیار'],
         ],
@@ -50,10 +54,12 @@ return [
             ['id' => 9, 'slug' => 'gram', 'name' => 'سکه یک گرمی'],
         ],
     ],
+    'mozaneh_unit_label' => env('MOZANEH_UNIT_LABEL', 'مظنه / مثقال'),
     // intrinsic = weight_g * (purity / reference_purity) * price(reference_item)
     'coin_bubble' => [
         'reference_item' => 'طلای ۱۸ عیار',
         'reference_purity' => 0.750,
+        'sync_threshold_seconds' => (int)env('COIN_BUBBLE_SYNC_SECONDS', 300),
         'coins' => [
             'سکه طرح قدیم' => ['weight_g' => 8.133, 'purity' => 0.900],
             'سکه طرح جدید' => ['weight_g' => 8.133, 'purity' => 0.900],

@@ -199,6 +199,14 @@
             color: var(--muted)
         }
 
+        .priceCard small.up {
+            color: #2f9e74
+        }
+
+        .priceCard small.down {
+            color: #d6455d
+        }
+
         .faq details {
             border: 1px solid var(--line);
             background: var(--surface);
@@ -270,18 +278,47 @@
             <div class="priceGrid">
                 @foreach($featuredItems as $item)
                 @php($bubble = ($bubbles ?? [])[$item->key] ?? null)
+                @php($direction = $item->latestPrice?->direction ?? 'none')
+                @php($changePercent = $item->latestPrice?->change_percent)
                 <article class="priceCard" id="item-{{ $item->id }}">
                     <small>{{ $item->category === 'coin' ? 'سکه' : 'طلا' }}</small>
                     <strong>{{ $item->name }}</strong>
                     @php($price = $item->latestPrice?->current_value)
                     <strong>@if($price !== null && (float)$price > 0){{ number_format((float)$price, $item->isUsd()
-                        ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}@else—@endif</strong>
-                    <small>تغییر: {{ $item->latestPrice?->change_percent !== null ?
-                        abs($item->latestPrice->change_percent) : '—' }}٪</small>
+                        ? 2 : 0, '.', ',') }} {{ $item->slug === 'mozaneh' ? ($mozanehUnitLabel ?? 'مظنه / مثقال') :
+                        ($item->isUsd() ? 'دلار' : 'تومان') }}@else—@endif</strong>
+                    <small class="{{ $direction === 'asc' ? 'up' : ($direction === 'desc' ? 'down' : '') }}">
+                        تغییر:
+                        @if($changePercent !== null)
+                        {{ $direction === 'desc' ? '−' : ($direction === 'asc' ? '+' : '') }}{{
+                        number_format(abs((float)$changePercent), 2, '.', ',') }}٪
+                        @if($direction === 'asc') صعودی
+                        @elseif($direction === 'desc') نزولی
+                        @endif
+                        @else
+                        —
+                        @endif
+                    </small>
                     @if($bubble)
+                    @if(($bubble['bubble'] ?? null) !== null)
                     <small>ارزش Intrinsic: {{ number_format($bubble['intrinsic'], 0, '.', ',') }} تومان</small>
                     <small>حباب: {{ number_format($bubble['bubble'], 0, '.', ',') }} تومان ({{
                         number_format($bubble['bubble_percent'], 1, '.', ',') }}٪)</small>
+                    @else
+                    <small>{{ $bubble['unavailable_reason'] ?? 'داده هم‌زمان نیست' }}</small>
+                    @endif
+                    @if(!empty($bubble['coin_fetched_at']) || !empty($bubble['reference_fetched_at']) ||
+                    isset($bubble['coin_direction']) || isset($bubble['reference_direction']))
+                    @php($coinDir = $bubble['coin_direction'] ?? 'none')
+                    @php($refDir = $bubble['reference_direction'] ?? 'none')
+                    <small>
+                        سکه: {{ $coinDir === 'asc' ? 'صعودی' : ($coinDir === 'desc' ? 'نزولی' : 'بدون تغییر') }}
+                        ({{ $bubble['coin_fetched_at'] ?? '—' }})
+                        |
+                        ۱۸ عیار: {{ $refDir === 'asc' ? 'صعودی' : ($refDir === 'desc' ? 'نزولی' : 'بدون تغییر') }}
+                        ({{ $bubble['reference_fetched_at'] ?? '—' }})
+                    </small>
+                    @endif
                     @endif
                 </article>
                 @endforeach
