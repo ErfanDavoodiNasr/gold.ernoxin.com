@@ -136,12 +136,16 @@ class EstjtScraper
 
     private function knownGoldTypes(): array
     {
-        return config('gold.known_items.gold') ?: self::GOLD_TYPES;
+        $names = app(MarketCatalog::class)->names('gold');
+
+        return $names !== [] ? $names : self::GOLD_TYPES;
     }
 
     private function knownCoinTypes(): array
     {
-        return config('gold.known_items.coin') ?: self::COIN_TYPES;
+        $names = app(MarketCatalog::class)->names('coin');
+
+        return $names !== [] ? $names : self::COIN_TYPES;
     }
 
     private function orderedRows(array $rows, array $knownTypes, string $fallbackCategory): array

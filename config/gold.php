@@ -34,9 +34,33 @@ return [
         'gold' => env('ESTJT_GOLD_HEADER_LABEL', 'نوع طلا'),
         'coin' => env('ESTJT_COIN_HEADER_LABEL', 'نوع سکه'),
     ],
+    // Fixed id/slug — never reorder-dependent. Adding items must use a new unused id.
     'known_items' => [
-        'gold' => ['انس طلا', 'مظنه تهران', 'طلای ۱۸ عیار', 'طلای ۲۴ عیار'],
-        'coin' => ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'],
+        'gold' => [
+            ['id' => 1, 'slug' => 'ounce', 'name' => 'انس طلا'],
+            ['id' => 2, 'slug' => 'mozaneh', 'name' => 'مظنه تهران'],
+            ['id' => 3, 'slug' => '18k', 'name' => 'طلای ۱۸ عیار'],
+            ['id' => 4, 'slug' => '24k', 'name' => 'طلای ۲۴ عیار'],
+        ],
+        'coin' => [
+            ['id' => 5, 'slug' => 'bahar-old', 'name' => 'سکه طرح قدیم'],
+            ['id' => 6, 'slug' => 'emami', 'name' => 'سکه طرح جدید'],
+            ['id' => 7, 'slug' => 'half', 'name' => 'نیم سکه'],
+            ['id' => 8, 'slug' => 'quarter', 'name' => 'ربع سکه'],
+            ['id' => 9, 'slug' => 'gram', 'name' => 'سکه یک گرمی'],
+        ],
+    ],
+    // intrinsic = weight_g * (purity / reference_purity) * price(reference_item)
+    'coin_bubble' => [
+        'reference_item' => 'طلای ۱۸ عیار',
+        'reference_purity' => 0.750,
+        'coins' => [
+            'سکه طرح قدیم' => ['weight_g' => 8.133, 'purity' => 0.900],
+            'سکه طرح جدید' => ['weight_g' => 8.133, 'purity' => 0.900],
+            'نیم سکه' => ['weight_g' => 4.0665, 'purity' => 0.900],
+            'ربع سکه' => ['weight_g' => 2.03325, 'purity' => 0.900],
+            'سکه یک گرمی' => ['weight_g' => 1.0, 'purity' => 0.900],
+        ],
     ],
     'features' => [
         'dark_mode' => true,

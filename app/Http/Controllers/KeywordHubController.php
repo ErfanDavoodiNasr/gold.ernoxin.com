@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CoinBubbleCalculator;
 use App\Services\MarketSummaryService;
 use App\Support\MarketItem;
 use Illuminate\Http\Response;
@@ -11,7 +12,10 @@ use Throwable;
 
 class KeywordHubController extends Controller
 {
-    public function __construct(private MarketSummaryService $summaryService)
+    public function __construct(
+        private MarketSummaryService $summaryService,
+        private CoinBubbleCalculator $coinBubble,
+    )
     {
     }
 
@@ -34,14 +38,25 @@ class KeywordHubController extends Controller
         }
 
         $featuredItems = $this->featuredItems($items, $config);
+        $bubbles = $hub === 'coin-bubble'
+            ? $this->coinBubble->forItems($items)
+            : [];
         $primaryItem = $featuredItems->first();
         $primaryPrice = $this->formatDisplayPrice($primaryItem, $primaryItem?->latestPrice?->current_value);
+        $primaryBubble = $primaryItem ? ($bubbles[$primaryItem->key] ?? null) : null;
+        $primaryBubbleLabel = $primaryBubble
+            ? number_format($primaryBubble['bubble'], 0, '.', ',') . ' تومان (' . number_format($primaryBubble['bubble_percent'], 1, '.', ',') . '٪)'
+            : 'نامشخص';
         $updatedAt = optional($lastFetch?->finishedAt ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
         $canonical = url($config['path']);
         $blogPath = config('learn.base_path', '/blog');
 
         $description = $primaryItem
-            ? str_replace('{price}', $primaryPrice, "{$config['description']} آخرین قیمت: {$primaryPrice}.")
+            ? str_replace(
+                ['{price}', '{bubble}'],
+                [$primaryPrice, $primaryBubbleLabel],
+                "{$config['description']} آخرین قیمت: {$primaryPrice}."
+            )
             : $config['description'];
 
         return response()
@@ -49,7 +64,9 @@ class KeywordHubController extends Controller
                 'hub' => $config,
                 'hubKey' => $hub,
                 'featuredItems' => $featuredItems,
+                'bubbles' => $bubbles,
                 'primaryPrice' => $primaryPrice,
+                'primaryBubbleLabel' => $primaryBubbleLabel,
                 'blogPath' => $blogPath,
                 'updatedAt' => $updatedAt,
                 'seo' => [
@@ -60,7 +77,7 @@ class KeywordHubController extends Controller
                     'robots' => 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1',
                     'ogImage' => url($config['og_image'] ?? config('learn.default_og_image')),
                     'updatedAt' => $updatedAt,
-                    'jsonLd' => $this->jsonLd($config, $canonical, $featuredItems, $primaryPrice, $updatedAt, $blogPath),
+                    'jsonLd' => $this->jsonLd($config, $canonical, $featuredItems, $primaryPrice, $primaryBubbleLabel, $updatedAt, $blogPath),
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
@@ -101,10 +118,14 @@ class KeywordHubController extends Controller
         return number_format((float)$value, 0, '.', ',') . ' تومان';
     }
 
-    private function jsonLd(array $config, string $canonical, Collection $items, string $primaryPrice, ?string $updatedAt, string $blogPath): array
+    private function jsonLd(array $config, string $canonical, Collection $items, string $primaryPrice, string $primaryBubbleLabel, ?string $updatedAt, string $blogPath): array
     {
-        $faqEntities = collect($config['faqs'] ?? [])->map(function ($faq) use ($primaryPrice) {
-            $answer = str_replace('{price}', $primaryPrice, $faq['answer']);
+        $faqEntities = collect($config['faqs'] ?? [])->map(function ($faq) use ($primaryPrice, $primaryBubbleLabel) {
+            $answer = str_replace(
+                ['{price}', '{bubble}'],
+                [$primaryPrice, $primaryBubbleLabel],
+                $faq['answer']
+            );
 
             return [
                 '@type' => 'Question',

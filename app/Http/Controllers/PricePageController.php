@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\MarketSummaryService;
+use App\Services\PersianNumber;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
 use Illuminate\Support\Collection;
@@ -109,7 +110,7 @@ class PricePageController extends Controller
         $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
         return Cache::remember(
-            'gold:price-jsonld:v1:' . $version . ':' . ($days ?? 0),
+            'gold:price-jsonld:v4:' . $version . ':' . ($days ?? 0),
             $ttl,
             fn() => $this->jsonLd($items, $availableRanges, $days, $updatedAt)
         );
@@ -122,49 +123,50 @@ class PricePageController extends Controller
             ? "نمودار {$days} روزه قیمت طلا و سکه"
             : 'قیمت طلا امروز و قیمت لحظه‌ای سکه';
 
+        $listElements = $this
+            ->primaryJsonLdItems($items)
+            ->map(function (MarketItem $item, int $index) use ($pageUrl) {
+                $price = $item->latestPrice;
+
+                return [
+                    '@type' => 'ListItem',
+                    'position' => $index + 1,
+                    'item' => [
+                        '@type' => 'FinancialProduct',
+                        '@id' => url('/price/#item-' . $item->id),
+                        'name' => $item->name,
+                        'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
+                        'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
+                        'url' => $pageUrl,
+                        'provider' => [
+                            '@type' => 'Organization',
+                            'name' => config('gold.source_name'),
+                            'url' => config('gold.source_url'),
+                        ],
+                        'offers' => [
+                            '@type' => 'Offer',
+                            'price' => $this->schemaOfferPrice($item, $price?->current_value),
+                            'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
+                            'availability' => 'https://schema.org/InStock',
+                            'url' => $pageUrl,
+                            'priceValidUntil' => now()->addDay()->toDateString(),
+                        ],
+                        'additionalProperty' => [
+                            ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber(
+                                PersianNumber::signedByDirection($price?->change_percent, $price?->direction ?? 'none')
+                            ), 'unitText' => 'PERCENT'],
+                        ],
+                    ],
+                ];
+            })->values()->all();
+
         $marketList = [
             '@type' => 'ItemList',
             '@id' => url('/price/#market-items'),
             'name' => 'قیمت لحظه‌ای طلا و سکه ایران',
-            // Inline the primary items only (18k gold + a coin + USD ounce when
-            // available). The full table is rendered in the visible <noscript>
-            // fallback, so listing every market item here only inflated the
-            // inlined JSON-LD without adding SEO value.
-            'numberOfItems' => $items->count(),
-            'itemListElement' => $this
-                ->primaryJsonLdItems($items)
-                ->map(function (MarketItem $item, int $index) use ($pageUrl) {
-                    $price = $item->latestPrice;
-
-                    return [
-                        '@type' => 'ListItem',
-                        'position' => $index + 1,
-                        'item' => [
-                            '@type' => 'FinancialProduct',
-                            '@id' => url('/price/#item-' . $item->id),
-                            'name' => $item->name,
-                            'category' => $item->category === 'coin' ? 'سکه طلا' : 'طلا',
-                            'description' => "قیمت لحظه‌ای {$item->name} در بازار ایران بر اساس داده‌های ثبت‌شده از " . config('gold.source_name') . '.',
-                            'url' => $pageUrl,
-                            'provider' => [
-                                '@type' => 'Organization',
-                                'name' => config('gold.source_name'),
-                                'url' => config('gold.source_url'),
-                            ],
-                            'offers' => [
-                                '@type' => 'Offer',
-                                'price' => $this->schemaNumber($price?->current_value),
-                                'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
-                                'availability' => 'https://schema.org/InStock',
-                                'url' => $pageUrl,
-                                'priceValidUntil' => now()->addDay()->toDateString(),
-                            ],
-                            'additionalProperty' => [
-                                ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber($price?->change_percent), 'unitText' => 'PERCENT'],
-                            ],
-                        ],
-                    ];
-                })->values()->all(),
+            // Primary items only (18k + coin + ounce); full table is in noscript.
+            'numberOfItems' => count($listElements),
+            'itemListElement' => $listElements,
         ];
 
         $dataset = [
@@ -265,6 +267,18 @@ class PricePageController extends Controller
             ->filter();
 
         return $primary->isNotEmpty() ? $primary : $items->take(3);
+    }
+
+    /** Stored prices are toman; schema.org IRR requires rial (×10). */
+    private function schemaOfferPrice(MarketItem $item, $value): ?float
+    {
+        if ($value === null || !is_numeric($value) || (float)$value <= 0) {
+            return null;
+        }
+
+        $price = (float)$value;
+
+        return $item->isUsd() ? $price : $price * 10;
     }
 
     private function schemaNumber($value): ?float

@@ -13,6 +13,7 @@ class MarketItem
         public string      $category,
         public ?string     $currency,
         public ?PricePoint $latestPrice = null,
+        public string      $slug = '',
     )
     {
     }

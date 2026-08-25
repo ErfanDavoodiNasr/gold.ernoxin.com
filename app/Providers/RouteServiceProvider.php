@@ -17,7 +17,10 @@ class RouteServiceProvider extends ServiceProvider
     public function boot()
     {
         Route::bind('item', function ($value): MarketItem {
-            $item = app(MarketCatalog::class)->find((int)$value);
+            $catalog = app(MarketCatalog::class);
+            $item = ctype_digit((string)$value)
+                ? $catalog->find((int)$value)
+                : $catalog->findBySlug((string)$value);
             abort_unless($item, 404);
 
             return $item;

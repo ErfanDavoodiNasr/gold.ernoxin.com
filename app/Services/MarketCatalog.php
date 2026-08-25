@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 class MarketCatalog
 {
-    /** @var array<int, array{id:int,key:string,name:string,category:string,currency:?string}>|null */
+    /** @var array<int, array{id:int,key:string,slug:string,name:string,category:string,currency:?string}>|null */
     private ?array $definitions = null;
 
     public function find(int $id): ?MarketItem
@@ -25,23 +25,47 @@ class MarketCatalog
         }
 
         $definitions = [];
-        $id = 1;
 
         foreach (['gold', 'coin'] as $category) {
-            foreach (config("gold.known_items.{$category}", []) as $name) {
-                $key = PersianNumber::label($name);
-                $definitions[$id] = [
-                    'id' => $id,
-                    'key' => $key,
-                    'name' => $name,
-                    'category' => $category,
-                    'currency' => $key === 'انس طلا' ? '$' : null,
-                ];
-                $id++;
+            foreach (config("gold.known_items.{$category}", []) as $entry) {
+                $item = $this->normalizeEntry($entry, $category);
+                if ($item === null) {
+                    continue;
+                }
+
+                $definitions[$item['id']] = $item;
             }
         }
 
         return $this->definitions = $definitions;
+    }
+
+    /**
+     * @param array{id:int,name:string,slug?:string}|string $entry
+     * @return array{id:int,key:string,slug:string,name:string,category:string,currency:?string}|null
+     */
+    private function normalizeEntry(mixed $entry, string $category): ?array
+    {
+        if (is_string($entry)) {
+            return null;
+        }
+
+        $id = (int)($entry['id'] ?? 0);
+        $name = (string)($entry['name'] ?? '');
+        if ($id < 1 || $name === '') {
+            return null;
+        }
+
+        $key = PersianNumber::label($name);
+
+        return [
+            'id' => $id,
+            'key' => $key,
+            'slug' => strtolower((string)($entry['slug'] ?? $id)),
+            'name' => $name,
+            'category' => $category,
+            'currency' => $key === 'انس طلا' ? '$' : null,
+        ];
     }
 
     private function makeItem(array $definition, ?PricePoint $latestPrice = null): MarketItem
@@ -53,7 +77,21 @@ class MarketCatalog
             category: $definition['category'],
             currency: $definition['currency'],
             latestPrice: $latestPrice,
+            slug: $definition['slug'],
         );
+    }
+
+    public function findBySlug(string $slug): ?MarketItem
+    {
+        $normalized = strtolower(trim($slug));
+
+        foreach ($this->definitions() as $definition) {
+            if ($definition['slug'] === $normalized) {
+                return $this->makeItem($definition);
+            }
+        }
+
+        return null;
     }
 
     public function findByKey(string $key): ?MarketItem
@@ -67,6 +105,15 @@ class MarketCatalog
         }
 
         return null;
+    }
+
+    public function names(string $category): array
+    {
+        return collect($this->definitions())
+            ->where('category', $category)
+            ->pluck('name')
+            ->values()
+            ->all();
     }
 
     public function allWithLatestPrices(): Collection

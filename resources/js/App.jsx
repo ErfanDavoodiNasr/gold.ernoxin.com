@@ -110,7 +110,10 @@ const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
             [data],
         );
         const yAxisWidth = React.useMemo(
-            () => chartYAxisWidth(selected, chartData.map((point) => point.current)),
+            () => chartYAxisWidth(
+                selected,
+                chartData.map((point) => point.current).filter((value) => Number.isFinite(value) && value > 0),
+            ),
             [selected, chartData],
         );
 
@@ -134,7 +137,7 @@ const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
                 <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
                          content={<ChartTooltip item={selected}/>}/>
                 <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
-                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls
+                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls={false}
                       strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
             </AreaChart>
         );
@@ -218,7 +221,11 @@ function resolveChartRange(availableRanges, serverDefault, {preferStored = true}
 }
 
 function isUsdItem(item) {
-    return item?.name?.includes('انس') || String(item?.currency || '').toUpperCase() === 'USD';
+    const currency = String(item?.currency || '').trim();
+    return item?.name?.includes('انس')
+        || currency.toUpperCase() === 'USD'
+        || currency === '$'
+        || currency.includes('$');
 }
 
 function displayValue(value, item) {
@@ -245,7 +252,7 @@ function hasPercentValue(percent) {
 
 function formatPercent(value) {
     if (!hasPercentValue(value)) return '—';
-    return formatNumber(value);
+    return formatNumber(Math.abs(Number(value)));
 }
 
 function shouldShowChangeIcon(direction, percent) {
@@ -359,36 +366,14 @@ function setMeta(name, content) {
 }
 
 function sanitizeHistory(points) {
-    const rows = (points || []).map((point) => ({...point}));
-    let lastGood = null;
-
-    for (let index = 0; index < rows.length; index += 1) {
-        const current = Number(rows[index].current);
+    return (points || []).map((point) => {
+        const current = Number(point.current);
         if (Number.isFinite(current) && current > 0) {
-            rows[index].current = current;
-            lastGood = current;
-            continue;
+            return {...point, current};
         }
 
-        let nextGood = null;
-        for (let j = index + 1; j < rows.length; j += 1) {
-            const candidate = Number(rows[j].current);
-            if (Number.isFinite(candidate) && candidate > 0) {
-                nextGood = candidate;
-                break;
-            }
-        }
-
-        if (lastGood !== null && nextGood !== null) {
-            rows[index].current = (lastGood + nextGood) / 2;
-            rows[index].isInterpolated = true;
-        } else {
-            rows[index].current = null;
-            rows[index].isInvalid = true;
-        }
-    }
-
-    return rows.filter((point) => Number(point.current) > 0);
+        return {...point, current: null};
+    });
 }
 
 function useElementSize() {
@@ -781,8 +766,14 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
         muted: '#9aa7b4',
     });
     const data = useMemo(() => history
-            .map((point) => ({...point, current: Number(point.current)}))
-            .filter((point) => Number.isFinite(point.current) && point.current > 0 && point.time),
+            .map((point) => {
+                const current = Number(point.current);
+                return {
+                    ...point,
+                    current: Number.isFinite(current) && current > 0 ? current : null,
+                };
+            })
+            .filter((point) => point.time),
         [history]);
 
     useEffect(() => {
@@ -796,7 +787,7 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
     }, [accent, theme]);
 
     return <div className="chartCanvas" ref={chartRef}>
-        {size.width > 0 && size.height > 0 && data.length > 0 && (
+        {size.width > 0 && size.height > 0 && data.some((point) => point.current !== null) && (
             <React.Suspense fallback={<div className="chartSkeleton" aria-hidden="true"/>}>
                 <ChartRenderer width={size.width} height={size.height} data={data} selected={selected}
                                activeRange={activeRange} colors={colors}/>

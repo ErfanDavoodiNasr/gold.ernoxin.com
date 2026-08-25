@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\MarketSummaryService;
 use App\Services\OutlierFilter;
+use App\Services\PersianNumber;
 use App\Services\PriceHistoryQuery;
 use App\Services\RangeParser;
 use App\Support\MarketItem;
@@ -67,9 +68,16 @@ class MarketController extends Controller
 
     public function history(Request $request, MarketItem $item)
     {
-        $range = $this->rangeParser->parse(
-            $request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d')
-        );
+        $requestedRange = $request->query('range') ?: $request->query('days') ?: config('gold.chart_default_range', '1d');
+        $range = $this->rangeParser->tryParse($requestedRange);
+        if ($range === null) {
+            return response()->json([
+                'message' => 'بازهٔ نامعتبر است.',
+                'requestedRange' => (string)$requestedRange,
+                'allowed' => config('gold.chart_available_ranges'),
+            ], 422);
+        }
+
         $ttl = $this->historyCacheTtl($range);
 
         try {
@@ -77,50 +85,52 @@ class MarketController extends Controller
             $cacheKey = implode(':', [
                 'gold',
                 'market-history',
-                'v7',
+                'v10',
                 $item->key,
                 $range['key'],
                 md5($latestFetchedAtKey),
             ]);
 
             $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range, $latestFetchedAtKey) {
-                $latestFetchedAt = $latestFetchedAtKey === 'empty'
-                    ? null
-                    : \Illuminate\Support\Carbon::parse($latestFetchedAtKey);
-
-                if (!$latestFetchedAt) {
+                if ($latestFetchedAtKey === 'empty') {
                     return [
                         'range' => $range['key'],
+                        'anchor' => 'now',
                         'analytics' => ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null],
                         'points' => [],
                     ];
                 }
 
-                $windowStart = $latestFetchedAt->copy()->subMinutes($range['minutes']);
+                $windowStart = now()->subMinutes($range['minutes']);
                 $maxPoints = (int)config('gold.chart_max_points', 600);
                 $useSqlBuckets = $range['minutes'] > max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
 
                 $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
+                $points = $this->filterHistoryOutliers($points);
 
                 if (!$useSqlBuckets) {
-                    $points = $this->filterHistoryOutliers($points);
                     $points = $this->samplePoints($points, $maxPoints);
                 }
 
-                $analytics = $this->historyQuery->fetchAnalytics($item->key, $windowStart, $points, $useSqlBuckets);
+                $analytics = $this->historyQuery->fetchAnalytics($points);
 
                 return [
                     'range' => $range['key'],
+                    'anchor' => 'now',
                     'analytics' => $analytics,
-                    'points' => $points->map(fn($p) => [
-                        'time' => optional($p->fetched_at)->toIso8601String(),
-                        'current' => $p->current_value,
-                        'high' => $p->high_value,
-                        'low' => $p->low_value,
-                        'change' => $p->change_value,
-                        'percent' => $p->change_percent,
-                        'direction' => $p->direction,
-                    ])->values(),
+                    'points' => $points->map(function ($p) {
+                        $direction = $p->direction ?? 'none';
+
+                        return [
+                            'time' => optional($p->fetched_at)->toIso8601String(),
+                            'current' => $p->current_value,
+                            'high' => $p->high_value,
+                            'low' => $p->low_value,
+                            'change' => PersianNumber::signedByDirection($p->change_value, $direction),
+                            'percent' => PersianNumber::signedByDirection($p->change_percent, $direction),
+                            'direction' => $direction,
+                        ];
+                    })->values(),
                 ];
             });
         } catch (Throwable $exception) {

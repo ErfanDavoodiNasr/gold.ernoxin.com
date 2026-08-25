@@ -64,12 +64,17 @@ class PriceNormalizer
         $row['low']['value'] = $this->normalizeValue($row['low']['value'] ?? null, $currentCurrency, $nextReference, $isUsd);
         $row['yesterdayAvg']['value'] = $this->normalizeValue($row['yesterdayAvg']['value'] ?? null, $yesterdayCurrency, $nextReference, $isUsd);
 
+        $direction = $row['change']['direction'] ?? 'none';
         if (isset($row['change']['value']) && $row['change']['value'] !== null) {
             $changeValue = abs((float)$row['change']['value']);
             $normalizedChange = $this->normalizeValue($changeValue, $currentCurrency, $current, $isUsd);
             if ($normalizedChange !== null) {
-                $row['change']['value'] = $normalizedChange * ($row['change']['direction'] === 'desc' ? -1 : 1);
+                $row['change']['value'] = $normalizedChange * ($direction === 'desc' ? -1 : 1);
             }
+        }
+        if (isset($row['change']['percent']) && $row['change']['percent'] !== null) {
+            $percent = abs((float)$row['change']['percent']);
+            $row['change']['percent'] = $direction === 'desc' ? -$percent : $percent;
         }
 
         return $row;

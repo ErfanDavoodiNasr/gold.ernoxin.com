@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PricePoint;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
 use Illuminate\Support\Collection;
@@ -42,9 +43,10 @@ class MarketSummaryService
     public function apiPayload(): array
     {
         $data = $this->cached();
+        $dailyRanges = $this->todayRanges($data['items']);
 
         return [
-            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item))->values(),
+            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item, $dailyRanges[$item->key] ?? null))->values(),
             'lastFetch' => $data['lastFetch']?->toArray(),
             'config' => [
                 'sourceName' => config('gold.source_name'),
@@ -61,7 +63,45 @@ class MarketSummaryService
         ];
     }
 
-    public function itemResource(MarketItem $item): array
+    /**
+     * @param Collection<int, MarketItem> $items
+     * @return array<string, array{high: float, low: float}>
+     */
+    private function todayRanges(Collection $items): array
+    {
+        $keys = $items->pluck('key')->filter()->unique()->values()->all();
+        if ($keys === []) {
+            return [];
+        }
+
+        $rows = PricePoint::query()
+            ->whereIn('item_key', $keys)
+            ->whereBetween('fetched_at', [now()->startOfDay(), now()->endOfDay()])
+            ->where('current_value', '>', 0)
+            ->groupBy('item_key')
+            ->selectRaw('item_key, MAX(current_value) as high_value, MIN(current_value) as low_value')
+            ->get();
+
+        $ranges = [];
+        foreach ($rows as $row) {
+            if (!$this->isUsablePrice($row->high_value) || !$this->isUsablePrice($row->low_value)) {
+                continue;
+            }
+            $ranges[$row->item_key] = [
+                'high' => (float)$row->high_value,
+                'low' => (float)$row->low_value,
+            ];
+        }
+
+        return $ranges;
+    }
+
+    private function isUsablePrice($value): bool
+    {
+        return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
+    public function itemResource(MarketItem $item, ?array $dailyRange = null): array
     {
         // MarketCatalog::allWithLatestPrices() already resolves the latest row
         // with a usable current_value (filtered via current_value > 0) in a
@@ -72,23 +112,28 @@ class MarketSummaryService
             ? $item->latestPrice
             : null;
 
+        $high = $price?->high_value;
+        $low = $price?->low_value;
+        if ((!$this->isUsablePrice($high) || !$this->isUsablePrice($low)) && $dailyRange) {
+            $high = $dailyRange['high'];
+            $low = $dailyRange['low'];
+        }
+
+        $direction = $price?->direction ?? 'none';
+
         return [
             'id' => $item->id,
+            'slug' => $item->slug,
             'name' => $item->name,
             'category' => $item->category,
             'currency' => $item->currency,
             'current' => $price?->current_value,
-            'high' => $price?->high_value,
-            'low' => $price?->low_value,
-            'change' => $price?->change_value,
-            'percent' => $price?->change_percent,
-            'direction' => $price?->direction ?? 'none',
+            'high' => $this->isUsablePrice($high) ? $high : null,
+            'low' => $this->isUsablePrice($low) ? $low : null,
+            'change' => PersianNumber::signedByDirection($price?->change_value, $direction),
+            'percent' => PersianNumber::signedByDirection($price?->change_percent, $direction),
+            'direction' => $direction,
             'fetchedAt' => $price?->fetched_at?->toIso8601String(),
         ];
-    }
-
-    private function isUsablePrice($value): bool
-    {
-        return $value !== null && is_numeric($value) && (float)$value > 0;
     }
 }

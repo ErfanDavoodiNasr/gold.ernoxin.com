@@ -92,4 +92,14 @@ class FetchStatusStore
 
         return $fallback?->finishedAt;
     }
+
+    public function isActivelyRunning(int $staleAfterSeconds = 90): bool
+    {
+        $last = Cache::get(self::CACHE_KEY);
+        if (!is_array($last) || ($last['status'] ?? null) !== 'running' || empty($last['started_at'])) {
+            return false;
+        }
+
+        return Carbon::parse($last['started_at'])->gt(now()->subSeconds(max(1, $staleAfterSeconds)));
+    }
 }

@@ -70,48 +70,7 @@ class PriceHistoryQuery
             ->get();
     }
 
-    public function fetchAnalytics(string $itemKey, Carbon $windowStart, Collection $points, bool $fromFullRange): array
-    {
-        if ($fromFullRange) {
-            return $this->analyticsFromSql($itemKey, $windowStart);
-        }
-
-        return $this->analyticsFromPoints($points);
-    }
-
-    private function analyticsFromSql(string $itemKey, Carbon $windowStart): array
-    {
-        $row = PricePoint::query()
-            ->where('item_key', $itemKey)
-            ->where('fetched_at', '>=', $windowStart)
-            ->where('current_value', '>', 0)
-            ->selectRaw('
-                MIN(current_value) as min_val,
-                MAX(current_value) as max_val,
-                AVG(current_value) as avg_val,
-                SUBSTRING_INDEX(GROUP_CONCAT(current_value ORDER BY fetched_at ASC), ",", 1) as first_val,
-                SUBSTRING_INDEX(GROUP_CONCAT(current_value ORDER BY fetched_at DESC), ",", 1) as last_val
-            ')
-            ->first();
-
-        if ($row === null || $row->min_val === null) {
-            return ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null];
-        }
-
-        $first = (float)$row->first_val;
-        $last = (float)$row->last_val;
-        $change = $last - $first;
-
-        return [
-            'min' => (float)$row->min_val,
-            'max' => (float)$row->max_val,
-            'avg' => round((float)$row->avg_val, 4),
-            'change' => $change,
-            'changePercent' => $first == 0.0 ? null : round(($change / $first) * 100, 4),
-        ];
-    }
-
-    private function analyticsFromPoints(Collection $points): array
+    public function fetchAnalytics(Collection $points): array
     {
         $values = $points->pluck('current_value')->filter(fn($value) => $this->isUsablePrice($value))->values();
         if ($values->isEmpty()) {

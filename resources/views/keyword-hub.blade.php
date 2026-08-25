@@ -252,6 +252,9 @@
                 @if($primaryPrice !== 'نامشخص')
                 <span class="pill">آخرین قیمت: {{ $primaryPrice }}</span>
                 @endif
+                @if(($hubKey ?? null) === 'coin-bubble' && ($primaryBubbleLabel ?? 'نامشخص') !== 'نامشخص')
+                <span class="pill">حباب: {{ $primaryBubbleLabel }}</span>
+                @endif
                 @if(!empty($updatedAt))
                 <span class="pill">به‌روزرسانی: {{ $updatedAt }}</span>
                 @endif
@@ -261,17 +264,25 @@
 
         @if($featuredItems->isNotEmpty())
         <section>
-            <h2>قیمت‌های مرتبط</h2>
+            <h2>{{ ($hubKey ?? null) === 'coin-bubble' ? 'قیمت و حباب سکه‌ها' : 'قیمت‌های مرتبط' }}</h2>
             <p class="lead" style="font-size:15px;margin-bottom:12px">داده‌های زنده از اتحادیه طلا تهران — {{
                 $featuredItems->count() }} نماد مرتبط با این صفحه.</p>
             <div class="priceGrid">
                 @foreach($featuredItems as $item)
+                @php($bubble = ($bubbles ?? [])[$item->key] ?? null)
                 <article class="priceCard" id="item-{{ $item->id }}">
                     <small>{{ $item->category === 'coin' ? 'سکه' : 'طلا' }}</small>
                     <strong>{{ $item->name }}</strong>
-                    <strong>{{ number_format((float)($item->latestPrice?->current_value ?? 0), $item->currency === 'USD'
-                        ? 2 : 0, '.', ',') }} {{ $item->currency === 'USD' ? 'دلار' : 'تومان' }}</strong>
-                    <small>تغییر: {{ $item->latestPrice?->change_percent ?? '—' }}٪</small>
+                    @php($price = $item->latestPrice?->current_value)
+                    <strong>@if($price !== null && (float)$price > 0){{ number_format((float)$price, $item->isUsd()
+                        ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}@else—@endif</strong>
+                    <small>تغییر: {{ $item->latestPrice?->change_percent !== null ?
+                        abs($item->latestPrice->change_percent) : '—' }}٪</small>
+                    @if($bubble)
+                    <small>ارزش Intrinsic: {{ number_format($bubble['intrinsic'], 0, '.', ',') }} تومان</small>
+                    <small>حباب: {{ number_format($bubble['bubble'], 0, '.', ',') }} تومان ({{
+                        number_format($bubble['bubble_percent'], 1, '.', ',') }}٪)</small>
+                    @endif
                 </article>
                 @endforeach
             </div>
@@ -308,7 +319,8 @@
             @foreach($hub['faqs'] as $faq)
             <details @if($loop->first) open @endif>
                 <summary>{{ $faq['question'] }}</summary>
-                <p>{{ str_replace('{price}', $primaryPrice, $faq['answer']) }}</p>
+                <p>{{ str_replace(['{price}', '{bubble}'], [$primaryPrice, $primaryBubbleLabel ?? 'نامشخص'],
+                    $faq['answer']) }}</p>
             </details>
             @endforeach
         </section>

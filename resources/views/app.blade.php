@@ -171,8 +171,12 @@
             @foreach(($seoItems ?? []) as $item)
             <tr id="item-{{ $item->id }}">
                 <th>{{ $item->name }}</th>
-                <td>{{ number_format((float)($item->latestPrice?->current_value ?? 0), 0, '.', ',') }}</td>
-                <td>{{ $item->latestPrice?->change_percent ?? '—' }}٪</td>
+                <td>@php($price = $item->latestPrice?->current_value)@if($price !== null && (float)$price > 0){{
+                    number_format((float)$price, 0, '.', ',') }}@else—@endif
+                </td>
+                <td>{{ $item->latestPrice?->change_percent !== null ? abs($item->latestPrice->change_percent) : '—'
+                    }}٪
+                </td>
                 <td>{{ optional($item->latestPrice?->fetched_at)->toIso8601String() ?? '—' }}</td>
             </tr>
             @endforeach
@@ -219,10 +223,11 @@
                 <span class="itemIcon">{{ $item->category === 'coin' ? 'س' : 'ط' }}</span>
                 <span class="itemMain">
                             <b>{{ $item->name }}</b>
-                            <small>{{ number_format((float)($item->latestPrice?->current_value ?? 0), $item->isUsd() ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}</small>
+                            @php($price = $item->latestPrice?->current_value)
+                            <small>@if($price !== null && (float)$price > 0){{ number_format((float)$price, $item->isUsd() ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}@else—@endif</small>
                         </span>
                 @php($direction = $item->latestPrice?->direction ?? 'none')
-                <span class="badge {{ $direction === 'desc' ? 'down' : ($direction === 'asc' ? 'up' : 'flat') }}">{{ $item->latestPrice?->change_percent ?? '—' }}٪</span>
+                <span class="badge {{ $direction === 'desc' ? 'down' : ($direction === 'asc' ? 'up' : 'flat') }}">{{ $item->latestPrice?->change_percent !== null ? abs($item->latestPrice->change_percent) : '—' }}٪</span>
             </div>
             @endforeach
         </div>

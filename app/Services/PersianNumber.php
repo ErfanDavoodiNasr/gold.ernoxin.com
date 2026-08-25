@@ -98,9 +98,40 @@ class PersianNumber
         $direction = in_array($directionHint, ['asc', 'desc'], true) ? $directionHint : 'none';
         if ($direction === 'none') {
             $direction = $value === null || $value == 0 ? 'none' : ($value > 0 ? 'asc' : 'desc');
-        } elseif ($value !== null) {
-            $value = $direction === 'desc' ? -abs($value) : abs($value);
+        }
+        if ($direction === 'desc') {
+            if ($value !== null) {
+                $value = -abs($value);
+            }
+            if ($percent !== null) {
+                $percent = -abs($percent);
+            }
+        } elseif ($direction === 'asc') {
+            if ($value !== null) {
+                $value = abs($value);
+            }
+            if ($percent !== null) {
+                $percent = abs($percent);
+            }
         }
         return ['value' => $value, 'percent' => $percent, 'direction' => $direction, 'raw' => $raw];
+    }
+
+    /** Ensure change/percent match direction (also repairs older absolute-percent rows). */
+    public static function signedByDirection(mixed $value, ?string $direction): mixed
+    {
+        if ($value === null || !is_numeric($value)) {
+            return $value;
+        }
+
+        $number = (float)$value;
+        if ($direction === 'desc') {
+            return -abs($number);
+        }
+        if ($direction === 'asc') {
+            return abs($number);
+        }
+
+        return $number;
     }
 }
