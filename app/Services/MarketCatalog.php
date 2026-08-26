@@ -142,6 +142,18 @@ class MarketCatalog
             ->groupBy('item_key');
 
         return PricePoint::query()
+            ->select([
+                'price_points.id',
+                'price_points.item_key',
+                'price_points.current_value',
+                'price_points.high_value',
+                'price_points.low_value',
+                'price_points.yesterday_avg_value',
+                'price_points.change_value',
+                'price_points.change_percent',
+                'price_points.direction',
+                'price_points.fetched_at',
+            ])
             ->joinSub($latest, 'latest', function ($join) {
                 $join->on('price_points.item_key', '=', 'latest.item_key')
                     ->on('price_points.fetched_at', '=', 'latest.max_fetched_at');

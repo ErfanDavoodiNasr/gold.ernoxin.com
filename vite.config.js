@@ -9,7 +9,10 @@ export default defineConfig({
         emptyOutDir: true,
         manifest: 'manifest.json',
         rollupOptions: {
-            input: 'resources/js/App.jsx',
+            input: {
+                app: 'resources/js/App.jsx',
+                learn: 'resources/css/learn.css',
+            },
             output: {
                 manualChunks(id) {
                     if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';

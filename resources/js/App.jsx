@@ -78,6 +78,10 @@ function historyClientTtlMs(range) {
     return 45_000;
 }
 
+function isShortHistoryRange(range) {
+    return ['1h', '2h', '6h', '12h', '1d'].includes(rangeKey(range));
+}
+
 function chartYAxisWidth(item, values) {
     if (!values.length) return 72;
     const labels = values.map((value) => formatAxisPrice(value, item));
@@ -100,6 +104,7 @@ function ChartYAxisTick({x, y, payload, fill, panelFill, item}) {
 }
 
 const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
+    // ponytail: keep recharts lazy; swap to uPlot/canvas if chart TTI becomes the budget bottleneck
     default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
         const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
 
@@ -144,9 +149,19 @@ const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
     },
 })));
 
+const faNumber = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2});
+const faNumberInt = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 0});
+const faTickTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit'});
+const faTickDate = new Intl.DateTimeFormat('fa-IR', {month: '2-digit', day: '2-digit'});
+const faDateTime = new Intl.DateTimeFormat('fa-IR', {dateStyle: 'medium', timeStyle: 'short'});
+const faTooltipDate = new Intl.DateTimeFormat('fa-IR', {year: 'numeric', month: 'long', day: 'numeric'});
+const faTooltipTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit', hour12: false});
+
 function formatNumber(value, options = {}) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-    return new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2, ...options}).format(value);
+    if (options.maximumFractionDigits === 0) return faNumberInt.format(Number(value));
+    if (Object.keys(options).length === 0) return faNumber.format(Number(value));
+    return new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2, ...options}).format(Number(value));
 }
 
 function resolveSystemTheme() {
@@ -328,10 +343,7 @@ function formatChartTick(value, range) {
     if (!value) return '';
     const date = new Date(value);
     const key = rangeKey(range);
-    const options = key.endsWith('h') || key === '1d'
-        ? {hour: '2-digit', minute: '2-digit'}
-        : {month: '2-digit', day: '2-digit'};
-    return new Intl.DateTimeFormat('fa-IR', options).format(date);
+    return (key.endsWith('h') || key === '1d' ? faTickTime : faTickDate).format(date);
 }
 
 function rangeKey(range) {
@@ -348,24 +360,17 @@ function rangeLabel(range) {
 
 function formatDate(value) {
     if (!value) return '—';
-    return new Intl.DateTimeFormat('fa-IR', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value));
+    return faDateTime.format(new Date(value));
 }
 
 function formatChartTooltipDate(value) {
     if (!value) return null;
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return null;
-    const datePart = new Intl.DateTimeFormat('fa-IR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    }).format(date);
-    const timePart = new Intl.DateTimeFormat('fa-IR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    }).format(date);
-    return {datePart, timePart};
+    return {
+        datePart: faTooltipDate.format(date),
+        timePart: faTooltipTime.format(date),
+    };
 }
 
 function fetchStatusMessage(lastFetch, itemsCount) {
@@ -417,6 +422,23 @@ function sanitizeHistory(points) {
 
         return {...point, current: null};
     });
+}
+
+function summaryFingerprint(data) {
+    const items = normalizeItems(data?.items);
+    const prices = items.map((item) =>
+        [item.id, item.current, item.direction, item.percent, item.change, item.stale ? 1 : 0].join(':'),
+    ).join('|');
+    const fetchKey = data?.lastFetch?.finished_at || data?.lastFetch?.finishedAt || '';
+    return `${fetchKey}#${prices}`;
+}
+
+function seoPriceFingerprint(items) {
+    const list = normalizeItems(items);
+    const primaryGold = list.find((item) => item.name?.includes('۱۸') || item.name?.includes('18'))
+        || list.find((item) => item.category === 'gold');
+    const primaryCoin = list.find((item) => item.category === 'coin');
+    return `${trendDaysFromPath()}|${primaryGold?.current ?? ''}|${primaryCoin?.current ?? ''}`;
 }
 
 function useElementSize() {
@@ -480,15 +502,17 @@ function App() {
     const [error, setError] = useState('');
     const [lastFetch, setLastFetch] = useState(() => embeddedSummary?.lastFetch || null);
     const [historyLoading, setHistoryLoading] = useState(false);
-    // historyTick bumps on every successful background summary refresh so the
-    // history effect re-runs and refetches the currently selected range.
-    // Without it, the auto-refresh loop only updated the summary and left the
-    // chart stale until the client-side history cache TTL (up to 5 min for
-    // long ranges) expired on its own.
+    // historyTick bumps on short-range price updates so the chart refetches.
+    // Long ranges keep client cache until TTL / range change (no per-tick refetch).
     const [historyTick, setHistoryTick] = useState(0);
     const historyCache = useRef(new Map());
+    const warmedRanges = useRef(new Set());
+    const rangeRef = useRef(range);
+    rangeRef.current = range;
     const refreshTimer = useRef(null);
     const lastFetchKey = useRef(embeddedSummary?.lastFetch?.finished_at || null);
+    const summaryFp = useRef(embeddedSummary ? summaryFingerprint(embeddedSummary) : null);
+    const seoFp = useRef(null);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -499,6 +523,26 @@ function App() {
         if (items.length > 0) {
             document.body.classList.add('appReady');
         }
+    }, [items.length]);
+
+    // Warm recharts chunk after first paint so the first chart open is cheaper.
+    useEffect(() => {
+        if (items.length === 0) return undefined;
+        let idleId = null;
+        let timerId = null;
+        const warm = () => {
+            import('recharts').catch(() => {
+            });
+        };
+        if ('requestIdleCallback' in window) {
+            idleId = window.requestIdleCallback(warm, {timeout: 3000});
+        } else {
+            timerId = window.setTimeout(warm, 1500);
+        }
+        return () => {
+            if (idleId) window.cancelIdleCallback?.(idleId);
+            if (timerId) window.clearTimeout(timerId);
+        };
     }, [items.length]);
 
     useEffect(() => {
@@ -522,6 +566,13 @@ function App() {
             }
 
             const data = result.data;
+            const nextFp = summaryFingerprint(data);
+            if (nextFp === summaryFp.current) {
+                if (!silent) setStatus('ready');
+                return;
+            }
+            summaryFp.current = nextFp;
+
             const nextConfig = buildConfigFromSummary(data);
             setConfig(nextConfig);
             if (!localStorage.getItem('theme')) {
@@ -535,8 +586,17 @@ function App() {
             setItems(normalizeItems(data.items));
             const nextFetchKey = data.lastFetch?.finished_at || data.lastFetch?.finishedAt || null;
             if (lastFetchKey.current && nextFetchKey && lastFetchKey.current !== nextFetchKey) {
-                historyCache.current.clear();
-                setHistoryTick((tick) => tick + 1);
+                const currentRange = rangeRef.current;
+                // Short ranges: soft-invalidate active window and refetch.
+                // Long ranges: keep client history until TTL / range change.
+                if (isShortHistoryRange(currentRange)) {
+                    for (const key of [...historyCache.current.keys()]) {
+                        if (key.endsWith(`:${currentRange}`)) {
+                            historyCache.current.delete(key);
+                        }
+                    }
+                    setHistoryTick((tick) => tick + 1);
+                }
             }
             lastFetchKey.current = nextFetchKey;
             setLastFetch(data.lastFetch || null);
@@ -552,8 +612,11 @@ function App() {
         }
     }, []);
 
+    // Embedded #market-summary already painted — skip the duplicate first fetch; poll after interval.
     useEffect(() => {
-        loadSummary({silent: Boolean(embeddedSummary)});
+        if (embeddedSummary) return undefined;
+        loadSummary({silent: false});
+        return undefined;
     }, [loadSummary]);
 
     useEffect(() => {
@@ -631,16 +694,15 @@ function App() {
 
     useEffect(() => {
         if (items.length === 0 || !range) return;
+        if (!isShortHistoryRange(range)) return;
+        if (warmedRanges.current.has(range)) return;
+        warmedRanges.current.add(range);
+
         const controller = new AbortController();
         var idleId = null;
         var timerId = null;
 
         const warmHistoryCache = () => {
-            const shortRanges = new Set(['1h', '2h', '6h', '12h', '1d']);
-            if (!shortRanges.has(range)) {
-                return;
-            }
-
             const queue = items
                 .filter((item) => item.id !== selected?.id)
                 .slice(0, 2)
@@ -690,6 +752,10 @@ function App() {
 
     useEffect(() => {
         if (items.length === 0) return;
+        const nextSeo = seoPriceFingerprint(items);
+        if (nextSeo === seoFp.current) return;
+        seoFp.current = nextSeo;
+
         const days = trendDaysFromPath();
         if (days) {
             document.title = `نمودار ${days} روزه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران`;
@@ -701,7 +767,7 @@ function App() {
         const description = `قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: ${formatPrice(primaryGold?.current, primaryGold)}، سکه: ${formatPrice(primaryCoin?.current, primaryCoin)}. مشاهده تغییرات زنده و نمودار تاریخی.`;
         document.title = 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';
         setMeta('description', description);
-    }, [items, range]);
+    }, [items]);
 
     return (
         <main className="shell">
@@ -777,11 +843,11 @@ function App() {
 
                     <div className="priceLine">
                         <strong>{formatPrice(selected?.current, selected)}</strong>
-                        <span className={changeTone(selected?.direction, selected?.percent)}>
-                            {shouldShowChangeIcon(selected?.direction, selected?.percent) && (
-                                <ChangeIcon direction={selected?.direction} percent={selected?.percent} size={16}/>
+                        <span className={changeTone(null, analytics?.changePercent)}>
+                            {shouldShowChangeIcon(null, analytics?.changePercent) && (
+                                <ChangeIcon direction={null} percent={analytics?.changePercent} size={16}/>
                             )}
-                            {formatPrice(selected?.change, selected)} ({formatPercent(selected?.percent)}٪)
+                            {formatPrice(analytics?.change, selected)} ({formatPercent(analytics?.changePercent)}٪)
                         </span>
                     </div>
 
@@ -798,8 +864,7 @@ function App() {
                     <div className="analyticsGrid">
                         <Metric value={analytics?.max} item={selected} label="بالاترین قیمت" compact price/>
                         <Metric value={analytics?.min} item={selected} label="پایین‌ترین قیمت" compact price/>
-                        <Metric value={analytics?.changePercent} label="تغییرات ٪" compact
-                                tone={changeTone(null, analytics?.changePercent)}/>
+                        <Metric value={analytics?.avg} item={selected} label="میانگین قیمت" compact price/>
                     </div>
                 </section>
             </section>

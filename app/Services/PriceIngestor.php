@@ -39,8 +39,9 @@ class PriceIngestor
             } else {
                 $this->fetchStatus->succeed($count);
             }
-            $this->clearSummaryCache();
+            $this->clearCaches();
             Cache::increment('gold:price-data-version');
+            $this->pruneOldPoints();
 
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
@@ -51,9 +52,9 @@ class PriceIngestor
 
     public function store(array $payload): int
     {
-        $count = 0;
         $fetchedAt = isset($payload['source']['fetchedAt']) ? Carbon::parse($payload['source']['fetchedAt']) : now();
         $referencePrices = $this->latestReferencePrices();
+        $pending = [];
 
         foreach (['gold', 'coin'] as $group) {
             foreach (($payload[$group] ?? []) as $row) {
@@ -75,33 +76,73 @@ class PriceIngestor
                 }
 
                 $current = (float)$row['current']['value'];
-                [$high, $low] = $this->resolveDailyRange(
-                    $normalized,
-                    $fetchedAt,
-                    $current,
-                    $row['high']['value'] ?? null,
-                    $row['low']['value'] ?? null,
-                );
-
-                PricePoint::updateOrCreate(
-                    ['item_key' => $normalized, 'fetched_at' => $fetchedAt],
-                    [
-                        'current_value' => $current,
-                        'high_value' => $high,
-                        'low_value' => $low,
-                        'yesterday_avg_value' => $row['yesterdayAvg']['value'],
-                        'change_value' => $row['change']['value'],
-                        'change_percent' => $row['change']['percent'],
-                        'direction' => $row['change']['direction'],
-                        'raw_payload' => $rawRow,
-                    ]
-                );
-                $referencePrices[$normalized] = (float)$row['current']['value'];
-                $count++;
+                $pending[] = [
+                    'item_key' => $normalized,
+                    'current' => $current,
+                    'source_high' => $row['high']['value'] ?? null,
+                    'source_low' => $row['low']['value'] ?? null,
+                    'yesterday_avg_value' => $row['yesterdayAvg']['value'],
+                    'change_value' => $row['change']['value'],
+                    'change_percent' => $row['change']['percent'],
+                    'direction' => $row['change']['direction'],
+                    'raw_payload' => $rawRow,
+                ];
+                $referencePrices[$normalized] = $current;
             }
         }
 
-        return $count;
+        if ($pending === []) {
+            return 0;
+        }
+
+        $dayStats = $this->dailyRangesFor(
+            array_column($pending, 'item_key'),
+            $fetchedAt,
+        );
+
+        $now = now();
+        $rows = [];
+        foreach ($pending as $item) {
+            [$high, $low] = $this->resolveDailyRange(
+                $item['current'],
+                $item['source_high'],
+                $item['source_low'],
+                $dayStats[$item['item_key']] ?? null,
+            );
+
+            $rows[] = [
+                'item_key' => $item['item_key'],
+                'fetched_at' => $fetchedAt,
+                'current_value' => $item['current'],
+                'high_value' => $high,
+                'low_value' => $low,
+                'yesterday_avg_value' => $item['yesterday_avg_value'],
+                'change_value' => $item['change_value'],
+                'change_percent' => $item['change_percent'],
+                'direction' => $item['direction'],
+                'raw_payload' => json_encode($item['raw_payload'], JSON_UNESCAPED_UNICODE),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        PricePoint::upsert(
+            $rows,
+            ['item_key', 'fetched_at'],
+            [
+                'current_value',
+                'high_value',
+                'low_value',
+                'yesterday_avg_value',
+                'change_value',
+                'change_percent',
+                'direction',
+                'raw_payload',
+                'updated_at',
+            ],
+        );
+
+        return count($rows);
     }
 
     /** @return array<string, float> */
@@ -136,25 +177,54 @@ class PriceIngestor
     }
 
     /**
-     * Source often leaves high/low as "—"; fall back to today's min/max of stored currents.
+     * One batched day-range query for all keys in this ingest.
      *
+     * @param list<string> $keys
+     * @return array<string, array{high: float, low: float}>
+     */
+    private function dailyRangesFor(array $keys, Carbon $fetchedAt): array
+    {
+        $keys = array_values(array_unique($keys));
+        if ($keys === []) {
+            return [];
+        }
+
+        $rows = PricePoint::query()
+            ->whereIn('item_key', $keys)
+            ->whereBetween('fetched_at', [$fetchedAt->copy()->startOfDay(), $fetchedAt->copy()->endOfDay()])
+            ->where('current_value', '>', 0)
+            ->groupBy('item_key')
+            ->selectRaw('item_key, MAX(current_value) as high_value, MIN(current_value) as low_value')
+            ->get();
+
+        $ranges = [];
+        foreach ($rows as $row) {
+            if (!$this->validPrice($row->high_value) || !$this->validPrice($row->low_value)) {
+                continue;
+            }
+            $ranges[$row->item_key] = [
+                'high' => (float)$row->high_value,
+                'low' => (float)$row->low_value,
+            ];
+        }
+
+        return $ranges;
+    }
+
+    /**
+     * Prefer source high/low; otherwise fall back to today's stored min/max.
+     *
+     * @param array{high: float, low: float}|null $dayStats
      * @return array{0: float, 1: float}
      */
-    private function resolveDailyRange(string $itemKey, Carbon $fetchedAt, float $current, $high, $low): array
+    private function resolveDailyRange(float $current, $high, $low, ?array $dayStats): array
     {
         if ($this->validPrice($high) && $this->validPrice($low)) {
             return [(float)$high, (float)$low];
         }
 
-        $stats = PricePoint::query()
-            ->where('item_key', $itemKey)
-            ->whereBetween('fetched_at', [$fetchedAt->copy()->startOfDay(), $fetchedAt->copy()->endOfDay()])
-            ->where('current_value', '>', 0)
-            ->selectRaw('MAX(current_value) as high_value, MIN(current_value) as low_value')
-            ->first();
-
-        $dayHigh = $this->validPrice($stats?->high_value) ? (float)$stats->high_value : $current;
-        $dayLow = $this->validPrice($stats?->low_value) ? (float)$stats->low_value : $current;
+        $dayHigh = $dayStats['high'] ?? $current;
+        $dayLow = $dayStats['low'] ?? $current;
 
         return [
             max($dayHigh, $current),
@@ -162,17 +232,37 @@ class PriceIngestor
         ];
     }
 
-    private function clearSummaryCache(): void
+    private function clearCaches(): void
     {
         Cache::forget('gold:market-summary:data');
         Cache::forget('gold:market-summary');
+
+        $ranges = config('gold.chart_available_ranges', []);
+        foreach ($this->catalog->keys() as $itemKey) {
+            foreach ($ranges as $rangeKey) {
+                Cache::forget("gold:market-history:{$itemKey}:{$rangeKey}");
+            }
+        }
+    }
+
+    /** Drop points older than chart max window. At most once per day. */
+    private function pruneOldPoints(): void
+    {
+        $days = (int)config('gold.history_retention_days', 400);
+        if ($days < 1 || Cache::get('gold:last-history-prune')) {
+            return;
+        }
+
+        // ponytail: plain DELETE by age; hourly rollup if table still grows too fast under sub-minute ingest
+        PricePoint::where('fetched_at', '<', now()->subDays($days))->delete();
+        Cache::put('gold:last-history-prune', 1, now()->addDay());
     }
 
     private function markFetchFailed(string $reference, string $source, \Throwable $e): void
     {
         $message = Str::limit($e->getMessage(), 500);
         $this->fetchStatus->fail($message);
-        $this->clearSummaryCache();
+        $this->clearCaches();
 
         Log::error('Gold price fetch failed', [
             'reference_id' => $reference,

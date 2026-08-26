@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\MarketSummaryService;
 use App\Services\OutlierFilter;
-use App\Services\PersianNumber;
 use App\Services\PriceHistoryQuery;
 use App\Services\RangeParser;
 use App\Support\MarketItem;
+use App\Support\StampedeCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -40,7 +40,9 @@ class MarketController extends Controller
             return $this->serverErrorResponse();
         }
 
-        return $this->cachedJson($payload, $ttl);
+        $version = (int)Cache::get('gold:price-data-version', 0);
+
+        return $this->cachedJson($payload, $ttl, "summary:{$version}");
     }
 
     private function serverErrorResponse()
@@ -50,10 +52,9 @@ class MarketController extends Controller
         ], 500);
     }
 
-    private function cachedJson($payload, int $ttl)
+    private function cachedJson($payload, int $ttl, string $etagSeed)
     {
-        $response = response()->json($payload);
-        $etag = '"' . sha1((string)$response->getContent()) . '"';
+        $etag = '"' . sha1($etagSeed) . '"';
         $headers = [
             'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=" . ($ttl * 6),
             'ETag' => $etag,
@@ -63,7 +64,7 @@ class MarketController extends Controller
             return response('', 304, $headers);
         }
 
-        return $response->withHeaders($headers);
+        return response()->json($payload)->withHeaders($headers);
     }
 
     public function history(Request $request, MarketItem $item)
@@ -81,58 +82,27 @@ class MarketController extends Controller
         $ttl = $this->historyCacheTtl($range);
 
         try {
-            $latestFetchedAtKey = $this->cachedLatestFetchedAt($item->key);
-            $cacheKey = implode(':', [
-                'gold',
-                'market-history',
-                'v11',
-                $item->key,
-                $range['key'],
-                md5($latestFetchedAtKey),
-            ]);
+            // Stable key — invalidated explicitly on ingest (PriceIngestor::clearCaches).
+            $cacheKey = "gold:market-history:{$item->key}:{$range['key']}";
 
-            $payload = Cache::remember($cacheKey, $ttl, function () use ($item, $range, $latestFetchedAtKey) {
-                if ($latestFetchedAtKey === 'empty') {
-                    return [
-                        'range' => $range['key'],
-                        'anchor' => 'now',
-                        'analytics' => ['min' => null, 'max' => null, 'avg' => null, 'change' => null, 'changePercent' => null],
-                        'points' => [],
-                    ];
-                }
-
+            $payload = StampedeCache::remember($cacheKey, $ttl, function () use ($item, $range) {
                 $windowStart = now()->subMinutes($range['minutes']);
                 $maxPoints = (int)config('gold.chart_max_points', 600);
-                $useSqlBuckets = $range['minutes'] > max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
 
                 $points = $this->historyQuery->fetchChartPoints($item->key, $windowStart, $range['minutes'], $maxPoints);
                 $points = $this->filterHistoryOutliers($points);
 
-                // Open/close of the window — before sample. Sample is draw-only.
                 [$open, $close] = $this->historyQuery->windowAnchors($points, $windowStart);
                 $analytics = $this->historyQuery->fetchAnalytics($points, $open, $close);
-
-                if (!$useSqlBuckets) {
-                    $points = $this->samplePoints($points, $maxPoints);
-                }
 
                 return [
                     'range' => $range['key'],
                     'anchor' => 'now',
                     'analytics' => $analytics,
-                    'points' => $points->map(function ($p) {
-                        $direction = $p->direction ?? 'none';
-
-                        return [
-                            'time' => optional($p->fetched_at)->toIso8601String(),
-                            'current' => $p->current_value,
-                            'high' => $p->high_value,
-                            'low' => $p->low_value,
-                            'change' => PersianNumber::signedByDirection($p->change_value, $direction),
-                            'percent' => PersianNumber::signedByDirection($p->change_percent, $direction),
-                            'direction' => $direction,
-                        ];
-                    })->values(),
+                    'points' => $points->map(fn($p) => [
+                        'time' => optional($p->fetched_at)->toIso8601String(),
+                        'current' => $p->current_value,
+                    ])->values(),
                 ];
             });
         } catch (Throwable $exception) {
@@ -146,7 +116,9 @@ class MarketController extends Controller
             return $this->serverErrorResponse();
         }
 
-        return $this->cachedJson($payload, $ttl);
+        $version = (int)Cache::get('gold:price-data-version', 0);
+
+        return $this->cachedJson($payload, $ttl, "{$version}:{$item->key}:{$range['key']}");
     }
 
     private function historyCacheTtl(array $range): int
@@ -164,37 +136,11 @@ class MarketController extends Controller
         return max(10, (int)config('gold.history_cache_seconds', 45));
     }
 
-    private function cachedLatestFetchedAt(string $itemKey): string
-    {
-        $version = (int)Cache::get('gold:price-data-version', 0);
-
-        return (string)Cache::remember(
-            'gold:item-latest-fetch:' . md5($itemKey) . ":v{$version}",
-            max(5, (int)config('gold.latest_fetch_cache_seconds', 10)),
-            fn() => $this->historyQuery->latestFetchedAt($itemKey)?->toIso8601String() ?: 'empty'
-        );
-    }
-
     private function filterHistoryOutliers($points)
     {
         return $this->outlierFilter->filter(
             $points,
             fn($point) => $point->current_value,
         );
-    }
-
-    private function samplePoints($points, int $maxPoints)
-    {
-        $maxPoints = max(20, $maxPoints);
-        if ($points->count() <= $maxPoints) {
-            return $points->values();
-        }
-
-        $lastIndex = $points->count() - 1;
-        $stride = (int)ceil($points->count() / $maxPoints);
-
-        return $points
-            ->filter(fn($point, $index) => $index % $stride === 0 || $index === $lastIndex)
-            ->values();
     }
 }

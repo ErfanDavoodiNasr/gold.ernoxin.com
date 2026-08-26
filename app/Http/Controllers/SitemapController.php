@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\LearnPages;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -22,7 +23,6 @@ class SitemapController extends Controller
             ])
             ->all();
 
-        $blogPath = config('learn.base_path', '/blog');
         $hubUrls = collect(config('seo_hubs.hubs', []))->map(fn($hub) => [
             'loc' => url($hub['path']),
             'lastmod' => config('learn.reviewed_at_iso'),
@@ -35,7 +35,7 @@ class SitemapController extends Controller
             ['loc' => url($blogPath), 'lastmod' => config('learn.reviewed_at_iso'), 'changefreq' => 'weekly', 'priority' => '0.8'],
         ], $hubUrls, $trendUrls);
 
-        $articleUrls = collect(config('learn.pages', []))->keys()->map(fn($slug) => [
+        $articleUrls = collect(array_keys(LearnPages::all()))->map(fn($slug) => [
             'loc' => url("{$blogPath}/{$slug}"),
             'lastmod' => config('learn.reviewed_at_iso'),
             'changefreq' => 'monthly',

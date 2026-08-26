@@ -68,34 +68,15 @@ class SharedHostingBootstrap
         ];
     }
 
+    /** Create missing dirs and chmod only the leaf path — never recurse into cache/data. */
     private function ensureWritableDirectory(string $directory): void
     {
         if (!is_dir($directory)) {
             @mkdir($directory, 0775, true);
         }
 
-        if (!is_dir($directory)) {
-            return;
-        }
-
-        $this->chmodDirectory($directory);
-
-        $items = @scandir($directory);
-        if (!$items) {
-            return;
-        }
-
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
-            }
-
-            $path = $directory . DIRECTORY_SEPARATOR . $item;
-            if (is_dir($path)) {
-                $this->ensureWritableDirectory($path);
-            } elseif (is_file($path)) {
-                $this->chmodFile($path);
-            }
+        if (is_dir($directory)) {
+            $this->chmodDirectory($directory);
         }
     }
 
@@ -105,15 +86,6 @@ class SharedHostingBootstrap
 
         if (!is_writable($directory)) {
             @chmod($directory, 0777);
-        }
-    }
-
-    private function chmodFile(string $file): void
-    {
-        @chmod($file, 0664);
-
-        if (!is_writable($file)) {
-            @chmod($file, 0666);
         }
     }
 
@@ -127,7 +99,12 @@ class SharedHostingBootstrap
     private function ensureWritableFile(string $file): void
     {
         $directory = dirname($file);
-        $this->ensureWritableDirectory($directory);
+        if (!is_dir($directory)) {
+            @mkdir($directory, 0775, true);
+            if (is_dir($directory)) {
+                $this->chmodDirectory($directory);
+            }
+        }
 
         if (!file_exists($file)) {
             @touch($file);
@@ -135,6 +112,15 @@ class SharedHostingBootstrap
 
         if (is_file($file)) {
             $this->chmodFile($file);
+        }
+    }
+
+    private function chmodFile(string $file): void
+    {
+        @chmod($file, 0664);
+
+        if (!is_writable($file)) {
+            @chmod($file, 0666);
         }
     }
 

@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\PricePoint;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
+use App\Support\StampedeCache;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 class MarketSummaryService
 {
@@ -27,40 +27,15 @@ class MarketSummaryService
     {
         $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
 
-        return Cache::remember('gold:market-summary:data', $ttl, function () {
+        return StampedeCache::remember('gold:market-summary:data', $ttl, function () {
+            $items = $this->catalog->allWithLatestPrices();
+
             return [
-                'items' => $this->catalog->allWithLatestPrices(),
+                'items' => $items,
                 'lastFetch' => $this->fetchStatus->last(),
+                'dailyRanges' => $this->todayRanges($items),
             ];
         });
-    }
-
-    public function lastFetch(): ?LastFetch
-    {
-        return $this->cached()['lastFetch'];
-    }
-
-    public function apiPayload(): array
-    {
-        $data = $this->cached();
-        $dailyRanges = $this->todayRanges($data['items']);
-
-        return [
-            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item, $dailyRanges[$item->key] ?? null))->values(),
-            'lastFetch' => $data['lastFetch']?->toArray(),
-            'config' => [
-                'sourceName' => config('gold.source_name'),
-                'sourceUrl' => config('gold.source_url'),
-                'chartDefaultRange' => $this->rangeParser->canonicalKey(config('gold.chart_default_range', '1d')),
-                'chartAvailableRanges' => config('gold.chart_available_ranges'),
-                'historyMaxDays' => config('gold.history_max_days'),
-                'chartMaxPoints' => config('gold.chart_max_points'),
-                'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
-                'themeDefault' => config('gold.theme_default'),
-                'themeAccent' => config('gold.theme_accent'),
-                'features' => config('gold.features'),
-            ],
-        ];
     }
 
     /**
@@ -99,6 +74,34 @@ class MarketSummaryService
     private function isUsablePrice($value): bool
     {
         return $value !== null && is_numeric($value) && (float)$value > 0;
+    }
+
+    public function lastFetch(): ?LastFetch
+    {
+        return $this->cached()['lastFetch'];
+    }
+
+    public function apiPayload(): array
+    {
+        $data = $this->cached();
+        $dailyRanges = $data['dailyRanges'] ?? [];
+
+        return [
+            'items' => $data['items']->map(fn(MarketItem $item) => $this->itemResource($item, $dailyRanges[$item->key] ?? null))->values(),
+            'lastFetch' => $data['lastFetch']?->toArray(),
+            'config' => [
+                'sourceName' => config('gold.source_name'),
+                'sourceUrl' => config('gold.source_url'),
+                'chartDefaultRange' => $this->rangeParser->canonicalKey(config('gold.chart_default_range', '1d')),
+                'chartAvailableRanges' => config('gold.chart_available_ranges'),
+                'historyMaxDays' => config('gold.history_max_days'),
+                'chartMaxPoints' => config('gold.chart_max_points'),
+                'autoRefreshSeconds' => config('gold.frontend_refresh_seconds'),
+                'themeDefault' => config('gold.theme_default'),
+                'themeAccent' => config('gold.theme_accent'),
+                'features' => config('gold.features'),
+            ],
+        ];
     }
 
     public function itemResource(MarketItem $item, ?array $dailyRange = null): array

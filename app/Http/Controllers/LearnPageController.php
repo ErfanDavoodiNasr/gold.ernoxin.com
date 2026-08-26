@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\LearnSchema;
+use App\Support\LearnPages;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -51,11 +52,11 @@ class LearnPageController extends Controller
 
     private function pages(): array
     {
-        return Cache::remember($this->contentCacheKey('pages:v4'), 86400, function () {
-            $extras = config('learn_extras', []);
+        return Cache::remember($this->contentCacheKey('pages:v5'), 86400, function () {
+            $extras = LearnPages::extras();
             unset($extras['defaults']);
 
-            return collect(config('learn.pages', []))
+            return collect(LearnPages::all())
                 ->map(function ($page, $slug) use ($extras) {
                     $sourcePage = array_merge($page, $extras[$slug] ?? []);
                     $merged = array_merge($page, $extras[$slug] ?? []);
@@ -76,13 +77,7 @@ class LearnPageController extends Controller
 
     private function contentCacheKey(string $name): string
     {
-        $files = [
-            config_path('learn.php'),
-            config_path('learn_articles.php'),
-            config_path('learn_extras.php'),
-        ];
-
-        $signature = collect($files)
+        $signature = collect(LearnPages::contentFiles())
             ->map(fn($file) => is_file($file) ? filemtime($file) . ':' . filesize($file) : 'missing')
             ->implode('|');
 
@@ -446,7 +441,7 @@ class LearnPageController extends Controller
 
     private function relatedLinks(string $slug, array $page): array
     {
-        $rawPages = config('learn.pages', []);
+        $rawPages = LearnPages::all();
         return collect($page['related'] ?? [])
             ->reject(fn($relatedSlug) => $relatedSlug === $slug || !isset($rawPages[$relatedSlug]))
             ->take(3)

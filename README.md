@@ -67,13 +67,14 @@ https://www.estjt.ir/price/
 
 ```env
 ESTJT_SOURCE_URL=https://www.estjt.ir/price/
-ESTJT_FETCH_INTERVAL_MINUTES=1
+ESTJT_FETCH_INTERVAL_MINUTES=5
 ESTJT_TIMEOUT_CONNECT=3
 ESTJT_TIMEOUT_READ=5
 ESTJT_RETRY_COUNT=1
 ESTJT_RETRY_BACKOFF_MS=150
 MARKET_SUMMARY_CACHE_SECONDS=10
 FRONTEND_REFRESH_SECONDS=60
+HISTORY_RETENTION_DAYS=400
 ```
 
 Cron پیشنهادی در cPanel:
@@ -90,12 +91,16 @@ Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
 مسیر `/home/USER/gold/artisan` را با مسیر واقعی پروژه روی هاست جایگزین کنید. اگر مسیر PHP روی هاست متفاوت است، به جای
 `/usr/local/bin/php` همان مسیر را بگذارید.
 
-فاصله دریافت بر اساس ساعت `Asia/Tehran` هم‌تراز می‌شود: با `ESTJT_FETCH_INTERVAL_MINUTES=1` دریافت در هر دقیقه (مثلاً
-۱۰:۲۰، ۱۰:۲۱، …) و با `5` در بازه‌های پنج‌دقیقه‌ای (مثلاً ۱۰:۲۰، ۱۰:۲۵، ۱۰:۳۰، …) انجام می‌شود. Cron باید هر دقیقه اجرا
-شود؛ برنامه خودش زمان‌های نامناسب را رد می‌کند.
+فاصله دریافت بر اساس ساعت `Asia/Tehran` هم‌تراز می‌شود: با `ESTJT_FETCH_INTERVAL_MINUTES=5` در بازه‌های
+پنج‌دقیقه‌ای (مثلاً ۱۰:۲۰، ۱۰:۲۵، ۱۰:۳۰، …) انجام می‌شود. Cron باید هر دقیقه اجرا شود؛ برنامه خودش زمان‌های نامناسب
+را رد می‌کند. نقاط قدیمی‌تر از `HISTORY_RETENTION_DAYS` روزی یک‌بار پاک می‌شوند.
 
 اگر هاست اجرای هر دقیقه را محدود کرده، Cron را هر پنج دقیقه اجرا کنید. در این حالت حتی اگر
 `ESTJT_FETCH_INTERVAL_MINUTES=1` باشد، دریافت واقعی حداکثر هر پنج دقیقه انجام می‌شود.
+
+کش برای هاست cPanel بدون Redis: اگر افزونهٔ PHP‏ `APCu` فعال باشد به‌صورت خودکار از حافظهٔ مشترک استفاده
+می‌شود (`CACHE_DRIVER=apc`)؛ وگرنه `file`. قفل ضد-stampede همیشه روی فایل است. در cPanel از
+Select PHP Version / Extensions می‌توانید `apcu` را روشن کنید.
 
 ## API
 

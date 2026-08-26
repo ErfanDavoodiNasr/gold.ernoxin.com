@@ -54,8 +54,8 @@ $series = collect([
     point(120, '2026-01-30 00:00:00'),
 ]);
 [$open, $close] = $query->windowAnchors($series, $windowStart);
-assert($open === 100.0, 'open nearest windowStart');
-assert($close === 120.0, 'close is last');
+assert($open === 100.0, 'open is first usable');
+assert($close === 120.0, 'close is last usable');
 
 $analytics = $query->fetchAnalytics($series, $open, $close);
 assert($analytics['change'] === 20.0);

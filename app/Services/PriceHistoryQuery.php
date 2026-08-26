@@ -11,42 +11,13 @@ class PriceHistoryQuery
 {
     private const SELECT_COLUMNS = [
         'current_value',
-        'high_value',
-        'low_value',
-        'change_value',
-        'change_percent',
-        'direction',
         'fetched_at',
     ];
 
-    public function latestFetchedAt(string $itemKey): ?Carbon
-    {
-        $value = PricePoint::where('item_key', $itemKey)->max('fetched_at');
-
-        return $value ? Carbon::parse($value) : null;
-    }
-
     public function fetchChartPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
     {
-        $maxPoints = max(20, $maxPoints);
-        $threshold = max(60, (int)config('gold.chart_sql_bucket_threshold_minutes', 360));
-
-        if ($rangeMinutes <= $threshold) {
-            return $this->fetchRawPoints($itemKey, $windowStart);
-        }
-
-        return $this->fetchBucketedPoints($itemKey, $windowStart, $rangeMinutes, $maxPoints);
-    }
-
-    private function fetchRawPoints(string $itemKey, Carbon $windowStart): Collection
-    {
-        return PricePoint::query()
-            ->where('item_key', $itemKey)
-            ->select(self::SELECT_COLUMNS)
-            ->where('fetched_at', '>=', $windowStart)
-            ->where('current_value', '>', 0)
-            ->orderBy('fetched_at')
-            ->get();
+        // Always aggregate in SQL — short ranges used to load every raw row then sample in PHP.
+        return $this->fetchBucketedPoints($itemKey, $windowStart, $rangeMinutes, max(20, $maxPoints));
     }
 
     private function fetchBucketedPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
@@ -54,15 +25,16 @@ class PriceHistoryQuery
         $bucketSeconds = max(60, (int)ceil(($rangeMinutes * 60) / $maxPoints));
 
         $bucketQuery = DB::table('price_points')
-            ->selectRaw('MAX(fetched_at) as bucket_fetched_at')
+            ->selectRaw('item_key, MAX(fetched_at) as bucket_fetched_at')
             ->where('item_key', $itemKey)
             ->where('fetched_at', '>=', $windowStart)
             ->where('current_value', '>', 0)
-            ->groupByRaw('FLOOR(UNIX_TIMESTAMP(fetched_at) / ' . $bucketSeconds . ')');
+            ->groupByRaw('item_key, FLOOR(UNIX_TIMESTAMP(fetched_at) / ' . $bucketSeconds . ')');
 
         return PricePoint::query()
             ->joinSub($bucketQuery, 'buckets', function ($join) {
-                $join->on('price_points.fetched_at', '=', 'buckets.bucket_fetched_at');
+                $join->on('price_points.item_key', '=', 'buckets.item_key')
+                    ->on('price_points.fetched_at', '=', 'buckets.bucket_fetched_at');
             })
             ->where('price_points.item_key', $itemKey)
             ->select(array_map(fn($column) => "price_points.{$column}", self::SELECT_COLUMNS))
@@ -103,36 +75,27 @@ class PriceHistoryQuery
     }
 
     /**
-     * Nearest usable price to window start (open) and last usable (close), before sampling.
+     * First / last usable price in an already time-ordered series (open / close).
      *
      * @return array{0: ?float, 1: ?float}
      */
     public function windowAnchors(Collection $points, Carbon $windowStart): array
     {
-        $usable = $points
-            ->filter(fn($point) => $this->isUsablePrice($point->current_value ?? null))
-            ->values();
+        $open = null;
+        $close = null;
 
-        if ($usable->isEmpty()) {
-            return [null, null];
+        foreach ($points as $point) {
+            if (!$this->isUsablePrice($point->current_value ?? null)) {
+                continue;
+            }
+
+            $value = (float)$point->current_value;
+            if ($open === null) {
+                $open = $value;
+            }
+            $close = $value;
         }
 
-        $open = $usable
-            ->sortBy(function ($point) use ($windowStart) {
-                $at = $point->fetched_at;
-                if (!$at) {
-                    return PHP_INT_MAX;
-                }
-
-                return abs($at->diffInSeconds($windowStart));
-            })
-            ->first();
-
-        $close = $usable->last();
-
-        return [
-            $open ? (float)$open->current_value : null,
-            $close ? (float)$close->current_value : null,
-        ];
+        return [$open, $close];
     }
 }

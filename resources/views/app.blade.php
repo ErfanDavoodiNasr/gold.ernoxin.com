@@ -15,6 +15,7 @@
     <link rel="alternate" type="application/rss+xml" title="بلاگ طلا و سکه ارنوکسین"
           href="{{ url(config('learn.base_path', '/blog') . '/feed.xml') }}">
     <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/Vazirmatn-Bold.woff2" as="font" type="font/woff2" crossorigin>
     @php($manifestPath = public_path('build/manifest.json'))
     @php($manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : null)
     @if($manifest)
@@ -23,37 +24,22 @@
     <link rel="preload" href="{{ asset('build/'.$appCss) }}" as="style">
     @endif
     @endif
+    <script>document.documentElement.classList.add('js')</script>
     <style>
         :root {
             color-scheme: light;
             --bg: #f5f7f8;
-            --surface: #fff;
             --text: #182027;
             --muted: #5c6873;
-            --line: #d7e0e5;
-            --accent: #a87520;
-            --panel: #fff;
-            --panel2: #eef3f5;
-            --gold: #a87520;
-            --blue: #2368a2;
-            --green: #267d5a;
-            --red: #a24646
+            --accent: #a87520
         }
 
         :root[data-theme=dark] {
             color-scheme: dark;
             --bg: #080b10;
-            --surface: #111821;
             --text: #f8fafc;
             --muted: #9aa7b4;
-            --line: #263241;
-            --accent: #d9a441;
-            --panel: #111821;
-            --panel2: #17212d;
-            --gold: #d9a441;
-            --blue: #62a8ff;
-            --green: #33d69f;
-            --red: #ff647c
+            --accent: #d9a441
         }
 
         html {
@@ -66,37 +52,32 @@
             margin: 0
         }
 
-        .shell {
+        .seoAppFallback {
             width: min(1180px, 100%);
             margin: auto;
             padding: 22px
         }
 
-        .topbar, .brand, .hero h1, .hero p, .eyebrow {
-            font-family: Vazirmatn, Tahoma, sans-serif
-        }
-
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px
-        }
-
-        .hero h1 {
+        .seoAppFallback h1 {
             margin: 8px 0 12px;
             font-size: clamp(28px, 5vw, 42px);
             line-height: 1.35
         }
 
-        .hero p, .brand p {
+        .seoAppFallback p {
             color: var(--muted)
         }
 
-        .eyebrow {
-            color: var(--accent);
-            font-size: 14px;
-            font-weight: 750
+        .seoAppFallback ul {
+            padding-right: 18px;
+            margin: 12px 0 0;
+            color: var(--muted)
+        }
+
+        /* Hide duplicate fallback as soon as JS runs — before React paints. */
+        html.js .seoAppFallback,
+        body.appReady .seoAppFallback {
+            display: none !important
         }
 
         .homeLearn {
@@ -184,54 +165,19 @@
         </table>
     </main>
 </noscript>
-<main class="seoAppFallback shell" aria-label="خلاصه سریع بازار طلا و سکه">
-    <header class="topbar">
-        <div class="brand">
-            <span class="logo"><img src="/favicon.svg" alt="Ernoxin Gold" width="48" height="48"></span>
-            <div>
-                <strong class="brandTitle">سکه و طلای ارنوکسین</strong>
-                <p>قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران</p>
-            </div>
-        </div>
-    </header>
-    <section class="hero">
-        <div>
-            <span class="eyebrow">داشبورد زنده بازار</span>
-            <h1>قیمت طلا امروز و قیمت لحظه‌ای سکه</h1>
-            <p>{{ $seo['description'] ?? 'آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه
-                تغییرات.' }}</p>
-        </div>
-        @php($seoStats = collect($seoItems ?? []))
-        <div class="stats">
-            <div class="metric"><strong>{{ $seoStats->count() }}</strong><span>نماد فعال</span></div>
-            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
-                    'asc')->count() }}</strong><span>صعودی</span></div>
-            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
-                    'none')->count() }}</strong><span>بدون تغییر</span></div>
-            <div class="metric"><strong>{{ $seoStats->filter(fn($item) => ($item->latestPrice?->direction ?? 'none') ===
-                    'desc')->count() }}</strong><span>نزولی</span></div>
-        </div>
-    </section>
+<main class="seoAppFallback" aria-label="خلاصه سریع بازار طلا و سکه">
+    <h1>قیمت طلا امروز و قیمت لحظه‌ای سکه</h1>
+    <p>{{ $seo['description'] ?? 'آخرین قیمت‌های بازار طلا و سکه ایران همراه با نمودار تعاملی و تاریخچه تغییرات.' }}</p>
     @if(!empty($seoItems) && count($seoItems) > 0)
-    <section class="marketPanel" style="width:auto;flex:auto;margin-top:16px">
-        <div class="panelTitle">
-            <h2>آخرین قیمت‌های ثبت‌شده</h2>
-        </div>
-        <div class="itemList">
-            @foreach(collect($seoItems)->take(6) as $item)
-            <div class="marketItem">
-                <span class="itemIcon">{{ $item->category === 'coin' ? 'س' : 'ط' }}</span>
-                <span class="itemMain">
-                            <b>{{ $item->name }}</b>
-                            @php($price = $item->latestPrice?->current_value)
-                            <small>@if($price !== null && (float)$price > 0){{ number_format((float)$price, $item->isUsd() ? 2 : 0, '.', ',') }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}@else—@endif</small>
-                        </span>
-                @php($direction = $item->latestPrice?->direction ?? 'none')
-                <span class="badge {{ $direction === 'desc' ? 'down' : ($direction === 'asc' ? 'up' : 'flat') }}">{{ $item->latestPrice?->change_percent !== null ? abs($item->latestPrice->change_percent) : '—' }}٪</span>
-            </div>
-            @endforeach
-        </div>
-    </section>
+    <ul>
+        @foreach(collect($seoItems)->take(6) as $item)
+        @php($price = $item->latestPrice?->current_value)
+        <li>{{ $item->name }}:
+            @if($price !== null && (float)$price > 0){{ number_format((float)$price, $item->isUsd() ? 2 : 0, '.', ',')
+            }} {{ $item->isUsd() ? 'دلار' : 'تومان' }}@else—@endif
+        </li>
+        @endforeach
+    </ul>
     @endif
 </main>
 @if(!empty($marketSummary))
@@ -246,26 +192,12 @@
 @endif
 <div id="root"></div>
 <?php
-$learnExtras = config('learn_extras', []);
-$learnDefaults = $learnExtras['defaults'] ?? [];
-unset($learnExtras['defaults']);
-$learnPages = collect(config('learn.pages', []))
-        ->map(fn($page, $slug) => array_merge($learnDefaults, $page, $learnExtras[$slug] ?? [], ['slug' => $slug]));
 $blogPath = config('learn.base_path', '/blog');
-$featuredLearn = $learnPages->only([
-        'gold-price-guide',
-        'how-gold-price-is-set',
-        '18k-gold',
-        'gold-coin-guide',
-        'gold-bubble',
-        'buying-gold-safely',
-]);
-$latestLearn = $learnPages->only([
-        'gold-price-calculation',
-        'gold-making-charge',
-        'gold-vat',
-        'online-gold-buying-risks',
-]);
+$homeCards = config('learn_home_cards', []);
+$featuredLearn = collect($homeCards['featured'] ?? [])
+        ->map(fn($page, $slug) => array_merge($page, ['slug' => $slug]));
+$latestLearn = collect($homeCards['latest'] ?? [])
+        ->map(fn($page, $slug) => array_merge($page, ['slug' => $slug]));
 ?>
 <section class="homeLearn shell" aria-label="مطالب آموزشی بازار طلا">
     <div class="homeLearnHeader">
