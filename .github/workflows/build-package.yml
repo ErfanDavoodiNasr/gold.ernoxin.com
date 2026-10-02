@@ -47,6 +47,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Run frontend unit tests
+        run: npm test
+
       - name: Build frontend
         run: npm run build
 
@@ -67,10 +70,13 @@ jobs:
             --exclude='.idea/' \
             --exclude='.env' \
             --exclude='node_modules/' \
+            --exclude='tests/' \
             --exclude='storage/framework/cache/data/*' \
             --exclude='storage/framework/sessions/*' \
             --exclude='storage/framework/views/*' \
             --exclude='storage/framework/hosting-bootstrap.lock' \
+            --exclude='storage/framework/database-migration.lock' \
+            --exclude='storage/framework/database-migrated.ts' \
             --exclude='storage/logs/*.log' \
             --exclude='.DS_Store' \
             --exclude='._*' \

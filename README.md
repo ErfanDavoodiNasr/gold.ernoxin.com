@@ -30,11 +30,17 @@
 2. فایل `ernoxin-gold.zip` را از بخش Assets دانلود و روی هاست extract کنید.
 3. یک دیتابیس MySQL و user بسازید.
 4. اطلاعات دیتابیس را در `.env.example` وارد کنید.
-5. دامنه را باز کنید؛ برنامه از همان فایل یک `.env` می‌سازد و `APP_KEY` را مقداردهی می‌کند.
-6. جدول‌های دیتابیس را در phpMyAdmin اجرا کنید: `database/schema/mysql.sql`
-   (نصب‌های قدیمی: پچ `database/schema/patches/2026-08-perf-raw-and-hourly.sql` و در صورت وجود ستون،
-   `ALTER TABLE price_points DROP COLUMN raw_payload`)
-7. Cron دریافت قیمت را فعال کنید.
+5. دامنه را باز کنید؛ برنامه به صورت خودکار:
+   - فایل `.env` را می‌سازد و `APP_KEY` را مقداردهی می‌کند.
+   - **مهاجرت هوشمند دیتابیس** را به صورت خودکار اجرا می‌کند: چه دیتابیس نو باشد و چه از نسخه‌های قدیمی حاوی داده باشد، ساختار دیتابیس تشخیص داده شده و جداول، انتقال داده‌ها، ستون‌های جدید و ایندکس‌های پرفورمنس بدون خطر قطعی و بدون از دست رفتن داده‌ها همگام می‌شوند.
+6. Cron دریافت قیمت را فعال کنید.
+
+در صورت نیاز به بررسی دستی یا شبیه‌سازی وضعیت دیتابیس از طریق خط فرمان:
+```bash
+php artisan gold:migrate --status    # گزارش وضعیت و سلامت ساختار دیتابیس
+php artisan gold:migrate --dry-run   # شبیه‌سازی مراحل ارتقا بدون تغییر
+php artisan gold:migrate             # اجرای مستقیم مهاجرت
+```
 
 هر tag با فرمت `v*` مثل `v1.0.0` در GitHub Actions بیلد می‌شود و فایل آماده‌ی نصب به همان Release اضافه می‌شود.
 
@@ -104,17 +110,18 @@ Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
 می‌شود (`CACHE_DRIVER=apc`)؛ وگرنه `file`. قفل ضد-stampede همیشه روی فایل است. در cPanel از
 Select PHP Version / Extensions می‌توانید `apcu` را روشن کنید.
 
-## تست‌ها (توسعه / CI)
+## تست‌ها و راستی‌آزمایی پیش از دیپلوی (Verification & Tests)
+
+برای اطمینان ۱۰۰٪ از صحت عملکرد بکند و فرانت‌اند قبل از آپلود یا کامیت:
 
 ```bash
-composer install
-vendor/bin/phpunit
-# یا:
-composer test
+npm run test:frontend   # تست‌های مستقل فرانت‌اند (Node.js test runner)
+npm run test:backend    # تست‌های PHPUnit بکند (۸۳ تست با ۲۳۷ assertion)
+npm run test:all        # اجرای هر دو مجموعه تست بکند و فرانت
+npm run verify          # بررسی کامل ۶ مرحله‌ای پیش از دیپلوی (Syntax, Frontend Tests, Vite Build, Backend Tests, Smart Migrator)
 ```
 
-تست‌ها روی SQLite حافظه‌ای اجرا می‌شوند و به منبع زنده estjt وابسته نیستند. Fixtureهای HTML در `tests/Fixtures/estjt/`
-هستند.
+تست‌ها روی SQLite حافظه‌ای اجرا می‌شوند و به منبع زنده estjt وابسته نیستند. Fixtureهای HTML در `tests/Fixtures/estjt/` هستند.
 
 ## امنیت DocumentRoot روی cPanel
 

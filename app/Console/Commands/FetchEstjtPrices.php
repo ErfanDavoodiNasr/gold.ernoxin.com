@@ -10,8 +10,10 @@ class FetchEstjtPrices extends Command
     protected $signature = 'gold:fetch-prices {--force : دریافت قیمت بدون بررسی فاصله زمانی}';
     protected $description = 'دریافت و ذخیره قیمت‌های طلا و سکه از estjt.ir';
 
-    public function handle(AutoPriceFetcher $fetcher): int
+    public function handle(AutoPriceFetcher $fetcher, \App\Services\DatabaseMigrator $migrator): int
     {
+        $migrator->ensureMigrated();
+
         $result = $fetcher->fetchIfDue((bool)$this->option('force'));
         $status = $result['status'] ?? null;
 

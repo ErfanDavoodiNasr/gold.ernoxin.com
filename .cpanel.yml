@@ -1,0 +1,12 @@
+---
+# cPanel Git Version Control Deployment Configuration
+# تنظیمات استقرار خودکار گیت در سی‌پنل (gold.ernoxin.com)
+deployment:
+  tasks:
+    # مسیر مقصد فایل‌ها در سرور سی‌پنل را مشخص کنید (به عنوان مثال public_html/gold یا public_html):
+    # Specify the target destination directory on your cPanel server:
+    - export DEPLOYPATH=${DEPLOYPATH:-/home/$USER/public_html/gold.ernoxin.com}
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R * $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/storage/framework/cache/data $DEPLOYPATH/storage/framework/sessions $DEPLOYPATH/storage/framework/views $DEPLOYPATH/storage/logs $DEPLOYPATH/bootstrap/cache
+    - /bin/chmod -R 775 $DEPLOYPATH/storage $DEPLOYPATH/bootstrap/cache

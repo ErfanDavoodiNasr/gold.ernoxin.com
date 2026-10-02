@@ -76,6 +76,8 @@ return [
     'hosting' => [
         // Shared hosting only — healthy hosts should leave this off (no hourly chmod walks).
         'ensure_writable_paths' => (bool)env('GOLD_ENSURE_WRITABLE_PATHS', false),
+        // Automatic zero-downtime database migration on deploy/bootstrap.
+        'auto_migrate' => (bool)env('GOLD_AUTO_MIGRATE', true),
     ],
     'theme_default' => env('THEME_DEFAULT') ?: 'system',
     'theme_accent' => env('THEME_ACCENT') ?: '#d9a441',

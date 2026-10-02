@@ -14,34 +14,35 @@ import {
     WalletCards
 } from 'lucide-react';
 import '../css/app.css';
-
-const defaultConfig = {
-    chartDefaultRange: '1d',
-    chartAvailableRanges: ['1h', '2h', '6h', '12h', '1d', '7d', '30d', '90d', '180d', '365d'],
-    autoRefreshSeconds: 60,
-    themeDefault: 'system',
-    themeAccent: '#d9a441',
-    sourceName: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
-    sourceUrl: 'https://www.estjt.ir/price/',
-};
+import {
+    defaultConfig,
+    chartRangeStorageKey,
+    normalizeItems,
+    buildConfigFromSummary,
+    historyClientTtlMs,
+    isShortHistoryRange,
+    chartYAxisWidth,
+    formatNumber,
+    formatDate,
+    formatPrice,
+    formatAxisPrice,
+    hasPercentValue,
+    formatPercent,
+    changeTone,
+    chartDomain,
+    formatChartTick,
+    formatChartTooltipDate,
+    rangeKey,
+    rangeLabel,
+    normalizeAvailableRanges,
+    coerceChartRange,
+    resolveThemeDefault,
+    resolveSystemTheme,
+    isUsdItem,
+    priceUnitLabel,
+} from './market-utils.js';
 
 const etagStore = new Map();
-
-function normalizeItems(items) {
-    const list = Array.isArray(items)
-        ? items
-        : (items && typeof items === 'object' ? Object.values(items) : []);
-
-    return list.filter((item) => item && (item.id != null || item.key || item.name)).map((item) => {
-        const current = item.current == null ? null : Number(item.current);
-        return {
-            ...item,
-            current: Number.isFinite(current) && current > 0 ? current : null,
-            stale: Boolean(item.stale),
-            direction: ['asc', 'desc', 'none'].includes(item.direction) ? item.direction : 'none',
-        };
-    });
-}
 
 function readEmbeddedSummary() {
     const node = document.getElementById('market-summary');
@@ -55,16 +56,6 @@ function readEmbeddedSummary() {
 
 const embeddedSummary = readEmbeddedSummary();
 
-function buildConfigFromSummary(data) {
-    const nextConfig = {...defaultConfig, ...(data?.config || {})};
-    nextConfig.chartDefaultRange = coerceChartRange(
-        nextConfig.chartDefaultRange,
-        nextConfig.chartAvailableRanges,
-        defaultConfig.chartDefaultRange,
-    );
-    nextConfig.chartAvailableRanges = normalizeAvailableRanges(nextConfig.chartAvailableRanges);
-    return nextConfig;
-}
 
 async function fetchJsonWithEtag(url, {signal, etagKey} = {}) {
     const headers = {Accept: 'application/json'};
@@ -83,54 +74,6 @@ async function fetchJsonWithEtag(url, {signal, etagKey} = {}) {
     return {notModified: false, data: await res.json()};
 }
 
-function historyClientTtlMs(range) {
-    const key = rangeKey(range);
-    if (!key) return 45_000;
-    const amount = parseInt(key, 10) || 1;
-    if (key.endsWith('h')) return 45_000;
-    if (amount >= 30) return 300_000;
-    if (amount >= 7) return 120_000;
-    return 45_000;
-}
-
-function isShortHistoryRange(range) {
-    const key = rangeKey(range);
-    return key ? ['1h', '2h', '6h', '12h', '1d'].includes(key) : false;
-}
-
-function chartYAxisWidth(item, values) {
-    if (!values.length) return 72;
-    const labels = values.map((value) => formatAxisPrice(value, item));
-    const longest = labels.reduce((max, label) => Math.max(max, label.length), 0);
-    return Math.min(96, Math.max(58, longest * 7 + 14));
-}
-
-const faNumber = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2});
-const faNumberInt = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 0});
-const faTickTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit'});
-const faTickDate = new Intl.DateTimeFormat('fa-IR', {month: '2-digit', day: '2-digit'});
-const faDateTime = new Intl.DateTimeFormat('fa-IR', {dateStyle: 'medium', timeStyle: 'short'});
-const faTooltipDate = new Intl.DateTimeFormat('fa-IR', {year: 'numeric', month: 'long', day: 'numeric'});
-const faTooltipTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit', hour12: false});
-
-function formatNumber(value, options = {}) {
-    if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-    if (options.maximumFractionDigits === 0) return faNumberInt.format(Number(value));
-    if (Object.keys(options).length === 0) return faNumber.format(Number(value));
-    return new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2, ...options}).format(Number(value));
-}
-
-function resolveSystemTheme() {
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function resolveThemeDefault(value) {
-    if (value === 'light' || value === 'dark') {
-        return value;
-    }
-
-    return resolveSystemTheme();
-}
 
 function getInitialTheme(themeDefault) {
     try {
@@ -153,7 +96,6 @@ function persistTheme(theme) {
     }
 }
 
-const chartRangeStorageKey = 'chartRange:v2';
 
 function hasStoredChartRange() {
     try {
@@ -196,23 +138,6 @@ function resolveChartRange(availableRanges, serverDefault, {preferStored = true}
     return coerceChartRange(serverDefault, available, available[0] || defaultConfig.chartDefaultRange);
 }
 
-function normalizeAvailableRanges(ranges) {
-    const source = ranges?.length ? ranges : defaultConfig.chartAvailableRanges;
-    return [...new Set(source.map(rangeKey).filter(Boolean))];
-}
-
-function coerceChartRange(range, availableRanges, fallback = defaultConfig.chartDefaultRange) {
-    const available = normalizeAvailableRanges(availableRanges);
-    const key = rangeKey(range);
-    if (key && available.includes(key)) {
-        return key;
-    }
-    const safeFallback = rangeKey(fallback);
-    if (safeFallback && available.includes(safeFallback)) {
-        return safeFallback;
-    }
-    return available[0] || defaultConfig.chartDefaultRange;
-}
 
 function trendRangeFromPath(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
     const match = String(pathname).match(/\/price\/trends\/(\d+[hd]?)/);
@@ -241,60 +166,12 @@ function syncTrendUrl(range) {
     window.history.replaceState(null, '', next);
 }
 
-function isUsdItem(item) {
-    const currency = String(item?.currency || '').trim();
-    return item?.name?.includes('انس')
-        || currency.toUpperCase() === 'USD'
-        || currency === '$'
-        || currency.includes('$');
-}
-
-function displayValue(value, item) {
-    if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
-    return Number(value);
-}
-
-function priceUnitLabel(item) {
-    if (item?.unitLabel) return item.unitLabel;
-    if (item?.slug === 'mozaneh') return 'مظنه / مثقال';
-    return isUsdItem(item) ? 'دلار' : 'تومان';
-}
-
-function formatPrice(value, item, options = {}) {
-    const nextValue = displayValue(value, item);
-    if (nextValue === null) return '—';
-    return `${formatNumber(nextValue, options)} ${priceUnitLabel(item)}`;
-}
-
-function formatAxisPrice(value, item) {
-    const nextValue = displayValue(value, item);
-    if (nextValue === null) return '—';
-    return formatNumber(nextValue, {maximumFractionDigits: isUsdItem(item) ? 2 : 0});
-}
-
-function hasPercentValue(percent) {
-    return percent !== null && percent !== undefined && !Number.isNaN(Number(percent));
-}
-
-function formatPercent(value) {
-    if (!hasPercentValue(value)) return '—';
-    return formatNumber(Math.abs(Number(value)));
-}
 
 function shouldShowChangeIcon(direction, percent) {
     const tone = changeTone(direction, percent);
     return !(tone === 'flat' && !hasPercentValue(percent));
 }
 
-function changeTone(direction, percent = null) {
-    if (direction === 'desc') return 'down';
-    if (direction === 'asc') return 'up';
-    if (direction === 'none') return 'flat';
-    const value = Number(percent);
-    if (Number.isFinite(value) && value < 0) return 'down';
-    if (Number.isFinite(value) && value > 0) return 'up';
-    return 'flat';
-}
 
 function ChangeIcon({direction, percent = null, size = 16, variant = 'arrow'}) {
     const tone = changeTone(direction, percent);
@@ -303,50 +180,6 @@ function ChangeIcon({direction, percent = null, size = 16, variant = 'arrow'}) {
     return <Minus size={size}/>;
 }
 
-function chartDomain([dataMin, dataMax]) {
-    if (!Number.isFinite(dataMin) || !Number.isFinite(dataMax)) return ['dataMin', 'dataMax'];
-    const span = Math.max(0, dataMax - dataMin);
-    const baseline = Math.max(Math.abs(dataMin), Math.abs(dataMax), 1);
-    const padding = Math.max(span * 0.18, baseline * 0.00025);
-    return [Math.max(0, dataMin - padding), dataMax + padding];
-}
-
-function formatChartTick(value, range) {
-    if (!value) return '';
-    const date = new Date(value);
-    const key = rangeKey(range) || '1d';
-    return (key.endsWith('h') || key === '1d' ? faTickTime : faTickDate).format(date);
-}
-
-function rangeKey(range) {
-    if (typeof range === 'number' && Number.isFinite(range) && range > 0) {
-        return `${Math.trunc(range)}d`;
-    }
-    const value = String(range || '').trim().toLowerCase();
-    return /^\d+[hd]$/.test(value) ? value : null;
-}
-
-function rangeLabel(range) {
-    const key = rangeKey(range);
-    if (!key) return '—';
-    const amount = parseInt(key, 10);
-    return key.endsWith('h') ? `${formatNumber(amount)} ساعت` : `${formatNumber(amount)} روز`;
-}
-
-function formatDate(value) {
-    if (!value) return '—';
-    return faDateTime.format(new Date(value));
-}
-
-function formatChartTooltipDate(value) {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return {
-        datePart: faTooltipDate.format(date),
-        timePart: faTooltipTime.format(date),
-    };
-}
 
 function seoRangeTitleLabel(rangeKey) {
     if (!rangeKey) return null;

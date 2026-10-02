@@ -10,6 +10,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\FetchEstjtPrices::class,
         \App\Console\Commands\RepairPriceData::class,
         \App\Console\Commands\BackfillHourlyRollups::class,
+        \App\Console\Commands\SmartMigrateDatabase::class,
     ];
 
     protected function schedule($schedule)

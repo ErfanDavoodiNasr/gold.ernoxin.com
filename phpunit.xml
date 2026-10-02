@@ -13,9 +13,11 @@
         </testsuite>
         <testsuite name="Feature">
             <directory suffix="Test.php">tests/Feature</directory>
+            <exclude>tests/Feature/._*</exclude>
         </testsuite>
         <testsuite name="Security">
             <directory suffix="Test.php">tests/Security</directory>
+            <exclude>tests/Security/._*</exclude>
         </testsuite>
     </testsuites>
     <php>

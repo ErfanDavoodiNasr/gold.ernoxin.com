@@ -11,6 +11,25 @@ class SharedHostingBootstrap
         $this->ensureWritableDirectories();
         $this->ensureEnvironmentFile();
         $this->ensureApplicationKey();
+        $this->ensureDatabaseMigrated();
+    }
+
+    private function ensureDatabaseMigrated(): void
+    {
+        if (!config('gold.hosting.auto_migrate', true)) {
+            return;
+        }
+
+        $statePath = storage_path('framework/database-migrated.ts');
+        if (is_file($statePath) && trim((string)@file_get_contents($statePath)) === (string)DatabaseMigrator::SCHEMA_VERSION) {
+            return;
+        }
+
+        try {
+            app(DatabaseMigrator::class)->ensureMigrated();
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     private function loadEnvBootstrap(): void
