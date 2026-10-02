@@ -2,22 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RangeParser;
 use App\Support\LearnPages;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
 {
+    public function __construct(private RangeParser $rangeParser)
+    {
+    }
+
     public function __invoke(): Response
     {
         $blogPath = config('learn.base_path', '/blog');
         $trendUrls = collect(config('gold.chart_available_ranges', ['1d', '7d', '30d', '90d', '180d', '365d']))
-            ->map(fn($range) => $this->rangeDays($range))
-            ->filter(fn($days) => $days >= 7 && $days <= (int)config('gold.history_max_days', 365))
+            ->map(fn($key) => $this->rangeParser->canonicalKey($key))
+            ->filter(fn(string $key) => $this->rangeParser->isSeoIndexedRange($key))
+            ->map(fn(string $key) => (int)$key)
+            ->filter(fn(int $days) => $days >= 7 && $days <= (int)config('gold.history_max_days', 365))
             ->unique()
             ->sort()
             ->values()
-            ->map(fn($days) => [
-                'loc' => url("/price/trends/{$days}"),
+            ->map(fn(int $days) => [
+                'loc' => $this->rangeParser->trendUrl("{$days}d"),
                 'changefreq' => $days <= 30 ? 'daily' : 'weekly',
                 'priority' => $days <= 30 ? '0.8' : '0.7',
             ])
@@ -45,15 +52,5 @@ class SitemapController extends Controller
         return response()
             ->view('sitemap', ['urls' => array_merge($staticUrls, $articleUrls)])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
-    }
-
-    private function rangeDays($range): int
-    {
-        $value = strtolower(trim((string)$range));
-        if (str_ends_with($value, 'h')) {
-            return 1;
-        }
-
-        return max(1, (int)$value);
     }
 }

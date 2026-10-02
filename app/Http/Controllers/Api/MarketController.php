@@ -27,7 +27,9 @@ class MarketController extends Controller
 
     public function summary()
     {
-        $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
+        $configured = max(5, (int)config('gold.summary_cache_seconds', 10));
+        $fetchCap = max(5, (int)config('gold.fetch_interval_minutes', 5) * 60);
+        $ttl = min($configured, $fetchCap);
 
         try {
             $payload = $this->summaryService->apiPayload();
@@ -52,11 +54,12 @@ class MarketController extends Controller
         ], 500);
     }
 
-    private function cachedJson($payload, int $ttl, string $etagSeed)
+    private function cachedJson($payload, int $ttl, string $etagSeed, ?int $sMaxAge = null)
     {
+        $edgeTtl = $sMaxAge ?? $ttl;
         $etag = '"' . sha1($etagSeed) . '"';
         $headers = [
-            'Cache-Control' => "public, max-age={$ttl}, s-maxage={$ttl}, stale-while-revalidate=" . ($ttl * 6),
+            'Cache-Control' => "public, max-age={$ttl}, s-maxage={$edgeTtl}, stale-while-revalidate=" . ($edgeTtl * 6),
             'ETag' => $etag,
         ];
 
@@ -80,11 +83,11 @@ class MarketController extends Controller
         }
 
         $ttl = $this->historyCacheTtl($range);
+        // Versioned key — ingest bumps gold:price-data-version; no mass Cache::forget.
+        $version = (int)Cache::get('gold:price-data-version', 0);
+        $cacheKey = "gold:market-history:v{$version}:{$item->key}:{$range['key']}";
 
         try {
-            // Stable key — invalidated explicitly on ingest (PriceIngestor::clearCaches).
-            $cacheKey = "gold:market-history:{$item->key}:{$range['key']}";
-
             $payload = StampedeCache::remember($cacheKey, $ttl, function () use ($item, $range) {
                 $windowStart = now()->subMinutes($range['minutes']);
                 $maxPoints = (int)config('gold.chart_max_points', 600);
@@ -116,9 +119,7 @@ class MarketController extends Controller
             return $this->serverErrorResponse();
         }
 
-        $version = (int)Cache::get('gold:price-data-version', 0);
-
-        return $this->cachedJson($payload, $ttl, "{$version}:{$item->key}:{$range['key']}");
+        return $this->cachedJson($payload, $ttl, "{$version}:{$item->key}:{$range['key']}", $this->historyEdgeCacheTtl($range, $ttl));
     }
 
     private function historyCacheTtl(array $range): int
@@ -142,5 +143,20 @@ class MarketController extends Controller
             $points,
             fn($point) => $point->current_value,
         );
+    }
+
+    private function historyEdgeCacheTtl(array $range, int $browserTtl): int
+    {
+        $minutes = $range['minutes'];
+
+        if ($minutes >= 43200) {
+            return max($browserTtl, (int)config('gold.history_cache_seconds_long', 300) * 4);
+        }
+
+        if ($minutes >= 10080) {
+            return max($browserTtl, (int)config('gold.history_cache_seconds_medium', 120) * 3);
+        }
+
+        return max($browserTtl, $browserTtl * 2);
     }
 }

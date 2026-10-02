@@ -16,10 +16,8 @@ return [
             'keywords' => ['قیمت مظنه امروز', 'مظنه طلا', 'مظنه تهران', 'قیمت مظنه', 'مظنه طلا چیست'],
             'item_patterns' => ['مظنه تهران'],
             'articles' => [
-                'gold-mozaneh' => 'مظنه طلا چیست؟',
-                'gold-ounce-mesghal' => 'تفاوت انس، مثقال و گرم',
-                'gold-price-calculation' => 'محاسبه قیمت طلا',
-                'how-gold-price-is-set' => 'قیمت طلا چگونه تعیین می‌شود؟',
+                'guide-gold-pricing-iran-market' => 'مکانیزم قیمت‌گذاری طلا',
+                'guide-gold-price-formulas' => 'فرمول‌های محاسبه قیمت',
             ],
             'faqs' => [
                 [
@@ -46,6 +44,7 @@ return [
             'category' => 'coin',
             'articles' => [
                 'coin-bubble-today-checklist' => 'چک‌لیست خواندن حباب سکه',
+                'guide-gold-investment-strategies' => 'استراتژی سرمایه‌گذاری طلا',
                 'gold-bubble' => 'حباب سکه چیست؟',
                 'why-coin-price-differs-from-gold-weight' => 'چرا قیمت سکه با وزن طلا برابر نیست؟',
                 'imami-vs-bahar-coin' => 'سکه امامی یا بهار آزادی؟',
@@ -74,9 +73,10 @@ return [
             'item_patterns' => ['انس طلا'],
             'articles' => [
                 'global-ounce-impact-iran-gold' => 'اثر انس جهانی بر ایران',
-                'gold-ounce-mesghal' => 'تفاوت انس، مثقال و گرم',
+                'guide-gold-price-formulas' => 'فرمول‌های محاسبه و تبدیل واحد',
+                'guide-gold-funds-etf-bourse' => 'صندوق ETF و گواهی سپرده',
                 'gold-price-today-dollar-ounce' => 'قیمت طلا و دلار و انس',
-                'how-gold-price-is-set' => 'قیمت طلا چگونه تعیین می‌شود؟',
+                'guide-gold-pricing-iran-market' => 'مکانیزم قیمت‌گذاری طلا',
             ],
             'faqs' => [
                 [

@@ -45,7 +45,7 @@ return [
                 'heading' => 'چک‌لیست ورود کوتاه‌مدت',
                 'body' => [
                     'هدف، افق زمانی، مبلغ قابل ریسک، قیمت ورود، هزینه خروج، سناریوی افت، قیمت فروش واقعی و منبع داده را بنویسید. اگر این موارد را ندارید، تصمیم شما بیشتر واکنشی است تا برنامه‌ریزی‌شده.',
-                    'برای تکمیل بررسی، مقاله <a href="/blog/coin-bubble-today-checklist">حباب سکه امروز</a> و <a href="/blog/buy-sell-gold-price-spread">تفاوت قیمت خرید و فروش طلا</a> را بخوانید.',
+                    'برای تکمیل بررسی، مقاله <a href="/blog/coin-bubble-today-checklist">حباب سکه امروز</a> و <a href="/blog/guide-gold-price-formulas">تفاوت قیمت خرید و فروش طلا</a> را بخوانید.',
                 ],
             ],
         ],
@@ -64,7 +64,7 @@ return [
             'اگر ابزار را نمی‌شناسید، ابتدا با مبلغ کم و آموزشی بررسی کنید.',
             'اگر هدف شما حفظ ارزش بلندمدت است، استراتژی کوتاه‌مدت شاید با هدف شما سازگار نباشد.',
         ],
-        'related' => ['coin-bubble-today-checklist', 'buy-sell-gold-price-spread', 'gold-etf-short-term-trading-risks', 'gold-investment-exit-strategy'],
+        'related' => ['coin-bubble-today-checklist', 'guide-gold-price-formulas', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -124,7 +124,7 @@ return [
                 'heading' => 'برنامه بلندمدت چه اجزایی دارد؟',
                 'body' => [
                     'سهم طلا از کل دارایی، روش خرید، محل نگهداری، زمان بازبینی، حد نیاز به نقدشوندگی و روش خروج را مشخص کنید. اگر این موارد مشخص نیست، بلندمدت بودن فقط یک عنوان است.',
-                    'برای تکمیل، مقاله <a href="/blog/gold-investment-portfolio-allocation">چقدر از سرمایه را طلا کنیم؟</a> و <a href="/blog/gold-investment-risk-management">مدیریت ریسک سرمایه‌گذاری طلا</a> را بخوانید.',
+                    'برای تکمیل، مقاله <a href="/blog/guide-gold-investment-strategies">چقدر از سرمایه را طلا کنیم؟</a> و <a href="/blog/guide-gold-investment-strategies">مدیریت ریسک سرمایه‌گذاری طلا</a> را بخوانید.',
                 ],
             ],
         ],
@@ -143,7 +143,7 @@ return [
             'اگر نقدشوندگی فوری لازم دارید، ابزارهای کم‌عمق یا تحویل‌دار را با احتیاط ببینید.',
             'اگر نگران سرقت هستید، صندوق، گواهی یا روش‌های نگهداری امن را مقایسه کنید.',
         ],
-        'related' => ['gold-investment-portfolio-allocation', 'gold-dca-investment-strategy', 'gold-storage-at-home', 'gold-bar-investment-guide'],
+        'related' => ['guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'gold-storage-at-home', 'gold-bar-investment-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -222,7 +222,7 @@ return [
             'اگر طلا بخش بزرگی از دارایی شماست، ریسک نگهداری و افت قیمت را دوباره بسنجید.',
             'اگر تازه‌کار هستید، خرید تدریجی و یادگیری ابزارها را جدی بگیرید.',
         ],
-        'related' => ['gold-investment-long-term-guide', 'gold-investment-risk-management', 'gold-dca-investment-strategy', 'gold-vs-dollar-investment-iran'],
+        'related' => ['guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -376,7 +376,7 @@ return [
             'اگر ابزار شما اسپرد بالایی دارد، تعداد مراحل را با دقت انتخاب کنید.',
             'اگر بازار بسیار خبری است، فاصله زمانی و قیمتی را محافظه‌کارانه‌تر بگذارید.',
         ],
-        'related' => ['monthly-gold-saving-plan', 'gold-investment-portfolio-allocation', 'digital-gold-small-saving-plan', 'gold-investment-risk-management'],
+        'related' => ['monthly-gold-saving-plan', 'guide-gold-investment-strategies', 'guide-digital-gold-iran', 'guide-gold-investment-strategies'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -451,7 +451,7 @@ return [
             'اگر فروش فوری ممکن است، نقدشوندگی را قبل از خرید تست کنید.',
             'اگر فاکتور یا سند ندارید، ریسک فروش آینده بیشتر می‌شود.',
         ],
-        'related' => ['gold-investment-short-term-guide', 'gold-investment-long-term-guide', 'gold-investment-portfolio-allocation', 'gold-scam-red-flags'],
+        'related' => ['guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'gold-scam-red-flags'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -529,7 +529,7 @@ return [
             'اگر به پول نیاز دارید، فروش مرحله‌ای و زمان تسویه را بررسی کنید.',
             'اگر حباب سکه بالاست، قیمت خرید بازار را با دقت بپرسید.',
         ],
-        'related' => ['selling-gold-tips', 'coin-selling-checklist', 'gold-investment-risk-management', 'buy-sell-gold-price-spread'],
+        'related' => ['selling-gold-tips', 'coin-selling-checklist', 'guide-gold-investment-strategies', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -603,7 +603,7 @@ return [
             'اگر طلا می‌خرید، نوع ابزار و هزینه خروج را مشخص کنید.',
             'اگر بین چند دارایی مردد هستید، سهم هرکدام را محدود و قابل بازبینی نگه دارید.',
         ],
-        'related' => ['gold-price-today-dollar-ounce', 'global-ounce-impact-iran-gold', 'gold-investment-portfolio-allocation', 'gold-investment-risk-management'],
+        'related' => ['gold-price-today-dollar-ounce', 'global-ounce-impact-iran-gold', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -680,7 +680,7 @@ return [
             'اگر حجم معاملات کم است، خروج را محتاطانه‌تر برنامه‌ریزی کنید.',
             'اگر تجربه بورسی ندارید، نوسان‌گیری صندوق را پرریسک ببینید.',
         ],
-        'related' => ['gold-etf-nav-bubble-guide', 'gold-etf-fund-guide', 'gold-investment-short-term-guide', 'gold-investment-risk-management'],
+        'related' => ['gold-etf-nav-bubble-guide', 'gold-etf-fund-guide', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -758,7 +758,7 @@ return [
             'اگر همه پول را یک‌باره وارد می‌کنید، سناریوی افت را بنویسید.',
             'اگر فروشنده یا پلتفرم مبهم است، قیمت جذاب را کافی ندانید.',
         ],
-        'related' => ['gold-investment-risk-management', 'gold-investment-short-term-guide', 'gold-investment-exit-strategy', 'buying-gold-safely'],
+        'related' => ['guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'guide-gold-investment-strategies', 'buying-gold-safely'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -813,7 +813,7 @@ return [
                 'heading' => 'قبل از اولین خرید چه چیزهایی را بخوانیم؟',
                 'body' => [
                     'صفحه مجوزها، شرایط استفاده، کارمزدها، روش قیمت‌گذاری، حداقل خرید، حداقل تحویل، زمان تسویه، پشتیبانی و روش رسیدگی به شکایت را بررسی کنید.',
-                    'برای خریدهای مهم، این مقاله را کنار <a href="/blog/digital-gold-license-checklist">چک‌لیست مجوز طلای دیجیتال</a> و <a href="/blog/digital-gold-custody-risk-guide">ریسک نگهداری طلای دیجیتال</a> بخوانید.',
+                    'برای خریدهای مهم، این مقاله را کنار <a href="/blog/guide-digital-gold-iran">چک‌لیست مجوز طلای دیجیتال</a> و <a href="/blog/guide-digital-gold-iran">ریسک نگهداری طلای دیجیتال</a> بخوانید.',
                 ],
             ],
         ],
@@ -832,7 +832,7 @@ return [
             'اگر خرید خرد می‌کنید، اثر کارمزد روی مبلغ کم را حساب کنید.',
             'اگر پلتفرم درباره پشتوانه مبهم توضیح می‌دهد، ریسک را بالاتر ببینید.',
         ],
-        'related' => ['digital-gold-license-checklist', 'digital-gold-physical-delivery-guide', 'digital-gold-vs-etf-vs-physical', 'online-melted-gold-buying-checklist'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'online-melted-gold-buying-checklist'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -891,7 +891,7 @@ return [
                 'heading' => 'مجوز داشتن یعنی ریسک صفر است؟',
                 'body' => [
                     'خیر. مجوز یا اینماد می‌تواند بخشی از اعتبارسنجی باشد، اما ریسک قیمت، کارمزد، اختلاف قرارداد، تحویل، محدودیت برداشت و تغییر مقررات همچنان باقی می‌ماند.',
-                    'برای ریسک‌های عملیاتی، مقاله <a href="/blog/digital-gold-custody-risk-guide">ریسک نگهداری طلای دیجیتال</a> و <a href="/blog/digital-gold-empty-selling-risk">خالی‌فروشی در طلای آنلاین</a> را بخوانید.',
+                    'برای ریسک‌های عملیاتی، مقاله <a href="/blog/guide-digital-gold-iran">ریسک نگهداری طلای دیجیتال</a> و <a href="/blog/guide-digital-gold-iran">خالی‌فروشی در طلای آنلاین</a> را بخوانید.',
                 ],
             ],
         ],
@@ -910,7 +910,7 @@ return [
             'اگر قرارداد کاربر درباره تحویل یا شکایت مبهم است، ریسک را جدی بگیرید.',
             'برای مبلغ بالا، از چند منبع رسمی و کارشناس مستقل کمک بگیرید.',
         ],
-        'related' => ['digital-gold-platform-guide', 'milli-gold-wallgold-checklist', 'digital-gold-tax-invoice-records', 'gold-scam-red-flags'],
+        'related' => ['guide-digital-gold-iran', 'milli-gold-wallgold-checklist', 'guide-digital-gold-iran', 'gold-scam-red-flags'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -989,7 +989,7 @@ return [
             'اگر تحویل فیزیکی مهم است، اول شرایط تحویل را بخوانید.',
             'اگر سرمایه زیادی نگه می‌دارید، ریسک نگهداری و اختلال پلتفرم مهم‌تر می‌شود.',
         ],
-        'related' => ['digital-gold-license-checklist', 'digital-gold-fees-spread-guide', 'digital-gold-physical-delivery-guide', 'digital-gold-custody-risk-guide'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1067,7 +1067,7 @@ return [
             'اگر به حداقل تحویل نمی‌رسید، گزینه‌های دیگر را مقایسه کنید.',
             'اگر ارسال می‌خواهید، بیمه و مسئولیت حمل را روشن کنید.',
         ],
-        'related' => ['digital-gold-platform-guide', 'digital-gold-custody-risk-guide', 'melted-gold-ang-inquiry', 'gold-bar-investment-guide'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'melted-gold-ang-inquiry', 'gold-bar-investment-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1125,7 +1125,7 @@ return [
                 'heading' => 'چطور دو پلتفرم را منصفانه مقایسه کنیم؟',
                 'body' => [
                     'همان مبلغ، همان زمان و همان هدف خروج را مقایسه کنید. اگر یک پلتفرم قیمت لحظه‌ای متفاوتی دارد، زمان داده و فرمول قیمت‌گذاری را بررسی کنید.',
-                    'برای دیدن مفهوم عمومی اختلاف خرید و فروش، مقاله <a href="/blog/buy-sell-gold-price-spread">تفاوت قیمت خرید و فروش طلا</a> را هم بخوانید.',
+                    'برای دیدن مفهوم عمومی اختلاف خرید و فروش، مقاله <a href="/blog/guide-gold-price-formulas">تفاوت قیمت خرید و فروش طلا</a> را هم بخوانید.',
                 ],
             ],
         ],
@@ -1144,7 +1144,7 @@ return [
             'اگر خرید خرد دارید، حداقل کارمزد را حساب کنید.',
             'اگر تحویل می‌خواهید، هزینه خروج فیزیکی را از ابتدا ببینید.',
         ],
-        'related' => ['digital-gold-platform-guide', 'milli-gold-wallgold-checklist', 'buy-sell-gold-price-spread', 'digital-gold-small-saving-plan'],
+        'related' => ['guide-digital-gold-iran', 'milli-gold-wallgold-checklist', 'guide-gold-price-formulas', 'guide-digital-gold-iran'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1218,7 +1218,7 @@ return [
             'اگر به نقدشوندگی فوری نیاز دارید، سابقه اختلال و ساعات معامله مهم است.',
             'اگر پشتوانه مبهم است، نگهداری بلندمدت ریسک بیشتری دارد.',
         ],
-        'related' => ['digital-gold-platform-guide', 'digital-gold-empty-selling-risk', 'digital-gold-physical-delivery-guide', 'gold-storage-at-home'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'gold-storage-at-home'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1277,7 +1277,7 @@ return [
                 'heading' => 'نظارت چه کمکی می‌کند و چه کمکی نمی‌کند؟',
                 'body' => [
                     'نظارت می‌تواند ریسک بازار را کاهش دهد، اما کاربر همچنان باید شرایط پلتفرم، قیمت، کارمزد و امکان خروج را بررسی کند. هیچ سامانه نظارتی به معنی سود قطعی یا حذف کامل ریسک نیست.',
-                    'برای بررسی مجوزها، مقاله <a href="/blog/digital-gold-license-checklist">چک‌لیست مجوز پلتفرم طلای دیجیتال</a> را بخوانید.',
+                    'برای بررسی مجوزها، مقاله <a href="/blog/guide-digital-gold-iran">چک‌لیست مجوز پلتفرم طلای دیجیتال</a> را بخوانید.',
                 ],
             ],
         ],
@@ -1296,7 +1296,7 @@ return [
             'اگر تحویل فیزیکی مبهم است، خرید با هدف مالکیت فیزیکی مناسب نیست.',
             'اگر خبرهای نظارتی تازه منتشر شده، شرایط پلتفرم را دوباره بخوانید.',
         ],
-        'related' => ['digital-gold-custody-risk-guide', 'digital-gold-license-checklist', 'digital-gold-physical-delivery-guide', 'gold-scam-red-flags'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'gold-scam-red-flags'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1374,7 +1374,7 @@ return [
             'اگر خرید و فروش سریع می‌خواهید، نقدشوندگی و ساعات معامله مهم‌تر می‌شود.',
             'اگر مبلغ بالا است، تقسیم ریسک بین گزینه‌ها را بررسی کنید.',
         ],
-        'related' => ['digital-gold-platform-guide', 'gold-etf-nav-bubble-guide', 'gold-storage-at-home', 'monthly-gold-saving-plan'],
+        'related' => ['guide-digital-gold-iran', 'gold-etf-nav-bubble-guide', 'gold-storage-at-home', 'monthly-gold-saving-plan'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -1452,7 +1452,7 @@ return [
             'اگر تحویل فیزیکی می‌گیرید، سند تحویل را با وزن و عیار تطبیق دهید.',
             'اگر مبلغ بالا است، درباره اثر مالیاتی از متخصص یا منبع رسمی بپرسید.',
         ],
-        'related' => ['gold-tax-invoice-1405-guide', 'gold-invoice-guide', 'digital-gold-license-checklist', 'digital-gold-fees-spread-guide'],
+        'related' => ['guide-gold-invoice-tax-1405', 'gold-invoice-guide', 'guide-digital-gold-iran', 'guide-digital-gold-iran'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1511,7 +1511,7 @@ return [
                 'heading' => 'برای پس‌انداز خرد چه برنامه‌ای بنویسیم؟',
                 'body' => [
                     'مبلغ ثابت، روز خرید، سقف کل موجودی در هر پلتفرم، شرط توقف، روش خروج و محل نگهداری مدارک را مشخص کنید. اگر قیمت شدیداً نوسان کرد، برنامه از قبل تعیین‌شده جلوی تصمیم هیجانی را می‌گیرد.',
-                    'برای خرید پله‌ای عمومی، مقاله <a href="/blog/monthly-gold-saving-plan">خرید ماهانه طلا</a> و برای کارمزدها مقاله <a href="/blog/digital-gold-fees-spread-guide">کارمزد طلای دیجیتال</a> را بخوانید.',
+                    'برای خرید پله‌ای عمومی، مقاله <a href="/blog/monthly-gold-saving-plan">خرید ماهانه طلا</a> و برای کارمزدها مقاله <a href="/blog/guide-digital-gold-iran">کارمزد طلای دیجیتال</a> را بخوانید.',
                 ],
             ],
         ],
@@ -1530,7 +1530,7 @@ return [
             'اگر هدف تحویل فیزیکی است، ببینید چه زمانی به حداقل تحویل می‌رسید.',
             'اگر پس‌انداز بلندمدت است، مدارک و گزارش‌ها را مرتب نگه دارید.',
         ],
-        'related' => ['monthly-gold-saving-plan', 'digital-gold-fees-spread-guide', 'digital-gold-platform-guide', 'gold-small-budget-options'],
+        'related' => ['monthly-gold-saving-plan', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'gold-small-budget-options'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -1821,7 +1821,7 @@ return [
                 'heading' => 'چطور قیمت امروز را با خطای کمتر بخوانیم؟',
                 'body' => [
                     'زمان به‌روزرسانی، واحد قیمت، نوع کالا، عیار، قیمت خرید یا فروش و منبع داده را مشخص کنید. بعد قیمت را با روند چندروزه مقایسه کنید، نه فقط با یک عدد لحظه‌ای.',
-                    'برای عددهای زنده از <a href="/price/">صفحه قیمت طلا امروز</a> استفاده کنید و برای چارچوب پایه‌ای مقاله <a href="/blog/how-gold-price-is-set">قیمت طلا چگونه تعیین می‌شود؟</a> را بخوانید.',
+                    'برای عددهای زنده از <a href="/price/">صفحه قیمت طلا امروز</a> استفاده کنید و برای چارچوب پایه‌ای مقاله <a href="/blog/guide-gold-pricing-iran-market">قیمت طلا چگونه تعیین می‌شود؟</a> را بخوانید.',
                 ],
             ],
         ],
@@ -1840,7 +1840,7 @@ return [
             'اگر هدف سرمایه‌گذاری است، افق زمانی و ریسک نوسان را روشن کنید.',
             'اگر بازار خبری است، عجله و سفارش بدون قیمت قطعی ریسک بیشتری دارد.',
         ],
-        'related' => ['how-gold-price-is-set', 'gold-price-factors', 'gold-ounce-mesghal', 'gold-price-guide'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'guide-gold-price-formulas', 'guide-gold-pricing-iran-market'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا امروز', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -1884,7 +1884,7 @@ return [
                 'heading' => 'انگ، عیار و وزن باید چطور ثبت شود؟',
                 'body' => [
                     'آب‌شده باید با وزن دقیق، عیار یا مسیر عیارسنجی، قیمت مبنا، تاریخ و مشخصات فروشنده در فاکتور یا سند معامله ثبت شود. عکس قطعه یا یک عدد کد به‌تنهایی برای پیگیری کافی نیست.',
-                    'برای فهم جزئیات، مقاله <a href="/blog/melted-gold-ang-inquiry">انگ طلای آب‌شده چیست؟</a> و <a href="/blog/melted-gold-price-calculation">محاسبه قیمت طلای آب‌شده</a> را بخوانید.',
+                    'برای فهم جزئیات، مقاله <a href="/blog/melted-gold-ang-inquiry">انگ طلای آب‌شده چیست؟</a> و <a href="/blog/guide-gold-price-formulas">محاسبه قیمت طلای آب‌شده</a> را بخوانید.',
                 ],
                 'table' => [
                     'headers' => ['مورد', 'حداقل انتظار', 'نشانه خطر'],
@@ -1995,7 +1995,7 @@ return [
             'اگر کالا برای سرمایه‌گذاری است، اجرت و مالیات اهمیت بیشتری پیدا می‌کند.',
             'اگر قانون یا بخشنامه‌ای مطرح می‌شود، منبع رسمی آن را بخواهید.',
         ],
-        'related' => ['gold-vat', 'gold-invoice-guide', 'seller-profit-in-gold-invoice', 'gold-price-calculation'],
+        'related' => ['guide-gold-invoice-tax-1405', 'gold-invoice-guide', 'guide-gold-invoice-tax-1405', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -2202,7 +2202,7 @@ return [
                 'heading' => 'خبرهای جهانی طلا را چطور بخوانیم؟',
                 'body' => [
                     'به بازه زمانی خبر توجه کنید: تغییر روزانه، هفتگی یا رکورد تاریخی هر کدام معنای متفاوتی دارد. همچنین ببینید خبر درباره قیمت نقدی، قرارداد آتی یا تحلیل یک موسسه است.',
-                    'برای تکمیل این موضوع، مقاله <a href="/blog/gold-ounce-mesghal">تفاوت انس، مثقال و گرم طلا</a> و <a href="/blog/gold-price-today-dollar-ounce">قیمت طلا امروز چرا تغییر می‌کند؟</a> را بخوانید.',
+                    'برای تکمیل این موضوع، مقاله <a href="/blog/guide-gold-price-formulas">تفاوت انس، مثقال و گرم طلا</a> و <a href="/blog/gold-price-today-dollar-ounce">قیمت طلا امروز چرا تغییر می‌کند؟</a> را بخوانید.',
                 ],
             ],
         ],
@@ -2221,7 +2221,7 @@ return [
             'اگر سکه می‌خرید، حباب را جدا از انس بررسی کنید.',
             'اگر مصنوعات می‌خرید، اجرت و فاکتور را از تحلیل قیمت جهانی جدا نکنید.',
         ],
-        'related' => ['gold-ounce-mesghal', 'gold-price-today-dollar-ounce', 'gold-price-factors', 'how-gold-price-is-set'],
+        'related' => ['guide-gold-price-formulas', 'gold-price-today-dollar-ounce', 'guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market'],
         'market_links' => [
             ['label' => 'قیمت انس جهانی امروز', 'url' => '/price/ounce'],
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
@@ -2260,7 +2260,7 @@ return [
                 'table' => [
                     'headers' => ['هدف', 'شاخص‌های مهم‌تر', 'مقاله مرتبط'],
                     'rows' => [
-                        ['خرید زیورآلات', 'طلای ۱۸ عیار، اجرت، مالیات', '<a href="/blog/gold-price-calculation">محاسبه قیمت طلا</a>'],
+                        ['خرید زیورآلات', 'طلای ۱۸ عیار، اجرت، مالیات', '<a href="/blog/guide-gold-price-formulas">محاسبه قیمت طلا</a>'],
                         ['خرید سکه', 'نوع سکه، حباب، اختلاف خرید و فروش', '<a href="/blog/coin-bubble-today-checklist">حباب سکه امروز</a>'],
                         ['صندوق طلا', 'NAV، قیمت تابلو، حجم معاملات', '<a href="/blog/gold-etf-nav-bubble-guide">NAV صندوق طلا</a>'],
                     ],
@@ -2296,7 +2296,7 @@ return [
             'اگر سکه می‌خرید، قیمت خرید بازار را هم کنار قیمت فروش ببینید.',
             'اگر صندوق طلا دارید، NAV و حجم معاملات را جداگانه اضافه کنید.',
         ],
-        'related' => ['gold-price-guide', 'gold-mozaneh', 'coin-bubble-today-checklist', 'gold-etf-nav-bubble-guide'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'coin-bubble-today-checklist', 'gold-etf-nav-bubble-guide'],
         'market_links' => [
             ['label' => 'قیمت لحظه‌ای طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -2352,7 +2352,7 @@ return [
                 'heading' => 'چه زمانی ریسک معامله بالاتر می‌رود؟',
                 'body' => [
                     'وقتی فروشنده فقط روی قیمت پایین تأکید می‌کند، اما فاکتور، انگ، عیار یا مسیر پیگیری را شفاف نمی‌کند، ریسک بالا می‌رود. در طلای آب‌شده، ارزان‌تر بودن بدون مدارک قابل بررسی مزیت محسوب نمی‌شود.',
-                    'اگر تجربه کافی ندارید، ابتدا مقاله <a href="/blog/melted-gold-price-calculation">محاسبه قیمت طلای آب‌شده</a> و <a href="/blog/should-buy-melted-gold">ریسک‌های خرید آب‌شده</a> را کنار این مطلب بخوانید.',
+                    'اگر تجربه کافی ندارید، ابتدا مقاله <a href="/blog/guide-gold-price-formulas">محاسبه قیمت طلای آب‌شده</a> و <a href="/blog/should-buy-melted-gold">ریسک‌های خرید آب‌شده</a> را کنار این مطلب بخوانید.',
                 ],
             ],
         ],
@@ -2371,7 +2371,7 @@ return [
             'اگر قصد فروش مجدد دارید، از ابتدا بپرسید همین قطعه با چه مبنایی از شما خریداری می‌شود.',
             'برای مبلغ مهم، از کارشناس مستقل یا مرجع معتبر کمک بگیرید.',
         ],
-        'related' => ['melted-gold-price-calculation', 'should-buy-melted-gold', 'gold-authenticity-check', 'gold-invoice-guide'],
+        'related' => ['guide-gold-price-formulas', 'should-buy-melted-gold', 'gold-authenticity-check', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -2448,7 +2448,7 @@ return [
             'اگر کالا دست دوم است، اصالت و سلامت را جدا از کد بررسی کنید.',
             'برای فروش مجدد، فاکتور کامل معمولاً از یک نشانه ظاهری خواناتر کمک‌کننده‌تر است.',
         ],
-        'related' => ['18k-gold', 'gold-karat-difference', 'gold-authenticity-check', 'gold-invoice-guide'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'gold-authenticity-check', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلای ۱۸ عیار', 'url' => '/price/'],
         ],
@@ -2754,7 +2754,7 @@ return [
             'اگر هدف فروش مجدد است، طلای ساده‌تر و فاکتور شفاف‌تر را دقیق‌تر مقایسه کنید.',
             'اگر سنگ گران‌قیمت است، مدارک و شیوه قیمت‌گذاری آن را جدا بخواهید.',
         ],
-        'related' => ['decorative-vs-investment-gold', 'gold-invoice-guide', 'why-some-gold-loses-more-on-resale', 'gold-making-charge'],
+        'related' => ['decorative-vs-investment-gold', 'gold-invoice-guide', 'guide-second-hand-gold', 'gold-making-charge'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -2828,7 +2828,7 @@ return [
             'اگر فروش مجدد مهم است، اختلاف خرید و فروش و اجرت را از ابتدا بپرسید.',
             'اگر سراغ صندوق می‌روید، NAV و کارمزد را مثل بخشی از تصمیم ببینید.',
         ],
-        'related' => ['persian-coin-guide', 'gold-etf-fund-guide', 'used-vs-new-gold', 'is-no-wage-gold-always-better'],
+        'related' => ['persian-coin-guide', 'gold-etf-fund-guide', 'guide-second-hand-gold', 'guide-second-hand-gold'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -2902,7 +2902,7 @@ return [
             'اگر خرید آنلاین است، شرایط مغایرت و مرجوعی را قبل از سفارش بخوانید.',
             'اگر فروش مجدد مهم است، اجرت و اختلاف خرید و فروش را از ابتدا وارد تصمیم کنید.',
         ],
-        'related' => ['gold-invoice-guide', 'gold-gift-buying-guide', 'online-gold-buying-risks', 'buy-sell-gold-price-spread'],
+        'related' => ['gold-invoice-guide', 'gold-gift-buying-guide', 'online-gold-buying-risks', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3031,7 +3031,7 @@ return [
                 'heading' => 'چه چیزهایی روز فروش مشکل‌ساز می‌شود؟',
                 'body' => [
                     'اجرت بالا، طرح خاص، سنگ یا نگین، آسیب فیزیکی، فاکتور ناقص و نبود شرایط بازخرید روشن می‌تواند روز فروش ابهام ایجاد کند. اگر خرید بیشتر احساسی است، این موارد را به عنوان هزینه استفاده بپذیرید؛ اگر هدف نگهداری ارزش است، دقیق‌تر مقایسه کنید.',
-                    'برای جزئیات بیشتر درباره افت فروش، مقاله <a href="/blog/why-some-gold-loses-more-on-resale">چرا بعضی طلاها موقع فروش افت بیشتری دارند؟</a> را ببینید.',
+                    'برای جزئیات بیشتر درباره افت فروش، مقاله <a href="/blog/guide-second-hand-gold">چرا بعضی طلاها موقع فروش افت بیشتری دارند؟</a> را ببینید.',
                 ],
             ],
         ],
@@ -3050,7 +3050,7 @@ return [
             'اگر فروش مجدد مهم است، طرح ساده‌تر و فاکتور شفاف‌تر را جدی‌تر بگیرید.',
             'اگر سرویس هدیه است، مهلت و شرایط تعویض را حتماً بپرسید.',
         ],
-        'related' => ['gold-jewelry-stone-weight', 'gold-making-charge', 'gold-return-exchange-policy', 'why-some-gold-loses-more-on-resale'],
+        'related' => ['gold-jewelry-stone-weight', 'gold-making-charge', 'gold-return-exchange-policy', 'guide-second-hand-gold'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3309,7 +3309,7 @@ return [
             'برای فاکتور مصنوعات، علاوه بر قیمت پایه، اجرت، سود و هزینه‌های قانونی را جدا ببینید.',
             'در مقایسه منابع، فقط عدد را نبینید؛ زمان و نوع قیمت را نیز بررسی کنید.',
         ],
-        'related' => ['gold-ounce-mesghal', 'gold-price-guide', 'how-gold-price-is-set', 'gold-price-calculation'],
+        'related' => ['guide-gold-price-formulas', 'guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت مظنه امروز', 'url' => '/price/mozaneh'],
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
@@ -3384,7 +3384,7 @@ return [
             'انگ، عیار و مشخصات فروشنده باید قابل پیگیری باشند.',
             'برای مقایسه، قیمت‌ها را در یک زمان و با یک مبنای عیار بررسی کنید.',
         ],
-        'related' => ['should-buy-melted-gold', 'melted-vs-bar-vs-coin', 'gold-mozaneh', 'gold-authenticity-check'],
+        'related' => ['should-buy-melted-gold', 'melted-vs-bar-vs-coin', 'guide-gold-pricing-iran-market', 'gold-authenticity-check'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3438,7 +3438,7 @@ return [
                 'heading' => 'چه کسانی باید محتاط‌تر باشند؟',
                 'body' => [
                     'خریداران کم‌تجربه، افرادی که فقط از روی قیمت پایین تصمیم می‌گیرند، و کسانی که امکان بررسی فروشنده و انگ را ندارند باید با احتیاط بیشتری عمل کنند.',
-                    'برای شروع، مقاله <a href="/blog/melted-gold-price-calculation">محاسبه قیمت طلای آب‌شده</a> و <a href="/blog/gold-authenticity-check">بررسی اصالت طلا</a> را بخوانید.',
+                    'برای شروع، مقاله <a href="/blog/guide-gold-price-formulas">محاسبه قیمت طلای آب‌شده</a> و <a href="/blog/gold-authenticity-check">بررسی اصالت طلا</a> را بخوانید.',
                 ],
             ],
         ],
@@ -3457,7 +3457,7 @@ return [
             'اگر قصد فروش مجدد دارید، قبل از خرید درباره بازارپذیری همان قطعه سؤال کنید.',
             'اگر هدف شما استفاده زینتی است، آب‌شده جایگزین زیورآلات نیست.',
         ],
-        'related' => ['melted-gold-price-calculation', 'melted-vs-bar-vs-coin', 'gold-authenticity-check', 'buying-gold-safely'],
+        'related' => ['guide-gold-price-formulas', 'melted-vs-bar-vs-coin', 'gold-authenticity-check', 'buying-gold-safely'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3529,7 +3529,7 @@ return [
             'اگر سکه می‌خرید، نوع سکه، حباب و اختلاف خرید و فروش را جدا ببینید.',
             'اگر شمش می‌خرید، مشخصات، بسته‌بندی، فروشنده و امکان استعلام را بررسی کنید.',
         ],
-        'related' => ['should-buy-melted-gold', 'melted-gold-price-calculation', 'gold-coin-guide', 'gold-bubble'],
+        'related' => ['should-buy-melted-gold', 'guide-gold-price-formulas', 'gold-coin-guide', 'gold-bubble'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -3583,7 +3583,7 @@ return [
                 'heading' => 'سوت در فاکتور چه اهمیتی دارد؟',
                 'body' => [
                     'در قطعات سبک، چند صدم گرم هم می‌تواند روی مبلغ اثر بگذارد. بنابراین وزن، عیار، قیمت مبنا و اجرت باید دقیق خوانده شوند.',
-                    'برای فهم مبلغ نهایی، مقاله <a href="/blog/gold-invoice-guide">فاکتور طلا</a> و <a href="/blog/gold-price-calculation">محاسبه قیمت طلا</a> را هم ببینید.',
+                    'برای فهم مبلغ نهایی، مقاله <a href="/blog/gold-invoice-guide">فاکتور طلا</a> و <a href="/blog/guide-gold-price-formulas">محاسبه قیمت طلا</a> را هم ببینید.',
                 ],
             ],
         ],
@@ -3602,7 +3602,7 @@ return [
             'قبل از پرداخت، وزن نوشته‌شده را با کالای تحویلی و توضیح فروشنده تطبیق دهید.',
             'برای محاسبه مبلغ نهایی، اجرت و هزینه‌ها را جداگانه بخوانید.',
         ],
-        'related' => ['gold-price-calculation', 'gold-invoice-guide', '18k-gold', 'gold-karat-difference'],
+        'related' => ['guide-gold-price-formulas', 'gold-invoice-guide', 'guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3675,7 +3675,7 @@ return [
             'برای مقایسه دو فروشنده، اجزای قیمت را جداگانه کنار هم بگذارید.',
             'در ابهام قانونی یا مالیاتی، منبع رسمی را معیار قرار دهید.',
         ],
-        'related' => ['gold-invoice-guide', 'gold-making-charge', 'gold-vat', 'gold-price-board-vs-shop'],
+        'related' => ['gold-invoice-guide', 'gold-making-charge', 'guide-gold-invoice-tax-1405', 'gold-price-board-vs-shop'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -3748,7 +3748,7 @@ return [
             'اگر کالا سنگ یا اجزای غیرطلا دارد، اثر آن بر قیمت را قبل از توافق روشن کنید.',
             'اگر فاکتور ندارید، فروشنده معتبر و رسید دقیق اهمیت بیشتری پیدا می‌کند.',
         ],
-        'related' => ['buy-sell-gold-price-spread', 'gold-authenticity-check', 'used-vs-new-gold', 'gold-invoice-guide'],
+        'related' => ['guide-gold-price-formulas', 'gold-authenticity-check', 'guide-second-hand-gold', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۷ روزه قیمت‌ها', 'url' => '/price/trends/7'],
@@ -3970,7 +3970,7 @@ return [
             'اگر کالا هدیه است، فاکتور را به شکلی بگیرید که گیرنده در آینده بتواند آن را پیگیری کند.',
             'اگر خرید دست دوم یا آنلاین است، ریسک فاکتور ناقص چند برابر می‌شود.',
         ],
-        'related' => ['gold-invoice-guide', 'gold-authenticity-check', 'second-hand-gold-without-invoice', 'online-gold-buying-risks'],
+        'related' => ['gold-invoice-guide', 'gold-authenticity-check', 'guide-second-hand-gold', 'online-gold-buying-risks'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -4193,7 +4193,7 @@ return [
             'اگر هدف نگهداری ارزش است، اثر اجرت در فروش مجدد را جدی‌تر ببینید.',
             'اگر اجرت توضیح‌پذیر نیست، از فروشنده فاکتور تفکیکی بخواهید.',
         ],
-        'related' => ['gold-making-charge', 'seller-profit-in-gold-invoice', 'gold-invoice-guide', 'coin-vs-jewelry-investment'],
+        'related' => ['gold-making-charge', 'guide-gold-invoice-tax-1405', 'gold-invoice-guide', 'coin-vs-jewelry-investment'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -4300,7 +4300,7 @@ return [
                 'answer' => 'فاکتور کامل ریسک را کم می‌کند، چون وزن، عیار، نوع کالا و فروشنده را قابل پیگیری می‌کند.',
                 'body' => [
                     'اگر طلای دست دوم فاکتور ندارد، فروشنده باید درباره عیار، وزن و منبع کالا توضیح قابل بررسی بدهد. نبود فاکتور می‌تواند فروش مجدد یا پیگیری اختلاف را سخت‌تر کند.',
-                    'برای ریسک‌های این موضوع، مقاله <a href="/blog/second-hand-gold-without-invoice">چرا بعضی فروشنده‌ها طلای دست دوم را بدون فاکتور می‌فروشند؟</a> را ببینید.',
+                    'برای ریسک‌های این موضوع، مقاله <a href="/blog/guide-second-hand-gold">چرا بعضی فروشنده‌ها طلای دست دوم را بدون فاکتور می‌فروشند؟</a> را ببینید.',
                 ],
             ],
             [
@@ -4341,7 +4341,7 @@ return [
             'اگر قصد استفاده روزمره دارید، سلامت فیزیکی به اندازه قیمت مهم است.',
             'اگر هدف فروش مجدد است، شرایط بازخرید همان قطعه را بپرسید.',
         ],
-        'related' => ['used-vs-new-gold', 'gold-authenticity-check', 'gold-invoice-guide', 'second-hand-gold-without-invoice'],
+        'related' => ['guide-second-hand-gold', 'gold-authenticity-check', 'gold-invoice-guide', 'guide-second-hand-gold'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -4415,7 +4415,7 @@ return [
             'اگر خرید حضوری در شهر دیگر هزینه سفر یا ارسال دارد، آن را هم در تصمیم ببینید.',
             'برای مصنوعات، وزن و اجرت را جداگانه مقایسه کنید.',
         ],
-        'related' => ['gold-price-board-vs-shop', 'gold-price-guide', 'gold-making-charge', 'buy-sell-gold-price-spread'],
+        'related' => ['gold-price-board-vs-shop', 'guide-gold-pricing-iran-market', 'gold-making-charge', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -4470,7 +4470,7 @@ return [
                 'heading' => 'چه زمانی باید بیشتر احتیاط کنیم؟',
                 'body' => [
                     'اگر فروشنده ناشناس است، قیمت بیش از حد پایین است، از ثبت فاکتور جدید خودداری می‌کند یا درباره عیار و وزن پاسخ روشن نمی‌دهد، ریسک معامله بالا می‌رود.',
-                    'برای چک‌لیست کامل‌تر، مقاله <a href="/blog/second-hand-gold-buying-checklist">هنگام خرید طلای دست دوم چه چیزهایی را بررسی کنیم؟</a> را بخوانید.',
+                    'برای چک‌لیست کامل‌تر، مقاله <a href="/blog/guide-second-hand-gold">هنگام خرید طلای دست دوم چه چیزهایی را بررسی کنیم؟</a> را بخوانید.',
                 ],
             ],
         ],
@@ -4489,7 +4489,7 @@ return [
             'اگر عیار قابل بررسی نیست، قیمت پایین را کافی ندانید.',
             'اگر فروش مجدد برایتان مهم است، اثر نبود فاکتور را از ابتدا بپرسید.',
         ],
-        'related' => ['second-hand-gold-buying-checklist', 'fake-gold-invoice-check', 'gold-authenticity-check', 'gold-invoice-guide'],
+        'related' => ['guide-second-hand-gold', 'fake-gold-invoice-check', 'gold-authenticity-check', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -4670,7 +4670,7 @@ return [
                 'answer' => 'طلای سفید از طلا و فلزات آلیاژی ساخته می‌شود و برای ظاهر سفیدتر، در بسیاری از مدل‌ها روکش رودیوم دارد.',
                 'body' => [
                     'طلا در حالت خالص رنگ زرد دارد. برای ساخت زیورآلات با دوام و رنگ متفاوت، آن را با فلزات دیگر ترکیب می‌کنند. عیار همچنان نشان می‌دهد چه نسبتی از آلیاژ طلاست؛ رنگ به‌تنهایی عیار را ثابت نمی‌کند.',
-                    'اگر کالایی ۱۸ عیار باشد، سفید یا زرد بودن آن به معنی تغییر تعریف عیار نیست. برای فهم عیار، مقاله <a href="/blog/18k-gold">طلای ۱۸ عیار چیست؟</a> را ببینید.',
+                    'اگر کالایی ۱۸ عیار باشد، سفید یا زرد بودن آن به معنی تغییر تعریف عیار نیست. برای فهم عیار، مقاله <a href="/blog/guide-gold-karat-purity-18k-vs-24k">طلای ۱۸ عیار چیست؟</a> را ببینید.',
                 ],
                 'table' => [
                     'headers' => ['موضوع', 'طلای سفید', 'طلای زرد'],
@@ -4711,7 +4711,7 @@ return [
             'اگر هدف فروش مجدد است، اثر طراحی، اجرت و روکش را در نظر بگیرید.',
             'اگر قطعه سنگ‌دار است، وزن طلا و اجزای غیرطلا را جدا بخواهید.',
         ],
-        'related' => ['18k-gold', 'gold-karat-difference', 'why-gold-colors-differ', 'gold-invoice-guide'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'why-gold-colors-differ', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -4759,7 +4759,7 @@ return [
                 'heading' => 'مثقال و اونس را چطور بفهمیم؟',
                 'body' => [
                     'مثقال در ادبیات بازار سنتی طلا دیده می‌شود و باید همراه با عیار مبنا خوانده شود. اونس یا انس تروا بیشتر در بازار جهانی استفاده می‌شود و به‌تنهایی قیمت ریالی فاکتور شما نیست.',
-                    'برای تبدیل و مقایسه، واحد، عیار، نرخ تبدیل و زمان داده باید روشن باشد. مقاله <a href="/blog/gold-ounce-mesghal">تفاوت انس، مثقال و گرم طلا</a> مکمل این بخش است.',
+                    'برای تبدیل و مقایسه، واحد، عیار، نرخ تبدیل و زمان داده باید روشن باشد. مقاله <a href="/blog/guide-gold-price-formulas">تفاوت انس، مثقال و گرم طلا</a> مکمل این بخش است.',
                 ],
             ],
             [
@@ -4785,7 +4785,7 @@ return [
             'اگر کالا سنگ یا نگین دارد، وزن طلا را جدا بپرسید.',
             'برای محاسبه مبلغ، وزن را با عیار و اجرت هم‌زمان بررسی کنید.',
         ],
-        'related' => ['gold-sot', 'gold-ounce-mesghal', 'gold-price-calculation', 'gold-invoice-guide'],
+        'related' => ['gold-sot', 'guide-gold-price-formulas', 'guide-gold-price-formulas', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و مظنه', 'url' => '/price/'],
         ],
@@ -4840,7 +4840,7 @@ return [
                 'heading' => 'چک‌لیست خرید طلای بدون اجرت',
                 'body' => [
                     'وزن، عیار، فاکتور، سلامت کالا، فروشنده، شرایط بازخرید، اجزای غیرطلا و دلیل بدون اجرت بودن را بررسی کنید. اگر پاسخ‌ها مبهم است، قیمت پایین را کافی ندانید.',
-                    'برای خرید دست دوم، مقاله <a href="/blog/second-hand-gold-buying-checklist">چک‌لیست خرید طلای دست دوم</a> را هم ببینید.',
+                    'برای خرید دست دوم، مقاله <a href="/blog/guide-second-hand-gold">چک‌لیست خرید طلای دست دوم</a> را هم ببینید.',
                 ],
             ],
         ],
@@ -4859,7 +4859,7 @@ return [
             'اگر هدف نگهداری ارزش است، فروش مجدد و اختلاف خرید و فروش مهم‌تر می‌شود.',
             'اگر کالا آب‌شده است، انگ و عیار را جدی‌تر بررسی کنید.',
         ],
-        'related' => ['gold-making-charge', 'second-hand-gold-buying-checklist', 'should-buy-melted-gold', 'buy-sell-gold-price-spread'],
+        'related' => ['gold-making-charge', 'guide-second-hand-gold', 'should-buy-melted-gold', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -4933,7 +4933,7 @@ return [
             'اگر هدف هدیه است، سلیقه گیرنده را بر تصور ارزش رنگ مقدم بدانید.',
             'اگر هدف فروش مجدد است، طراحی و اجرت را بیشتر از رنگ بررسی کنید.',
         ],
-        'related' => ['white-gold-vs-yellow-gold', '18k-gold', 'gold-karat-difference', 'gold-gift-buying-guide'],
+        'related' => ['white-gold-vs-yellow-gold', 'guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'gold-gift-buying-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -5155,7 +5155,7 @@ return [
             'اگر قرار است هدیه بدهید، فاکتور را طوری بگیرید که گیرنده بتواند پیگیری کند.',
             'اگر خرید دست دوم است، جزئیات فاکتور اهمیت بیشتری پیدا می‌کند.',
         ],
-        'related' => ['gold-invoice-guide', 'fake-gold-invoice-check', 'second-hand-gold-without-invoice', 'gold-authenticity-check'],
+        'related' => ['gold-invoice-guide', 'fake-gold-invoice-check', 'guide-second-hand-gold', 'gold-authenticity-check'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -5229,7 +5229,7 @@ return [
             'اگر فروش مجدد مهم است، اجرت و نقدشوندگی را از فروشنده بپرسید.',
             'اگر هدیه می‌خرید، امکان تعویض و فاکتور کامل را فراموش نکنید.',
         ],
-        'related' => ['coin-vs-jewelry-investment', 'gold-bar-investment-guide', 'is-no-wage-gold-always-better', 'gold-gift-buying-guide'],
+        'related' => ['coin-vs-jewelry-investment', 'gold-bar-investment-guide', 'guide-second-hand-gold', 'gold-gift-buying-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -5262,7 +5262,7 @@ return [
                 'answer' => 'یعنی فاصله میان مبلغی که قبلاً پرداخت کرده‌اید و مبلغی که بازار امروز حاضر است برای همان کالا بدهد.',
                 'body' => [
                     'این فاصله می‌تواند از تغییر قیمت بازار، اجرت، سود فروشنده، مالیات یا هزینه‌های فاکتور، اختلاف خرید و فروش و وضعیت خود کالا ناشی شود. بنابراین نباید فقط قیمت روز را مقصر دانست.',
-                    'برای فهم فاصله خرید و فروش، مقاله <a href="/blog/buy-sell-gold-price-spread">تفاوت قیمت خرید و فروش طلا</a> را ببینید.',
+                    'برای فهم فاصله خرید و فروش، مقاله <a href="/blog/guide-gold-price-formulas">تفاوت قیمت خرید و فروش طلا</a> را ببینید.',
                 ],
             ],
             [
@@ -5303,7 +5303,7 @@ return [
             'اگر استفاده و زیبایی هدف اصلی است، افت فروش را بخشی از هزینه مصرفی بدانید.',
             'اگر کالا آسیب دیده است، قبل از فروش چند نظر معتبر بگیرید.',
         ],
-        'related' => ['buy-sell-gold-price-spread', 'high-gold-making-charge-reasons', 'selling-gold-tips', 'gold-invoice-guide'],
+        'related' => ['guide-gold-price-formulas', 'high-gold-making-charge-reasons', 'selling-gold-tips', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -5377,7 +5377,7 @@ return [
             'اگر حباب سکه برایتان مهم است، فرمول و زمان داده را بررسی کنید.',
             'اگر خریدار ناشناس است، امنیت محل معامله و تسویه را جدی بگیرید.',
         ],
-        'related' => ['gold-coin-guide', 'banki-vs-nonbanki-coin', 'gold-bubble', 'buy-sell-gold-price-spread'],
+        'related' => ['gold-coin-guide', 'banki-vs-nonbanki-coin', 'gold-bubble', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده انواع سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه قیمت‌ها', 'url' => '/price/trends/30'],
@@ -5501,7 +5501,7 @@ return [
                 'heading' => 'برای سرمایه‌گذاری کدام را بررسی کنیم؟',
                 'body' => [
                     'اگر هدف فقط نگهداری ارزش است، معمولاً کالاهایی با اجرت کمتر و فاکتور شفاف جذاب‌ترند. این کالا ممکن است شمش، آب‌شده، سکه یا طلای کم‌اجرت باشد، نه صرفاً ۲۴ یا ۱۸ عیار بودن.',
-                    'برای شمش، مقاله <a href="/blog/gold-bar-investment-guide">راهنمای سرمایه‌گذاری در شمش طلا</a> و برای طلای ۱۸ عیار مقاله <a href="/blog/18k-gold">طلای ۱۸ عیار چیست؟</a> را ببینید.',
+                    'برای شمش، مقاله <a href="/blog/gold-bar-investment-guide">راهنمای سرمایه‌گذاری در شمش طلا</a> و برای طلای ۱۸ عیار مقاله <a href="/blog/guide-gold-karat-purity-18k-vs-24k">طلای ۱۸ عیار چیست؟</a> را ببینید.',
                 ],
             ],
             [
@@ -5527,7 +5527,7 @@ return [
             'اگر نگهداری ارزش هدف اصلی است، اجرت و فروش مجدد را مقدم بر ظاهر ببینید.',
             'اگر شمش می‌خرید، فروشنده، بسته‌بندی، عیار و فاکتور را دقیق بررسی کنید.',
         ],
-        'related' => ['18k-gold', '24k-gold', 'gold-karat-difference', 'gold-bar-investment-guide'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'gold-bar-investment-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -5634,7 +5634,7 @@ return [
                 'answer' => 'نام شرکت، مجوزها، نشانی، شرایط استفاده و روش پاسخ‌گویی باید شفاف و قابل پیگیری باشد.',
                 'body' => [
                     'اگر اپلیکیشن فقط وعده خرید آسان می‌دهد اما درباره پشتوانه، نگهداری طلا، تحویل فیزیکی و حقوق کاربر توضیح روشن ندارد، ریسک شما بالاتر است.',
-                    'برای شروع، مقاله <a href="/blog/digital-gold-license-checklist">چک‌لیست مجوز طلای دیجیتال</a> را ببینید.',
+                    'برای شروع، مقاله <a href="/blog/guide-digital-gold-iran">چک‌لیست مجوز طلای دیجیتال</a> را ببینید.',
                 ],
                 'table' => [
                     'headers' => ['موضوع', 'سؤال کلیدی', 'نشانه خطر'],
@@ -5649,7 +5649,7 @@ return [
                 'heading' => 'کارمزد و اختلاف قیمت را ببینید',
                 'body' => [
                     'ممکن است قیمت خرید و فروش داخل اپلیکیشن فاصله داشته باشد. کارمزد معامله، کارمزد نگهداری، هزینه برداشت، هزینه تحویل و زمان تسویه را قبل از خرید بخوانید.',
-                    'برای جزئیات بیشتر، مقاله <a href="/blog/digital-gold-fees-spread-guide">کارمزد و اسپرد طلای دیجیتال</a> را مطالعه کنید.',
+                    'برای جزئیات بیشتر، مقاله <a href="/blog/guide-digital-gold-iran">کارمزد و اسپرد طلای دیجیتال</a> را مطالعه کنید.',
                 ],
             ],
             [
@@ -5675,7 +5675,7 @@ return [
             'اگر تحویل فیزیکی برایتان مهم است، حداقل مقدار و هزینه آن را قبل از خرید بدانید.',
             'اگر برای پس‌انداز خرد استفاده می‌کنید، کارمزدهای کوچک اما تکرارشونده را محاسبه کنید.',
         ],
-        'related' => ['digital-gold-platform-guide', 'digital-gold-license-checklist', 'digital-gold-physical-delivery-guide', 'digital-gold-custody-risk-guide'],
+        'related' => ['guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran', 'guide-digital-gold-iran'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -5828,7 +5828,7 @@ return [
             'اگر فروشنده تفکیک نمی‌دهد، قبل از پرداخت تصمیم را متوقف کنید.',
             'اگر بازار نوسانی است، قیمت چند دقیقه قبل ممکن است دیگر معتبر نباشد.',
         ],
-        'related' => ['gold-price-board-vs-shop', 'gold-price-guide', 'gold-mozaneh', 'buy-sell-gold-price-spread'],
+        'related' => ['gold-price-board-vs-shop', 'guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -5883,7 +5883,7 @@ return [
                 'heading' => 'چطور ریسک را کم کنیم؟',
                 'body' => [
                     'ورود پله‌ای، محدود کردن مبلغ، مقایسه انواع سکه، بررسی اسپرد و مشخص کردن نقطه خروج می‌تواند تصمیم را منظم‌تر کند. اگر تصمیم فقط از ترس جا ماندن می‌آید، احتمال خطا بیشتر است.',
-                    'برای افق کوتاه‌مدت، مقاله <a href="/blog/gold-investment-short-term-guide">سرمایه‌گذاری کوتاه‌مدت در طلا و سکه</a> را بخوانید.',
+                    'برای افق کوتاه‌مدت، مقاله <a href="/blog/guide-gold-investment-strategies">سرمایه‌گذاری کوتاه‌مدت در طلا و سکه</a> را بخوانید.',
                 ],
             ],
         ],
@@ -5902,7 +5902,7 @@ return [
             'اگر هدف حفظ ارزش بلندمدت است، خرید یک‌باره در هیجان بازار را دوباره بسنجید.',
             'اگر فرمول حباب را نمی‌دانید، روی عدد خام تصمیم نگیرید.',
         ],
-        'related' => ['coin-bubble-today-checklist', 'best-coin-by-budget-investment', 'gold-investment-short-term-guide', 'buy-sell-gold-price-spread'],
+        'related' => ['coin-bubble-today-checklist', 'best-coin-by-budget-investment', 'guide-gold-investment-strategies', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -5977,7 +5977,7 @@ return [
             'اگر فروش سریع مهم است، قیمت خرید واقعی از شما را قبل از خرید بپرسید.',
             'اگر فیزیکی می‌خرید، فاکتور و اصالت را مقدم بر تخفیف بدانید.',
         ],
-        'related' => ['gold-small-budget-options', 'best-coin-by-budget-investment', 'digital-gold-small-saving-plan', 'monthly-gold-saving-plan'],
+        'related' => ['gold-small-budget-options', 'best-coin-by-budget-investment', 'guide-digital-gold-iran', 'monthly-gold-saving-plan'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -6051,7 +6051,7 @@ return [
             'اگر انس جهانی خلاف جهت دلار حرکت می‌کند، نتیجه ریالی را ساده فرض نکنید.',
             'اگر افق کوتاه دارید، اسپرد و زمان خروج را قبل از ورود مشخص کنید.',
         ],
-        'related' => ['gold-price-today-dollar-ounce', 'global-ounce-impact-iran-gold', 'gold-price-factors', 'why-coin-price-differs-from-gold-weight'],
+        'related' => ['gold-price-today-dollar-ounce', 'global-ounce-impact-iran-gold', 'guide-gold-pricing-iran-market', 'why-coin-price-differs-from-gold-weight'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه بازار', 'url' => '/price/trends/30'],
@@ -6100,7 +6100,7 @@ return [
                 'heading' => 'برای تازه‌کارها کدام پرریسک‌تر است؟',
                 'body' => [
                     'اگر تجربه تشخیص عیار، خواندن انگ، بررسی فاکتور و انتخاب فروشنده معتبر را ندارید، آب‌شده می‌تواند ریسک بیشتری داشته باشد. طلای دست دوم هم اگر بدون فاکتور یا با مشخصات مبهم باشد، انتخاب ساده‌ای نیست.',
-                    'برای طلای دست دوم، مقاله <a href="/blog/second-hand-gold-buying-checklist">چک‌لیست خرید طلای دست دوم</a> را ببینید.',
+                    'برای طلای دست دوم، مقاله <a href="/blog/guide-second-hand-gold">چک‌لیست خرید طلای دست دوم</a> را ببینید.',
                 ],
             ],
             [
@@ -6126,7 +6126,7 @@ return [
             'اگر آب‌شده می‌خرید، انگ و اعتبار فروشنده را جدی بگیرید.',
             'اگر دست دوم می‌خرید، سلامت کالا و شرایط بازخرید را بپرسید.',
         ],
-        'related' => ['should-buy-melted-gold', 'melted-gold-ang-inquiry', 'second-hand-gold-buying-checklist', 'is-no-wage-gold-always-better'],
+        'related' => ['should-buy-melted-gold', 'melted-gold-ang-inquiry', 'guide-second-hand-gold', 'guide-second-hand-gold'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],

@@ -4,7 +4,8 @@ return [
     'source_key' => env('ESTJT_SOURCE_KEY') ?: 'estjt',
     'source_name' => env('ESTJT_SOURCE_NAME') ?: 'اتحادیه صنف فروشندگان و سازندگان طلا و جواهر و نقره و سکه تهران',
     'source_url' => env('ESTJT_SOURCE_URL', 'https://www.estjt.ir/price/'),
-    'fetch_interval_minutes' => (int)env('ESTJT_FETCH_INTERVAL_MINUTES', 5),
+    // Clamped in AutoPriceFetcher::isDue() to [1, 1440] — never allow continuous fetch loops.
+    'fetch_interval_minutes' => max(1, min(1440, (int)env('ESTJT_FETCH_INTERVAL_MINUTES', 5))),
     'frontend_refresh_seconds' => (int)env('FRONTEND_REFRESH_SECONDS', 60),
     'summary_cache_seconds' => (int)env('MARKET_SUMMARY_CACHE_SECONDS', 10),
     'history_cache_seconds' => (int)env('MARKET_HISTORY_CACHE_SECONDS', 45),

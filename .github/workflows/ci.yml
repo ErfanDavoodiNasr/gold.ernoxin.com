@@ -1,0 +1,92 @@
+# CI — tests, audits, and Apache .htaccess regression (not required on cPanel).
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (PHP 8.2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: dom, pdo, pdo_sqlite, pdo_mysql, mbstring, openssl, tokenizer, xml, ctype, json, fileinfo, curl
+          coverage: none
+          tools: composer
+
+      - name: Composer validate
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: PHP syntax
+        run: find app bootstrap config database routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Composer audit
+        run: composer audit --format=plain || true
+        continue-on-error: true
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit --colors=never
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm audit --audit-level=high || true
+        continue-on-error: true
+
+  apache-htaccess:
+    name: Apache .htaccess security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Serve repo root with Apache and probe sensitive paths
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apache2
+          DOCROOT="$PWD"
+          cat > /tmp/gold-htaccess.conf <<EOF
+          Listen 18080
+          <VirtualHost *:18080>
+              DocumentRoot ${DOCROOT}
+              <Directory ${DOCROOT}>
+                  AllowOverride All
+                  Require all granted
+              </Directory>
+              ErrorLog /tmp/gold-apache-error.log
+              CustomLog /tmp/gold-apache-access.log combined
+          </VirtualHost>
+          EOF
+          sudo cp /tmp/gold-htaccess.conf /etc/apache2/sites-available/gold-htaccess.conf
+          sudo a2enmod rewrite
+          sudo a2ensite gold-htaccess
+          sudo apachectl configtest
+          sudo systemctl restart apache2 || sudo service apache2 restart
+          sleep 1
+          for path in /.env /composer.json /artisan /vendor/autoload.php /app/Services/PriceNormalizer.php /.git/config /storage/logs/laravel.log /config/app.php /bootstrap/app.php; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080${path}" || true)
+            echo "$path -> $code"
+            if [ "$code" != "403" ] && [ "$code" != "404" ]; then
+              echo "FAIL: expected 403/404 for $path, got $code"
+              exit 1
+            fi
+          done
+          echo "Apache sensitive-path probes passed"

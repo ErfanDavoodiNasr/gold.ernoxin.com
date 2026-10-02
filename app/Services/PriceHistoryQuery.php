@@ -2,44 +2,132 @@
 
 namespace App\Services;
 
-use App\Models\PricePoint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PriceHistoryQuery
 {
-    private const SELECT_COLUMNS = [
-        'current_value',
-        'fetched_at',
-    ];
+    /** Ranges ≥7d read hourly rollups instead of every raw ingest point. */
+    private const HOURLY_RANGE_MINUTES = 10080;
 
     public function fetchChartPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
     {
-        // Always aggregate in SQL — short ranges used to load every raw row then sample in PHP.
-        return $this->fetchBucketedPoints($itemKey, $windowStart, $rangeMinutes, max(20, $maxPoints));
+        $maxPoints = max(20, $maxPoints);
+
+        if ($rangeMinutes >= self::HOURLY_RANGE_MINUTES && Schema::hasTable('price_points_hourly')) {
+            $points = $this->fetchBucketedFromTable(
+                'price_points_hourly',
+                'bucket_at',
+                $itemKey,
+                $windowStart,
+                $rangeMinutes,
+                $maxPoints,
+                3600,
+            );
+            if ($points->isNotEmpty()) {
+                return $this->finalizeChartPoints($points, $rangeMinutes, $maxPoints);
+            }
+        }
+
+        $points = $this->fetchBucketedFromTable(
+            'price_points',
+            'fetched_at',
+            $itemKey,
+            $windowStart,
+            $rangeMinutes,
+            $maxPoints,
+            60,
+        );
+
+        return $this->finalizeChartPoints($points, $rangeMinutes, $maxPoints);
     }
 
-    private function fetchBucketedPoints(string $itemKey, Carbon $windowStart, int $rangeMinutes, int $maxPoints): Collection
+    /**
+     * Single-pass bucket: last usable value per time bucket (no self-join).
+     */
+    private function fetchBucketedFromTable(
+        string $table,
+        string $timeColumn,
+        string $itemKey,
+        Carbon $windowStart,
+        int    $rangeMinutes,
+        int    $maxPoints,
+        int    $minBucketSeconds,
+    ): Collection
     {
-        $bucketSeconds = max(60, (int)ceil(($rangeMinutes * 60) / $maxPoints));
+        // maxPoints - 1 intervals between endpoints — avoids an extra boundary bucket.
+        $spanSeconds = $rangeMinutes * 60;
+        $bucketSeconds = max($minBucketSeconds, (int)ceil($spanSeconds / max(1, $maxPoints - 1)));
 
-        $bucketQuery = DB::table('price_points')
-            ->selectRaw('item_key, MAX(fetched_at) as bucket_fetched_at')
-            ->where('item_key', $itemKey)
-            ->where('fetched_at', '>=', $windowStart)
-            ->where('current_value', '>', 0)
-            ->groupByRaw('item_key, FLOOR(UNIX_TIMESTAMP(fetched_at) / ' . $bucketSeconds . ')');
+        $bucketExpr = 'FLOOR(UNIX_TIMESTAMP(' . $timeColumn . ') / ' . $bucketSeconds . ')';
 
-        return PricePoint::query()
-            ->joinSub($bucketQuery, 'buckets', function ($join) {
-                $join->on('price_points.item_key', '=', 'buckets.item_key')
-                    ->on('price_points.fetched_at', '=', 'buckets.bucket_fetched_at');
-            })
-            ->where('price_points.item_key', $itemKey)
-            ->select(array_map(fn($column) => "price_points.{$column}", self::SELECT_COLUMNS))
-            ->orderBy('price_points.fetched_at')
-            ->get();
+        // ROW_NUMBER avoids GROUP_CONCAT truncation (group_concat_max_len) on large prices.
+        // Allowlist table/column names — never interpolate request input here.
+        $allowed = [
+            'price_points' => 'fetched_at',
+            'price_points_hourly' => 'bucket_at',
+        ];
+        if (($allowed[$table] ?? null) !== $timeColumn) {
+            throw new \InvalidArgumentException('Invalid history table/column pair.');
+        }
+
+        $rows = DB::select(
+            'SELECT ' . $timeColumn . ' AS fetched_at, current_value
+             FROM (
+                 SELECT ' . $timeColumn . ', current_value,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY ' . $bucketExpr . '
+                            ORDER BY ' . $timeColumn . ' DESC
+                        ) AS rn
+                 FROM ' . $table . '
+                 WHERE item_key = ?
+                   AND ' . $timeColumn . ' >= ?
+                   AND current_value > 0
+             ) ranked
+             WHERE rn = 1
+             ORDER BY ' . $timeColumn,
+            [$itemKey, $windowStart],
+        );
+
+        // DB::select returns a plain array — wrap before Collection methods.
+        return collect($rows)->map(fn($row) => (object)[
+            'fetched_at' => Carbon::parse($row->fetched_at),
+            'current_value' => (float)$row->current_value,
+        ]);
+    }
+
+    private function finalizeChartPoints(Collection $points, int $rangeMinutes, int $maxPoints): Collection
+    {
+        if ($rangeMinutes < self::HOURLY_RANGE_MINUTES) {
+            $points = $this->dedupConsecutiveEqual($points);
+        }
+
+        if ($points->count() > $maxPoints) {
+            $points = $points->slice(-$maxPoints)->values();
+        }
+
+        return $points;
+    }
+
+    /** Drop flat runs so short-range charts stay light after bucketing. */
+    private function dedupConsecutiveEqual(Collection $points): Collection
+    {
+        $result = collect();
+        $previousValue = null;
+
+        foreach ($points as $point) {
+            $value = (float)$point->current_value;
+            if ($previousValue !== null && $value === $previousValue) {
+                continue;
+            }
+
+            $result->push($point);
+            $previousValue = $value;
+        }
+
+        return $result;
     }
 
     /**

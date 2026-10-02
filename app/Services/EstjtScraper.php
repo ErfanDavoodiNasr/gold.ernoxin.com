@@ -21,6 +21,8 @@ class EstjtScraper
         'yesterday' => ['دیروز', 'میانگین دیروز'],
         'change' => ['تغییر', 'درصد تغییر'],
     ];
+    /** Soft cap so a hostile/oversized upstream cannot exhaust shared-hosting memory. */
+    private const MAX_RESPONSE_BYTES = 2_000_000;
 
     public function fetch(): array
     {
@@ -30,10 +32,13 @@ class EstjtScraper
 
     public function fetchHtml(): string
     {
+        $connect = max(1, (int)config('gold.timeout_connect', 3));
+        $read = max(1, (int)config('gold.timeout_read', 5));
         $client = new Client([
-            'timeout' => config('gold.timeout_connect') + config('gold.timeout_read'),
-            'connect_timeout' => config('gold.timeout_connect'),
+            'timeout' => $connect + $read,
+            'connect_timeout' => $connect,
             'http_errors' => false,
+            'allow_redirects' => ['max' => 3, 'strict' => true, 'referer' => true, 'track_redirects' => false],
             // TLS verify on (Guzzle default). Do not disable — fix CA bundle if host SSL fails.
             'headers' => [
                 'User-Agent' => config('gold.http_headers.user_agent'),
@@ -42,12 +47,14 @@ class EstjtScraper
                 'Referer' => config('gold.http_headers.referer'),
             ],
         ]);
-        $attempts = max(1, (int)config('gold.retry_count', 2) + 1);
+        $attempts = max(1, (int)config('gold.retry_count', 1) + 1);
         for ($i = 1; $i <= $attempts; $i++) {
             try {
-                $response = $client->get($this->sourceUrl());
+                $response = $client->get($this->sourceUrl(), [
+                    'stream' => true,
+                ]);
                 $status = $response->getStatusCode();
-                $html = (string)$response->getBody();
+                $html = $this->readBodyBounded($response->getBody(), self::MAX_RESPONSE_BYTES);
                 if ($status >= 400 || trim($html) === '' || $this->looksBlocked($html)) {
                     throw new RuntimeException('منبع قیمت‌ها در دسترس نیست یا درخواست را مسدود کرده است.');
                 }
@@ -56,7 +63,8 @@ class EstjtScraper
                 if ($i === $attempts) {
                     throw new RuntimeException('ارتباط با منبع برقرار نشد: ' . $e->getMessage(), 0, $e);
                 }
-                usleep(max(1, (int)config('gold.retry_backoff_milliseconds', 300)) * 1000 * $i);
+                // Do not retry obvious client blocks (403/404) forever — still allow one bounded retry for flaky upstream.
+                usleep(max(1, (int)config('gold.retry_backoff_milliseconds', 150)) * 1000 * $i);
             }
         }
         throw new RuntimeException('دریافت داده ناموفق بود.');
@@ -65,6 +73,25 @@ class EstjtScraper
     private function sourceUrl(): string
     {
         return (string)config('gold.source_url', 'https://www.estjt.ir/price/');
+    }
+
+    private function readBodyBounded($body, int $maxBytes): string
+    {
+        $chunks = '';
+        $size = 0;
+        while (!$body->eof()) {
+            $chunk = $body->read(65536);
+            if ($chunk === '') {
+                break;
+            }
+            $size += strlen($chunk);
+            if ($size > $maxBytes) {
+                throw new RuntimeException('پاسخ منبع بیش از حد بزرگ است.');
+            }
+            $chunks .= $chunk;
+        }
+
+        return $chunks;
     }
 
     private function looksBlocked(string $html): bool

@@ -298,6 +298,26 @@ button {
     padding: 12px 14px
 }
 
+.noticeWithAction {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px
+}
+
+.noticeWithAction button {
+    border: 1px solid rgba(255, 100, 124, .45);
+    border-radius: 10px;
+    background: rgba(255, 100, 124, .12);
+    color: inherit;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px
+}
+
 .layout {
     align-items: stretch;
     gap: 16px;
@@ -550,6 +570,7 @@ button {
     width: 100%;
     height: 100%;
     min-height: 0;
+    position: relative;
     direction: ltr
 }
 
@@ -573,15 +594,6 @@ button {
     100% {
         opacity: .35
     }
-}
-
-.chartWrap .recharts-surface {
-    overflow: visible
-}
-
-.chartYAxisTick text {
-    direction: ltr;
-    font-variant-numeric: tabular-nums
 }
 
 .chartWrap.loading::after {
@@ -620,28 +632,19 @@ button {
     gap: 10px
 }
 
-.recharts-cartesian-grid line {
-    stroke: var(--line);
-    stroke-opacity: .82
-}
-
-.recharts-text {
-    fill: var(--muted);
-    font-family: Vazirmatn;
-    font-size: 12px
-}
-
-.recharts-label {
-    fill: var(--muted);
-    font-size: 12px
-}
-
 .tooltip {
     border: 1px solid var(--line);
     border-radius: 12px;
     background: var(--panel2);
     padding: 10px 12px;
     box-shadow: var(--shadow)
+}
+
+.chartHoverTip {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    min-width: 110px
 }
 
 .tooltip span {
@@ -991,9 +994,5 @@ button {
     .chartWrap {
         height: clamp(430px, 62svh, 640px);
         min-height: 430px
-    }
-
-    .recharts-text {
-        font-size: 11px
     }
 }

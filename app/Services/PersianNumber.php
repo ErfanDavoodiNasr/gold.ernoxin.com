@@ -26,7 +26,7 @@ class PersianNumber
     public static function currencyAndValue(?string $text): array
     {
         $raw = self::clean($text);
-        $normalized = self::digits($raw);
+        $normalized = self::collapseDigitGroupSpaces(self::digits($raw));
         if (!preg_match('/[-+]?\d[\d,\.٫٬]*/u', $normalized, $m, PREG_OFFSET_CAPTURE)) {
             return [null, null];
         }
@@ -34,6 +34,14 @@ class PersianNumber
         $start = $m[0][1];
         $currency = self::clean(substr($normalized, 0, $start) . substr($normalized, $start + strlen($token)));
         return [self::numeric($token), in_array($currency, ['', '-', '—', '–', '―'], true) ? null : $currency];
+    }
+
+    /** Turn "7 530 000" / NBSP groups into "7530000" without touching currency words. */
+    private static function collapseDigitGroupSpaces(string $text): string
+    {
+        $text = str_replace(["\u{00A0}", "\u{202F}", "\u{2007}"], ' ', $text);
+
+        return preg_replace('/(?<=\d)\s+(?=\d)/u', '', $text) ?? $text;
     }
 
     public static function numeric(?string $text): ?float
@@ -48,7 +56,12 @@ class PersianNumber
 
     private static function numericToken(?string $text): ?string
     {
-        $normalized = str_replace(['−', '–'], '-', self::digits(self::clean($text)));
+        $normalized = str_replace(
+            ['−', '–'],
+            ['-', '-'],
+            self::collapseDigitGroupSpaces(self::digits(self::clean($text)))
+        );
+
         return preg_match('/[-+]?\d[\d,\.٫٬]*/u', $normalized, $m) ? $m[0] : null;
     }
 

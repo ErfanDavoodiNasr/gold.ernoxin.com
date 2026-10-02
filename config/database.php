@@ -17,6 +17,12 @@ return [
             'strict' => true,
             'engine' => null,
         ],
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'database' => env('DB_DATABASE', database_path('testing.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
         'pgsql' => [
             'driver' => 'pgsql',
             'host' => env('DB_HOST', '127.0.0.1'),

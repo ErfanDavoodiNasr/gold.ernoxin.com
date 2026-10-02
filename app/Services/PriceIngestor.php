@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PriceIngestor
@@ -24,28 +25,60 @@ class PriceIngestor
     {
         $reference = (string)Str::uuid();
         $source = config('gold.source_key', 'estjt');
+        $count = 0;
+        $expected = count($this->catalog->keys());
+        $committed = false;
 
         try {
             $this->fetchStatus->start($reference);
 
             $payload = $this->scraper->fetch();
-            $count = DB::transaction(fn() => $this->store($payload));
-            $expected = count($this->catalog->keys());
-            if ($count === 0) {
-                throw new \RuntimeException('هیچ قیمت معتبری ذخیره نشد.');
-            }
+            $count = DB::transaction(function () use ($payload, $expected) {
+                $stored = $this->store($payload);
+                // Fail closed: a half-empty snapshot is worse than keeping the last good one.
+                $minimum = $expected > 0 ? max(1, (int)ceil($expected * 0.5)) : 1;
+                if ($stored < $minimum) {
+                    throw new \RuntimeException(
+                        "تعداد نمادهای معتبر کافی نیست ({$stored}/{$expected}). داده مشکوک ذخیره نشد."
+                    );
+                }
+
+                return $stored;
+            });
+            $committed = true;
+
             if ($expected > 0 && $count < $expected) {
                 $this->fetchStatus->partial($count, "فقط {$count} از {$expected} نماد به‌روزرسانی شد.");
             } else {
                 $this->fetchStatus->succeed($count);
             }
+
+            Log::info('Gold price ingest stored', [
+                'reference_id' => $reference,
+                'source' => $source,
+                'items' => $count,
+            ]);
+
             $this->clearCaches();
             Cache::increment('gold:price-data-version');
             $this->pruneOldPoints();
 
             return ['referenceId' => $reference, 'items' => $count, 'payload' => $payload];
         } catch (\Throwable $e) {
-            $this->markFetchFailed($reference, $source, $e);
+            if ($committed && $count > 0) {
+                $message = Str::limit($e->getMessage(), 500);
+                $this->fetchStatus->partial($count, $message);
+                Log::warning('Gold price ingest post-commit failure', [
+                    'reference_id' => $reference,
+                    'source' => $source,
+                    'items' => $count,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                ]);
+            } else {
+                $this->markFetchFailed($reference, $source, $e);
+            }
+
             throw $e;
         }
     }
@@ -68,7 +101,6 @@ class PriceIngestor
                 $referenceToman = $referencePrices[$normalized] ?? null;
                 $isUsd = $this->normalizer->isUsdItem($row['current']['currency'] ?? $definition->currency, $group);
 
-                $rawRow = $row;
                 $row = $this->normalizer->normalizeRow($row, $referenceToman, $isUsd);
                 if ($row === null || !$this->validPrice($row['current']['value'] ?? null)) {
                     report(new \RuntimeException("Invalid zero or empty price skipped for {$normalized}"));
@@ -76,6 +108,12 @@ class PriceIngestor
                 }
 
                 $current = (float)$row['current']['value'];
+                if (!$isUsd && $referenceToman !== null && $referenceToman > 0
+                    && ($this->normalizer->looksLikeRialSpike($current, $referenceToman)
+                        || $this->normalizer->looksLikeTomanDip($current, $referenceToman))) {
+                    report(new \RuntimeException("Unit spike rejected at ingest for {$normalized}"));
+                    continue;
+                }
                 $pending[] = [
                     'item_key' => $normalized,
                     'current' => $current,
@@ -85,7 +123,6 @@ class PriceIngestor
                     'change_value' => $row['change']['value'],
                     'change_percent' => $row['change']['percent'],
                     'direction' => $row['change']['direction'],
-                    'raw_payload' => $rawRow,
                 ];
                 $referencePrices[$normalized] = $current;
             }
@@ -95,13 +132,21 @@ class PriceIngestor
             return 0;
         }
 
-        $dayStats = $this->dailyRangesFor(
-            array_column($pending, 'item_key'),
-            $fetchedAt,
-        );
+        $needDayStats = array_values(array_filter(
+            $pending,
+            fn(array $item) => !$this->validPrice($item['source_high']) || !$this->validPrice($item['source_low']),
+        ));
+        $dayStats = $needDayStats === []
+            ? []
+            : $this->dailyRangesFor(array_column($needDayStats, 'item_key'), $fetchedAt);
 
         $now = now();
         $rows = [];
+        $hourly = [];
+        $bucketAt = $fetchedAt->copy()->startOfHour()->format('Y-m-d H:i:s');
+        // Legacy installs may still have NOT NULL raw_payload until DROP patch runs.
+        $legacyRaw = Schema::hasColumn('price_points', 'raw_payload');
+
         foreach ($pending as $item) {
             [$high, $low] = $this->resolveDailyRange(
                 $item['current'],
@@ -110,7 +155,7 @@ class PriceIngestor
                 $dayStats[$item['item_key']] ?? null,
             );
 
-            $rows[] = [
+            $row = [
                 'item_key' => $item['item_key'],
                 'fetched_at' => $fetchedAt,
                 'current_value' => $item['current'],
@@ -120,7 +165,18 @@ class PriceIngestor
                 'change_value' => $item['change_value'],
                 'change_percent' => $item['change_percent'],
                 'direction' => $item['direction'],
-                'raw_payload' => json_encode($item['raw_payload'], JSON_UNESCAPED_UNICODE),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+            if ($legacyRaw) {
+                $row['raw_payload'] = '{}';
+            }
+            $rows[] = $row;
+
+            $hourly[] = [
+                'item_key' => $item['item_key'],
+                'bucket_at' => $bucketAt,
+                'current_value' => $item['current'],
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -137,10 +193,17 @@ class PriceIngestor
                 'change_value',
                 'change_percent',
                 'direction',
-                'raw_payload',
                 'updated_at',
             ],
         );
+
+        if (Schema::hasTable('price_points_hourly')) {
+            DB::table('price_points_hourly')->upsert(
+                $hourly,
+                ['item_key', 'bucket_at'],
+                ['current_value', 'updated_at'],
+            );
+        }
 
         return count($rows);
     }
@@ -153,11 +216,10 @@ class PriceIngestor
             return [];
         }
 
+        // Zeros rejected at ingest — keep MAX on UNIQUE(item_key, fetched_at) tip.
         $latest = PricePoint::query()
             ->selectRaw('item_key, MAX(fetched_at) as max_fetched_at')
             ->whereIn('item_key', $keys)
-            ->whereNotNull('current_value')
-            ->where('current_value', '>', 0)
             ->groupBy('item_key');
 
         return PricePoint::query()
@@ -177,7 +239,7 @@ class PriceIngestor
     }
 
     /**
-     * One batched day-range query for all keys in this ingest.
+     * One batched day-range query for keys that lack source high/low.
      *
      * @param list<string> $keys
      * @return array<string, array{high: float, low: float}>
@@ -234,13 +296,13 @@ class PriceIngestor
 
     private function clearCaches(): void
     {
-        Cache::forget('gold:market-summary:data');
-        Cache::forget('gold:market-summary');
-
-        $ranges = config('gold.chart_available_ranges', []);
-        foreach ($this->catalog->keys() as $itemKey) {
-            foreach ($ranges as $rangeKey) {
-                Cache::forget("gold:market-history:{$itemKey}:{$rangeKey}");
+        foreach (['gold:market-summary:data:v2', 'gold:market-summary:data', 'gold:market-summary'] as $key) {
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                Cache::forget($key);
+                if (Cache::get($key) === null) {
+                    break;
+                }
+                usleep(50_000);
             }
         }
     }
@@ -253,8 +315,26 @@ class PriceIngestor
             return;
         }
 
-        // ponytail: plain DELETE by age; hourly rollup if table still grows too fast under sub-minute ingest
-        PricePoint::where('fetched_at', '<', now()->subDays($days))->delete();
+        $cutoff = now()->subDays($days);
+
+        // ponytail: chunked DELETE — one huge wipe locks shared MySQL too long
+        do {
+            $deleted = PricePoint::where('fetched_at', '<', $cutoff)->limit(5000)->delete();
+        } while ($deleted > 0);
+
+        if (Schema::hasTable('price_points_hourly')) {
+            do {
+                $deleted = DB::table('price_points_hourly')->where('bucket_at', '<', $cutoff)->limit(5000)->delete();
+            } while ($deleted > 0);
+        }
+
+        // Shrink legacy JSON left on disk until DROP COLUMN patch is applied.
+        if (Schema::hasColumn('price_points', 'raw_payload')) {
+            do {
+                $n = DB::update('UPDATE price_points SET raw_payload = NULL WHERE raw_payload IS NOT NULL LIMIT 2000');
+            } while ($n > 0);
+        }
+
         Cache::put('gold:last-history-prune', 1, now()->addDay());
     }
 

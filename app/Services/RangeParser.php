@@ -55,4 +55,44 @@ final class RangeParser
             'minutes' => min($minutes, $maxMinutes),
         ];
     }
+
+    public function trendUrl(string $key): string
+    {
+        return url('/price/trends/' . $this->trendUrlSlug($key));
+    }
+
+    /** Slug for /price/trends/{slug} — hours keep suffix (1h), days are bare number (7). */
+    public function trendUrlSlug(string $key): string
+    {
+        $key = strtolower(trim($key));
+        if (str_ends_with($key, 'h')) {
+            return $key;
+        }
+
+        if (preg_match('/^(\d+)d$/', $key, $matches)) {
+            return $matches[1];
+        }
+
+        return $key;
+    }
+
+    /** Day-only ranges suitable for SEO index / sitemap (excludes hour windows). */
+    public function isSeoIndexedRange(string $key): bool
+    {
+        return (bool)preg_match('/^(\d+)d$/', strtolower(trim($key)), $matches)
+            && (int)$matches[1] >= 1;
+    }
+
+    public function seoRangeLabel(string $key): string
+    {
+        $key = strtolower(trim($key));
+        if (preg_match('/^(\d+)h$/', $key, $matches)) {
+            return $matches[1] . ' ساعت';
+        }
+        if (preg_match('/^(\d+)d$/', $key, $matches)) {
+            return $matches[1] . ' روز';
+        }
+
+        return $key;
+    }
 }

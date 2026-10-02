@@ -28,6 +28,14 @@ class LearnPages
             config_path('learn.php'),
             resource_path('data/learn_articles.php'),
             resource_path('data/learn_inline_pages.php'),
+            resource_path('data/learn_karat_master.php'),
+            resource_path('data/learn_pricing_master.php'),
+            resource_path('data/learn_formulas_master.php'),
+            resource_path('data/learn_tax_invoice_master.php'),
+            resource_path('data/learn_used_gold_master.php'),
+            resource_path('data/learn_digital_gold_master.php'),
+            resource_path('data/learn_gold_funds_master.php'),
+            resource_path('data/learn_investment_master.php'),
             resource_path('data/learn_extras.php'),
         ];
     }

@@ -19,24 +19,22 @@ class LearnPageController extends Controller
     public function index(Request $request): Response
     {
         $allPages = $this->pages();
-        $query = trim((string)$request->query('q', ''));
-        $pages = $query !== '' ? $this->searchPages($allPages, $query) : $allPages;
-        $resultCount = count($pages);
+        $query = Str::limit(trim((string)$request->query('q', '')), 100, '');
         $title = 'بلاگ طلا و سکه ارنوکسین';
         $description = 'مقاله‌های کاربردی فارسی درباره قیمت طلا، سکه، اجرت، مالیات، فاکتور، اصالت و ریسک‌های خرید.';
         $basePath = config('learn.base_path', '/blog');
 
         if ($query !== '') {
             $title = "نتایج جستجو برای «{$query}» | بلاگ طلا و سکه";
-            $description = "{$resultCount} مقاله مرتبط با «{$query}» درباره قیمت طلا، سکه و بازار ایران.";
+            $description = "جستجو در مقالات بلاگ طلا و سکه برای «{$query}» — قیمت طلا، سکه و بازار ایران.";
         }
 
         return response()->view('learn.index', [
-            'pages' => $pages,
+            'pages' => $allPages,
             'allPages' => $allPages,
             'basePath' => $basePath,
             'searchQuery' => $query,
-            'resultCount' => $resultCount,
+            'resultCount' => null,
             'searchIndexUrl' => "{$basePath}/search-index.json",
             'seo' => [
                 'title' => $title,
@@ -58,9 +56,7 @@ class LearnPageController extends Controller
 
             return collect(LearnPages::all())
                 ->map(function ($page, $slug) use ($extras) {
-                    $sourcePage = array_merge($page, $extras[$slug] ?? []);
                     $merged = array_merge($page, $extras[$slug] ?? []);
-                    $merged['_source_search_text'] = $this->pageBodyText($sourcePage);
                     unset(
                         $merged['author_note'],
                         $merged['default_sources'],
@@ -82,27 +78,6 @@ class LearnPageController extends Controller
             ->implode('|');
 
         return 'learn:' . $name . ':' . md5($signature);
-    }
-
-    private function pageBodyText(array $page): string
-    {
-        $parts = [];
-        foreach (($page['sections'] ?? []) as $section) {
-            $parts[] = $section['heading'] ?? '';
-            foreach (($section['body'] ?? []) as $paragraph) {
-                if (str_contains($paragraph, 'برای کامل‌تر شدن مسیر مطالعه')) {
-                    continue;
-                }
-                $parts[] = $paragraph;
-            }
-        }
-        foreach (($page['faqs'] ?? []) as $faq) {
-            $parts[] = $faq['question'] ?? '';
-            $parts[] = $faq['answer'] ?? '';
-        }
-        array_push($parts, ...($page['important_notes'] ?? []), ...($page['common_mistakes'] ?? []), ...($page['decision_points'] ?? []));
-
-        return implode(' ', $parts);
     }
 
     private function enrichPage(array $page, string $slug): array
@@ -136,150 +111,6 @@ class LearnPageController extends Controller
         ];
 
         return array_values(array_filter($fallbacks, fn($item) => $item !== $slug));
-    }
-
-    private function searchPages(array $pages, string $query): array
-    {
-        $normalizedQuery = $this->normalizeSearchText($query);
-        $tokens = collect($this->searchTokens($normalizedQuery));
-
-        if ($tokens->isEmpty()) {
-            return $pages;
-        }
-
-        return collect($pages)
-            ->map(function ($page, $slug) use ($tokens, $normalizedQuery) {
-                $score = $this->searchScore($page, $tokens->all(), $normalizedQuery);
-                if ($score < 10) {
-                    return null;
-                }
-
-                $page['slug'] = $slug;
-                $page['search_score'] = $score;
-                $page['search_excerpt'] = $this->searchExcerpt($page, $tokens->all());
-                return $page;
-            })
-            ->filter()
-            ->sortByDesc('search_score')
-            ->take(18)
-            ->mapWithKeys(fn($page) => [$page['slug'] => $page])
-            ->all();
-    }
-
-    private function normalizeSearchText(string $text): string
-    {
-        $text = strip_tags($text);
-        $text = str_replace(['ي', 'ك', 'ۀ', 'ة', 'ؤ', 'إ', 'أ', 'آ'], ['ی', 'ک', 'ه', 'ه', 'و', 'ا', 'ا', 'ا'], $text);
-        $text = mb_strtolower($text, 'UTF-8');
-        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
-        return trim(preg_replace('/\s+/u', ' ', $text));
-    }
-
-    private function searchTokens(string $normalizedQuery): array
-    {
-        $stopWords = [
-            'و', 'یا', 'در', 'از', 'به', 'با', 'برای', 'را', 'که', 'این', 'آن', 'اون',
-            'چیست', 'چیه', 'چطور', 'چگونه', 'کدام', 'ایا', 'آیا', 'بهترین', 'ای', 'تی', 'اف',
-        ];
-        $genericTokens = ['طلا', 'سکه', 'قیمت', 'بازار'];
-
-        $tokens = collect(preg_split('/\s+/u', $normalizedQuery, -1, PREG_SPLIT_NO_EMPTY))
-            ->map(fn($token) => trim($token))
-            ->filter(fn($token) => mb_strlen($token) >= 2)
-            ->reject(fn($token) => in_array($token, $stopWords, true))
-            ->values();
-
-        $specificTokens = $tokens->reject(fn($token) => in_array($token, $genericTokens, true))->values();
-        if ($specificTokens->isNotEmpty()) {
-            $tokens = $specificTokens;
-        }
-
-        if (str_contains($normalizedQuery, 'صندوق طلا')) {
-            $tokens = collect(['صندوق طلا', 'صندوق سرمایه گذاری', 'etf']);
-        }
-
-        $synonyms = [
-            'ای تی اف' => ['etf', 'صندوق', 'بورس'],
-            'etf' => ['صندوق', 'بورس'],
-            'بورس' => ['صندوق', 'گواهی', 'سرمایه گذاری'],
-            'اب شده' => ['آبشده', 'انگ'],
-            'رسید' => ['فاکتور'],
-            'مالیات' => ['ارزش افزوده'],
-            'سکه' => ['حباب', 'امامی', 'بهار'],
-        ];
-
-        foreach ($synonyms as $phrase => $extraTokens) {
-            if (str_contains($normalizedQuery, $this->normalizeSearchText($phrase))) {
-                $tokens = $tokens->merge($extraTokens);
-            }
-        }
-
-        return $tokens
-            ->map(fn($token) => $this->normalizeSearchText($token))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    private function searchScore(array $page, array $tokens, string $query): int
-    {
-        $fields = [
-            'title' => [$page['title'] ?? '', 30],
-            'h1' => [$page['h1'] ?? '', 24],
-            'category' => [$page['category'] ?? '', 12],
-            'keywords' => [implode(' ', $page['keywords'] ?? []), 18],
-            'summary' => [implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? '']), 10],
-            'body' => [$page['_source_search_text'] ?? $this->pageBodyText($page), 3],
-        ];
-
-        $score = 0;
-        foreach ($fields as $fieldName => [$text, $weight]) {
-            $normalized = $this->normalizeSearchText($text);
-            if ($query !== '' && $this->containsSearchToken($normalized, $query)) {
-                $score += $weight * 4;
-                if (in_array($fieldName, ['title', 'h1'], true) && str_starts_with($normalized, $query)) {
-                    $score += $weight * 3;
-                }
-            }
-
-            foreach ($tokens as $token) {
-                if ($this->containsSearchToken($normalized, $token)) {
-                    $score += $weight + min(4, substr_count($normalized, $token));
-                    $score += intdiv($weight, 2);
-                }
-            }
-        }
-
-        return $score;
-    }
-
-    private function containsSearchToken(string $normalizedText, string $token): bool
-    {
-        return preg_match('/(^|\s)' . preg_quote($token, '/') . '/u', $normalizedText) === 1;
-    }
-
-    private function searchExcerpt(array $page, array $tokens): string
-    {
-        $candidates = array_merge(
-            [$page['quick_summary'] ?? '', $page['meta_description'] ?? '', $page['intro'] ?? ''],
-            collect($page['sections'] ?? [])->flatMap(fn($section) => $section['body'] ?? [])->all()
-        );
-
-        foreach ($candidates as $candidate) {
-            if (str_contains($candidate, 'برای کامل‌تر شدن مسیر مطالعه')) {
-                continue;
-            }
-
-            $normalized = $this->normalizeSearchText($candidate);
-            foreach ($tokens as $token) {
-                if ($this->containsSearchToken($normalized, $token)) {
-                    return Str::limit(trim(strip_tags($candidate)), 230);
-                }
-            }
-        }
-
-        return Str::limit($page['meta_description'] ?? $page['intro'] ?? '', 230);
     }
 
     public function feed(): Response
@@ -325,26 +156,36 @@ class LearnPageController extends Controller
 
     private function buildSearchIndex(array $pages, string $basePath): array
     {
-        return Cache::remember($this->contentCacheKey('search-index:v3'), 86400, fn() => collect($pages)
+        return Cache::remember($this->contentCacheKey('search-index:v4'), 86400, fn() => collect($pages)
             ->map(fn($page, $slug) => [
                 'slug' => $slug,
                 'url' => "{$basePath}/{$slug}",
                 'title' => $page['title'] ?? '',
                 'category' => $page['category'] ?? 'آموزش طلا و سکه',
                 'summary' => $page['quick_summary'] ?? $page['meta_description'] ?? '',
-                'description' => $page['meta_description'] ?? '',
                 'readingTime' => $page['reading_time'] ?? '۶ دقیقه',
                 'search' => [
                     'title' => $this->normalizeSearchText($page['title'] ?? ''),
                     'category' => $this->normalizeSearchText($page['category'] ?? 'آموزش طلا و سکه'),
                     'keywords' => $this->normalizeSearchText(implode(' ', $page['keywords'] ?? [])),
-                    'summary' => $this->normalizeSearchText(implode(' ', [$page['meta_description'] ?? '', $page['quick_summary'] ?? '', $page['intro'] ?? ''])),
-                    'body' => $this->normalizeSearchText($page['_source_search_text'] ?? $this->pageBodyText($page)),
+                    'summary' => $this->normalizeSearchText(implode(' ', [
+                        $page['meta_description'] ?? '',
+                        $page['quick_summary'] ?? '',
+                        $page['intro'] ?? '',
+                    ])),
                 ],
-                'plainText' => Str::limit(trim(strip_tags($page['_source_search_text'] ?? $this->pageBodyText($page))), 700),
             ])
             ->values()
             ->all());
+    }
+
+    private function normalizeSearchText(string $text): string
+    {
+        $text = strip_tags($text);
+        $text = str_replace(['ي', 'ك', 'ۀ', 'ة', 'ؤ', 'إ', 'أ', 'آ'], ['ی', 'ک', 'ه', 'ه', 'و', 'ا', 'ا', 'ا'], $text);
+        $text = mb_strtolower($text, 'UTF-8');
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 
     public function show(string $slug): Response
@@ -374,28 +215,6 @@ class LearnPageController extends Controller
                 'jsonLd' => $this->schema->article($page),
             ],
         ]);
-    }
-
-    private function matchesSearchTokens(array $page, array $tokens): bool
-    {
-        $corpus = $this->normalizeSearchText(implode(' ', [
-            $page['title'] ?? '',
-            $page['h1'] ?? '',
-            $page['category'] ?? '',
-            implode(' ', $page['keywords'] ?? []),
-            $page['meta_description'] ?? '',
-            $page['quick_summary'] ?? '',
-            $page['intro'] ?? '',
-            $page['_source_search_text'] ?? $this->pageBodyText($page),
-        ]));
-
-        foreach ($tokens as $token) {
-            if (!$this->containsSearchToken($corpus, $token)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function iranMarketSection(string $slug, string $topic, array $page): array

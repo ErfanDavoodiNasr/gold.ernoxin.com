@@ -1,0 +1,30 @@
+-- One-shot repair for rial/toman unit spikes and missing daily high/low.
+-- Prefer: php artisan gold:repair-price-data
+-- Run manually only when artisan is unavailable.
+
+-- Example (MySQL 8+): fix rows ~10x neighbors — review counts before UPDATE.
+-- UPDATE price_points p
+-- JOIN (
+--     SELECT id, item_key, current_value,
+--            LAG(current_value) OVER (PARTITION BY item_key ORDER BY fetched_at) AS prev_value
+--     FROM price_points
+--     WHERE current_value > 0
+-- ) x ON x.id = p.id
+-- SET p.current_value = p.current_value / 10
+-- WHERE x.prev_value > 0
+--   AND p.current_value / x.prev_value BETWEEN 8 AND 12;
+
+-- Backfill null high/low from same-day min/max:
+-- UPDATE price_points p
+-- JOIN (
+--     SELECT item_key, DATE(fetched_at) AS day,
+--            MAX(current_value) AS day_high,
+--            MIN(current_value) AS day_low
+--     FROM price_points
+--     WHERE current_value > 0
+--     GROUP BY item_key, DATE(fetched_at)
+-- ) d ON d.item_key = p.item_key AND d.day = DATE(p.fetched_at)
+-- SET p.high_value = d.day_high,
+--     p.low_value = d.day_low
+-- WHERE p.high_value IS NULL OR p.low_value IS NULL
+--    OR p.high_value <= 0 OR p.low_value <= 0;

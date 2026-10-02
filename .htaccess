@@ -1,8 +1,13 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    RewriteRule ^(?:app|bootstrap|config|database|resources|routes|storage|vendor)(?:/|$) - [F,L]
-    RewriteRule ^(?:\.env|artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|vite\.config\.js|README\.md|server\.php)$ - [F,L]
+    # Deny Laravel internals and non-public trees when DocumentRoot is the repo root (cPanel).
+    RewriteRule ^(?:app|bootstrap|config|database|resources|routes|storage|vendor|scripts|tests|node_modules)(?:/|$) - [F,L]
+
+    # Deny dotfiles/dirs (.env, .git, .github, …). Allow ACME /.well-known/.
+    RewriteRule "(^|/)\.(?!well-known(?:/|$))" - [F,L]
+
+    RewriteRule ^(?:artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|vite\.config\.js|phpunit\.xml(?:\.dist)?|README\.md|server\.php)$ - [F,L]
 
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
@@ -12,4 +17,11 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ public/index.php [L]
+</IfModule>
+
+# Fail closed when mod_rewrite is unavailable — do not serve Laravel sources as static files.
+<IfModule !mod_rewrite.c>
+    <FilesMatch "^(?!index\.php$).+">
+        Require all denied
+    </FilesMatch>
 </IfModule>

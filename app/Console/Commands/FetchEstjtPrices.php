@@ -13,18 +13,29 @@ class FetchEstjtPrices extends Command
     public function handle(AutoPriceFetcher $fetcher): int
     {
         $result = $fetcher->fetchIfDue((bool)$this->option('force'));
+        $status = $result['status'] ?? null;
 
-        if (($result['status'] ?? null) === 'skipped') {
-            $this->line('زمان دریافت بعدی هنوز نرسیده است.');
+        if ($status === 'skipped') {
+            $reason = $result['reason'] ?? 'interval';
+            if ($reason === 'locked') {
+                $this->line('دریافت دیگری در حال اجراست؛ این اجرا رد شد.');
+            } else {
+                $this->line('زمان دریافت بعدی هنوز نرسیده است.');
+            }
+
             return self::SUCCESS;
         }
 
-        if (($result['status'] ?? null) === 'failed') {
+        if ($status === 'failed') {
             $this->error('دریافت قیمت ناموفق بود: ' . ($result['error'] ?? 'خطای نامشخص'));
+
             return self::FAILURE;
         }
 
-        $this->info("{$result['items']} مورد ذخیره شد. شناسه: {$result['referenceId']}");
+        $items = (int)($result['items'] ?? 0);
+        $reference = (string)($result['referenceId'] ?? '');
+        $this->info("{$items} مورد ذخیره شد. شناسه: {$reference}");
+
         return self::SUCCESS;
     }
 }

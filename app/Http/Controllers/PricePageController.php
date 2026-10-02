@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Services\MarketSummaryService;
 use App\Services\PersianNumber;
+use App\Services\RangeParser;
 use App\Support\LastFetch;
 use App\Support\MarketItem;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -13,20 +15,36 @@ use Throwable;
 
 class PricePageController extends Controller
 {
-    public function __construct(private MarketSummaryService $summaryService)
+    public function __construct(
+        private MarketSummaryService $summaryService,
+        private RangeParser          $rangeParser,
+    )
     {
     }
 
-    public function __invoke($days = null)
+    public function __invoke($range = null)
     {
-        $availableRanges = collect(config('gold.chart_available_ranges', ['1d', '7d', '30d', '90d', '180d', '365d']))
-            ->map(fn($range) => $this->rangeDays($range))
-            ->filter(fn($range) => $range >= 1 && $range <= (int)config('gold.history_max_days', 365))
+        $availableRangeKeys = collect(config('gold.chart_available_ranges', ['1d', '7d', '30d', '90d', '180d', '365d']))
+            ->map(fn($key) => $this->rangeParser->canonicalKey($key))
             ->unique()
             ->values();
 
-        $requestedDays = filter_var($days, FILTER_VALIDATE_INT) ?: null;
-        $days = $requestedDays ? $availableRanges->first(fn($range) => $range === $requestedDays) : null;
+        $seoDayRanges = $availableRangeKeys
+            ->filter(fn(string $key) => $this->rangeParser->isSeoIndexedRange($key))
+            ->map(fn(string $key) => (int)$key)
+            ->filter(fn(int $days) => $days >= 1 && $days <= (int)config('gold.history_max_days', 365))
+            ->unique()
+            ->sort()
+            ->values();
+
+        $activeRangeKey = null;
+        if ($range !== null) {
+            $parsed = $this->rangeParser->tryParse($range);
+            if ($parsed !== null && $availableRangeKeys->contains($parsed['key'])) {
+                $activeRangeKey = $parsed['key'];
+            }
+        }
+
         try {
             $items = $this->summaryService->items();
             $lastFetch = $this->summaryService->lastFetch();
@@ -40,36 +58,29 @@ class PricePageController extends Controller
         }
 
         return view('app', [
-            'seo' => $this->seoPayload($items, $availableRanges, $days, $lastFetch),
+            'seo' => $this->seoPayload($items, $seoDayRanges, $activeRangeKey, $lastFetch),
             'seoItems' => $items,
             'marketSummary' => $this->embeddedMarketSummary(),
         ]);
     }
 
-    private function rangeDays($range): int
-    {
-        $value = strtolower(trim((string)$range));
-        if (str_ends_with($value, 'h')) {
-            return 1;
-        }
-
-        return max(1, (int)$value);
-    }
-
-    private function seoPayload(Collection $items, Collection $availableRanges, ?int $days, ?LastFetch $lastFetch): array
+    private function seoPayload(Collection $items, Collection $seoDayRanges, ?string $activeRangeKey, ?LastFetch $lastFetch): array
     {
         $primaryGold = $items->first(fn($item) => str_contains($item->name, '۱۸') || str_contains($item->name, '18'))
             ?: $items->firstWhere('category', 'gold');
         $primaryCoin = $items->firstWhere('category', 'coin');
         $goldPrice = $this->formatDisplayPrice($primaryGold, $primaryGold?->latestPrice?->current_value);
         $coinPrice = $this->formatDisplayPrice($primaryCoin, $primaryCoin?->latestPrice?->current_value);
-        $canonical = url($days ? "/price/trends/{$days}" : '/price/');
+        $canonical = $activeRangeKey
+            ? $this->rangeParser->trendUrl($activeRangeKey)
+            : url('/price/');
         $updatedAt = optional($lastFetch?->finishedAt ?: $items->pluck('latestPrice.fetched_at')->filter()->max())->toIso8601String();
-        $title = $days
-            ? "نمودار {$days} روزه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران"
+        $rangeLabel = $activeRangeKey ? $this->rangeParser->seoRangeLabel($activeRangeKey) : null;
+        $title = $rangeLabel
+            ? "نمودار {$rangeLabel}ه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران"
             : 'قیمت طلا امروز و قیمت لحظه‌ای سکه | داشبورد بازار ایران';
-        $description = $days
-            ? "بررسی روند {$days} روزه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران."
+        $description = $rangeLabel
+            ? "بررسی روند {$rangeLabel}ه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران."
             : ($items->isNotEmpty()
                 ? "قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران. طلای ۱۸ عیار: {$goldPrice}، سکه: {$coinPrice}. مشاهده تغییرات زنده و نمودار تاریخی."
                 : 'قیمت طلا امروز و قیمت لحظه‌ای سکه در بازار ایران همراه با نمودار تعاملی، تاریخچه تغییرات و داده‌های به‌روزشونده.');
@@ -82,12 +93,13 @@ class PricePageController extends Controller
             'updatedAt' => $updatedAt,
             'keywords' => 'قیمت طلا امروز,قیمت سکه امروز,قیمت طلای ۱۸ عیار,نمودار قیمت طلا,قیمت لحظه‌ای طلا,بازار طلا ایران,قیمت مظنه,حباب سکه,انس جهانی',
             'ogImage' => url(config('learn.price_og_image', config('learn.default_og_image'))),
-            'alternateRanges' => $availableRanges->map(fn($range) => [
-                'days' => $range,
-                'url' => url("/price/trends/{$range}"),
-                'title' => "روند {$range} روزه قیمت طلا و سکه",
+            'alternateRanges' => $seoDayRanges->map(fn(int $days) => [
+                'days' => $days,
+                'range' => "{$days}d",
+                'url' => $this->rangeParser->trendUrl("{$days}d"),
+                'title' => "روند {$days} روزه قیمت طلا و سکه",
             ])->all(),
-            'jsonLd' => $this->cachedJsonLd($items, $availableRanges, $days, $updatedAt),
+            'jsonLd' => $this->cachedJsonLd($items, $seoDayRanges, $activeRangeKey, $updatedAt),
         ];
     }
 
@@ -104,23 +116,26 @@ class PricePageController extends Controller
         return number_format((float)$value, 0, '.', ',') . ' تومان';
     }
 
-    private function cachedJsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
+    private function cachedJsonLd(Collection $items, Collection $seoDayRanges, ?string $activeRangeKey, ?string $updatedAt): array
     {
         $version = (int)Cache::get('gold:price-data-version', 0);
-        $ttl = max(5, (int)config('gold.summary_cache_seconds', 20));
+        $ttl = max(5, (int)config('gold.summary_cache_seconds', 10));
 
         return Cache::remember(
-            'gold:price-jsonld:v4:' . $version . ':' . ($days ?? 0),
+            'gold:price-jsonld:v4:' . $version . ':' . ($activeRangeKey ?? 'home'),
             $ttl,
-            fn() => $this->jsonLd($items, $availableRanges, $days, $updatedAt)
+            fn() => $this->jsonLd($items, $seoDayRanges, $activeRangeKey, $updatedAt)
         );
     }
 
-    private function jsonLd(Collection $items, Collection $availableRanges, ?int $days, ?string $updatedAt): array
+    private function jsonLd(Collection $items, Collection $seoDayRanges, ?string $activeRangeKey, ?string $updatedAt): array
     {
-        $pageUrl = url($days ? "/price/trends/{$days}" : '/price/');
-        $pageName = $days
-            ? "نمودار {$days} روزه قیمت طلا و سکه"
+        $pageUrl = $activeRangeKey
+            ? $this->rangeParser->trendUrl($activeRangeKey)
+            : url('/price/');
+        $rangeLabel = $activeRangeKey ? $this->rangeParser->seoRangeLabel($activeRangeKey) : null;
+        $pageName = $rangeLabel
+            ? "نمودار {$rangeLabel}ه قیمت طلا و سکه"
             : 'قیمت طلا امروز و قیمت لحظه‌ای سکه';
 
         $listElements = $this
@@ -149,7 +164,8 @@ class PricePageController extends Controller
                             'priceCurrency' => $item->isUsd() ? 'USD' : 'IRR',
                             'availability' => 'https://schema.org/InStock',
                             'url' => $pageUrl,
-                            'priceValidUntil' => now()->addDay()->toDateString(),
+                            'validFrom' => optional($price?->fetched_at)->toIso8601String(),
+                            'priceValidUntil' => $this->schemaPriceValidUntil($price?->fetched_at),
                         ],
                         'additionalProperty' => [
                             ['@type' => 'PropertyValue', 'name' => 'changePercent', 'value' => $this->schemaNumber(
@@ -185,11 +201,11 @@ class PricePageController extends Controller
             ],
             'temporalCoverage' => 'P365D',
             'variableMeasured' => ['current_value', 'high_value', 'low_value', 'change_value', 'change_percent'],
-            'distribution' => $availableRanges->map(fn($range) => [
+            'distribution' => $seoDayRanges->map(fn(int $days) => [
                 '@type' => 'DataDownload',
                 'encodingFormat' => 'text/html',
-                'name' => "تاریخچه {$range} روزه قیمت طلا و سکه",
-                'contentUrl' => url("/price/trends/{$range}"),
+                'name' => "تاریخچه {$days} روزه قیمت طلا و سکه",
+                'contentUrl' => $this->rangeParser->trendUrl("{$days}d"),
             ])->all(),
         ];
 
@@ -197,8 +213,8 @@ class PricePageController extends Controller
             ['@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => url('/')],
             ['@type' => 'ListItem', 'position' => 2, 'name' => 'قیمت طلا و سکه', 'item' => url('/price/')],
         ];
-        if ($days) {
-            $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 3, 'name' => "روند {$days} روزه", 'item' => $pageUrl];
+        if ($rangeLabel) {
+            $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 3, 'name' => "روند {$rangeLabel}ه", 'item' => $pageUrl];
         }
 
         $graph = [
@@ -237,7 +253,7 @@ class PricePageController extends Controller
                     'itemListElement' => $breadcrumbItems,
                 ],
                 'isPartOf' => ['@id' => url('/#website')],
-                'mainEntity' => $days ? ['@id' => url('/price/#historical-price-dataset')] : ['@id' => url('/price/#market-items')],
+                'mainEntity' => $activeRangeKey ? ['@id' => url('/price/#historical-price-dataset')] : ['@id' => url('/price/#market-items')],
                 'speakable' => [
                     '@type' => 'SpeakableSpecification',
                     'cssSelector' => ['h1', '.hero p', '.marketItem small'],
@@ -279,6 +295,14 @@ class PricePageController extends Controller
         $price = (float)$value;
 
         return $item->isUsd() ? $price : $price * 10;
+    }
+
+    private function schemaPriceValidUntil(?Carbon $fetchedAt): string
+    {
+        $intervalMinutes = max(1, (int)config('gold.fetch_interval_minutes', 5));
+        $base = $fetchedAt ? $fetchedAt->copy() : now();
+
+        return $base->addMinutes($intervalMinutes)->toIso8601String();
     }
 
     private function schemaNumber($value): ?float

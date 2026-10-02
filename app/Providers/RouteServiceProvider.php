@@ -27,7 +27,23 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('api', function (Request $request) {
+            if ($request->is('api/market/items/*/history')) {
+                return Limit::perMinute(30)->by($request->ip());
+            }
+
             return Limit::perMinute(120)->by($request->ip());
+        });
+
+        RateLimiter::for('blog-search-index', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
+        });
+
+        RateLimiter::for('blog', function (Request $request) {
+            if (trim((string)$request->query('q', '')) !== '') {
+                return Limit::perMinute(60)->by($request->ip());
+            }
+
+            return Limit::none();
         });
 
         $this->routes(function () {

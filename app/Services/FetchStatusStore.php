@@ -70,14 +70,22 @@ class FetchStatusStore
 
     private function fallbackFromPricePoints(): ?LastFetch
     {
-        $finishedAt = \App\Models\PricePoint::max('fetched_at');
+        $keys = app(MarketCatalog::class)->keys();
+        if ($keys === []) {
+            return null;
+        }
+
+        // Scope to known symbols — avoid MAX over entire append-only table.
+        $finishedAt = \App\Models\PricePoint::query()
+            ->whereIn('item_key', $keys)
+            ->max('fetched_at');
         if (!$finishedAt) {
             return null;
         }
 
         return new LastFetch(
             status: 'success',
-            itemsCount: count(app(MarketCatalog::class)->keys()),
+            itemsCount: count($keys),
             finishedAt: Carbon::parse($finishedAt),
         );
     }

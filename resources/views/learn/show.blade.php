@@ -9,6 +9,21 @@
             <span class="eyebrow">{{ $page['category'] ?? 'مقاله آموزشی طلا و سکه' }}</span>
             <h1>{{ $page['h1'] }}</h1>
             <p class="lead">{{ $page['intro'] }}</p>
+            @if(!empty($page['executive_summary']))
+            <blockquote class="executiveSummary" aria-label="خلاصه اجرایی">
+                <strong>خلاصه اجرایی (در ۳۰ ثانیه):</strong>
+                <ul>
+                    @foreach($page['executive_summary'] as $point)
+                    <li>{{ $point }}</li>
+                    @endforeach
+                </ul>
+            </blockquote>
+            @elseif(!empty($page['quick_summary']))
+            <blockquote class="executiveSummary" aria-label="خلاصه اجرایی">
+                <strong>خلاصه اجرایی:</strong>
+                <p>{{ $page['quick_summary'] }}</p>
+            </blockquote>
+            @endif
             <div class="meta">
                 <span class="pill">آخرین بازبینی محتوا: {{ config('learn.reviewed_at') }}</span>
                 @if(!empty($page['reading_time']))

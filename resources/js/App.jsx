@@ -28,9 +28,19 @@ const defaultConfig = {
 const etagStore = new Map();
 
 function normalizeItems(items) {
-    if (Array.isArray(items)) return items;
-    if (items && typeof items === 'object') return Object.values(items);
-    return [];
+    const list = Array.isArray(items)
+        ? items
+        : (items && typeof items === 'object' ? Object.values(items) : []);
+
+    return list.filter((item) => item && (item.id != null || item.key || item.name)).map((item) => {
+        const current = item.current == null ? null : Number(item.current);
+        return {
+            ...item,
+            current: Number.isFinite(current) && current > 0 ? current : null,
+            stale: Boolean(item.stale),
+            direction: ['asc', 'desc', 'none'].includes(item.direction) ? item.direction : 'none',
+        };
+    });
 }
 
 function readEmbeddedSummary() {
@@ -47,8 +57,12 @@ const embeddedSummary = readEmbeddedSummary();
 
 function buildConfigFromSummary(data) {
     const nextConfig = {...defaultConfig, ...(data?.config || {})};
-    nextConfig.chartDefaultRange = rangeKey(nextConfig.chartDefaultRange);
-    nextConfig.chartAvailableRanges = (nextConfig.chartAvailableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    nextConfig.chartDefaultRange = coerceChartRange(
+        nextConfig.chartDefaultRange,
+        nextConfig.chartAvailableRanges,
+        defaultConfig.chartDefaultRange,
+    );
+    nextConfig.chartAvailableRanges = normalizeAvailableRanges(nextConfig.chartAvailableRanges);
     return nextConfig;
 }
 
@@ -71,6 +85,7 @@ async function fetchJsonWithEtag(url, {signal, etagKey} = {}) {
 
 function historyClientTtlMs(range) {
     const key = rangeKey(range);
+    if (!key) return 45_000;
     const amount = parseInt(key, 10) || 1;
     if (key.endsWith('h')) return 45_000;
     if (amount >= 30) return 300_000;
@@ -79,7 +94,8 @@ function historyClientTtlMs(range) {
 }
 
 function isShortHistoryRange(range) {
-    return ['1h', '2h', '6h', '12h', '1d'].includes(rangeKey(range));
+    const key = rangeKey(range);
+    return key ? ['1h', '2h', '6h', '12h', '1d'].includes(key) : false;
 }
 
 function chartYAxisWidth(item, values) {
@@ -88,66 +104,6 @@ function chartYAxisWidth(item, values) {
     const longest = labels.reduce((max, label) => Math.max(max, label.length), 0);
     return Math.min(96, Math.max(58, longest * 7 + 14));
 }
-
-function ChartYAxisTick({x, y, payload, fill, panelFill, item}) {
-    const label = formatAxisPrice(payload.value, item);
-    if (label === '—') return null;
-    const width = Math.max(48, label.length * 6.8 + 8);
-    return (
-        <g className="chartYAxisTick" transform={`translate(${x},${y})`}>
-            <rect x={2} y={-10} width={width} height={20} fill={panelFill} opacity={0.94} rx={4}/>
-            <text x={6} y={4} textAnchor="start" fill={fill} fontSize={11} fontFamily="Vazirmatn, Tahoma, sans-serif">
-                {label}
-            </text>
-        </g>
-    );
-}
-
-const ChartRenderer = React.lazy(() => import('recharts').then((module) => ({
-    // ponytail: keep recharts lazy; swap to uPlot/canvas if chart TTI becomes the budget bottleneck
-    default: function ChartRenderer({width, height, data, selected, activeRange, colors}) {
-        const {Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis} = module;
-
-        const chartData = React.useMemo(
-            () => data
-                .map((point) => ({...point, timeValue: new Date(point.time).getTime()}))
-                .filter((point) => Number.isFinite(point.timeValue)),
-            [data],
-        );
-        const yAxisWidth = React.useMemo(
-            () => chartYAxisWidth(
-                selected,
-                chartData.map((point) => point.current).filter((value) => Number.isFinite(value) && value > 0),
-            ),
-            [selected, chartData],
-        );
-
-        return (
-            <AreaChart width={width} height={height} data={chartData} margin={{top: 12, right: 2, left: 2, bottom: 8}}>
-                <defs>
-                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={colors.accent} stopOpacity="0.32"/>
-                        <stop offset="100%" stopColor={colors.accent} stopOpacity="0.02"/>
-                    </linearGradient>
-                </defs>
-                <CartesianGrid stroke={colors.line} strokeOpacity={0.82} strokeDasharray="0" vertical={false}/>
-                <XAxis dataKey="timeValue" type="number" scale="time" domain={['dataMin', 'dataMax']}
-                       padding={{left: 0, right: 0}} tickLine={false} axisLine={false}
-                       minTickGap={28}
-                       tickFormatter={(value) => formatChartTick(value, activeRange)}/>
-                <YAxis orientation="right" width={yAxisWidth} tickLine={false} axisLine={false}
-                       domain={chartDomain}
-                       tickCount={5}
-                       tick={<ChartYAxisTick fill={colors.muted} panelFill={colors.panel} item={selected}/>}/>
-                <Tooltip cursor={{stroke: colors.line, strokeDasharray: '3 3'}}
-                         content={<ChartTooltip item={selected}/>}/>
-                <Area type="linear" dataKey="current" stroke={colors.accent} strokeWidth={3}
-                      fill="url(#goldGradient)" dot={false} activeDot={{r: 4}} connectNulls={false}
-                      strokeLinecap="round" strokeLinejoin="round" isAnimationActive={false}/>
-            </AreaChart>
-        );
-    },
-})));
 
 const faNumber = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2});
 const faNumberInt = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 0});
@@ -208,15 +164,17 @@ function hasStoredChartRange() {
 }
 
 function persistChartRange(range) {
+    const key = rangeKey(range);
+    if (!key) return;
     try {
-        localStorage.setItem(chartRangeStorageKey, rangeKey(range));
+        localStorage.setItem(chartRangeStorageKey, key);
     } catch {
         // ignore storage failures
     }
 }
 
 function resolveChartRange(availableRanges, serverDefault, {preferStored = true} = {}) {
-    const available = (availableRanges || defaultConfig.chartAvailableRanges).map(rangeKey);
+    const available = normalizeAvailableRanges(availableRanges);
     const fromTrend = rangeFromTrendPath(available);
     if (fromTrend) {
         return fromTrend;
@@ -226,7 +184,7 @@ function resolveChartRange(availableRanges, serverDefault, {preferStored = true}
             const stored = localStorage.getItem(chartRangeStorageKey);
             if (stored) {
                 const key = rangeKey(stored);
-                if (available.includes(key)) {
+                if (key && available.includes(key)) {
                     return key;
                 }
             }
@@ -235,35 +193,49 @@ function resolveChartRange(availableRanges, serverDefault, {preferStored = true}
         }
     }
 
-    const fallback = rangeKey(serverDefault || defaultConfig.chartDefaultRange);
-    return available.includes(fallback) ? fallback : available[0];
+    return coerceChartRange(serverDefault, available, available[0] || defaultConfig.chartDefaultRange);
 }
 
-function trendDaysFromPath(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
-    const match = String(pathname).match(/\/price\/trends\/(\d+)/);
-    return match ? Number(match[1]) : null;
+function normalizeAvailableRanges(ranges) {
+    const source = ranges?.length ? ranges : defaultConfig.chartAvailableRanges;
+    return [...new Set(source.map(rangeKey).filter(Boolean))];
+}
+
+function coerceChartRange(range, availableRanges, fallback = defaultConfig.chartDefaultRange) {
+    const available = normalizeAvailableRanges(availableRanges);
+    const key = rangeKey(range);
+    if (key && available.includes(key)) {
+        return key;
+    }
+    const safeFallback = rangeKey(fallback);
+    if (safeFallback && available.includes(safeFallback)) {
+        return safeFallback;
+    }
+    return available[0] || defaultConfig.chartDefaultRange;
+}
+
+function trendRangeFromPath(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
+    const match = String(pathname).match(/\/price\/trends\/(\d+[hd]?)/);
+    return match ? match[1] : null;
 }
 
 function rangeFromTrendPath(availableRanges) {
-    const days = trendDaysFromPath();
-    if (!days) return null;
-    const key = `${days}d`;
-    const available = (availableRanges || []).map(rangeKey);
-    return available.includes(key) ? key : null;
+    const slug = trendRangeFromPath();
+    if (!slug) return null;
+    const key = slug.endsWith('h')
+        ? rangeKey(slug)
+        : rangeKey(slug.endsWith('d') ? slug : `${slug}d`);
+    const available = normalizeAvailableRanges(availableRanges);
+    return key && available.includes(key) ? key : null;
 }
 
 function syncTrendUrl(range) {
     if (typeof window === 'undefined' || !window.history?.replaceState) return;
     const key = rangeKey(range);
-    if (!key.endsWith('d')) {
-        if (/\/price\/trends\/\d+/.test(window.location.pathname)) {
-            window.history.replaceState(null, '', '/price/');
-        }
-        return;
-    }
-    const days = parseInt(key, 10);
-    if (!Number.isFinite(days) || days < 1) return;
-    const next = `/price/trends/${days}`;
+    if (!key) return;
+    const slug = key.endsWith('h') ? key : String(parseInt(key, 10));
+    if (!slug) return;
+    const next = `/price/trends/${slug}`;
     if (window.location.pathname === next) return;
     if (!window.location.pathname.startsWith('/price')) return;
     window.history.replaceState(null, '', next);
@@ -342,18 +314,21 @@ function chartDomain([dataMin, dataMax]) {
 function formatChartTick(value, range) {
     if (!value) return '';
     const date = new Date(value);
-    const key = rangeKey(range);
+    const key = rangeKey(range) || '1d';
     return (key.endsWith('h') || key === '1d' ? faTickTime : faTickDate).format(date);
 }
 
 function rangeKey(range) {
-    if (typeof range === 'number') return `${range}d`;
+    if (typeof range === 'number' && Number.isFinite(range) && range > 0) {
+        return `${Math.trunc(range)}d`;
+    }
     const value = String(range || '').trim().toLowerCase();
-    return /^\d+[hd]$/.test(value) ? value : `${parseInt(value || '1', 10) || 1}d`;
+    return /^\d+[hd]$/.test(value) ? value : null;
 }
 
 function rangeLabel(range) {
     const key = rangeKey(range);
+    if (!key) return '—';
     const amount = parseInt(key, 10);
     return key.endsWith('h') ? `${formatNumber(amount)} ساعت` : `${formatNumber(amount)} روز`;
 }
@@ -373,6 +348,13 @@ function formatChartTooltipDate(value) {
     };
 }
 
+function seoRangeTitleLabel(rangeKey) {
+    if (!rangeKey) return null;
+    const amount = parseInt(rangeKey, 10);
+    if (!Number.isFinite(amount) || amount < 1) return null;
+    return rangeKey.endsWith('h') ? `${formatNumber(amount)} ساعت` : `${formatNumber(amount)} روز`;
+}
+
 function fetchStatusMessage(lastFetch, itemsCount) {
     if (!lastFetch && itemsCount === 0) {
         return 'هنوز هیچ دریافت موفقی ثبت نشده است. لطفاً کمی بعد دوباره تلاش کنید.';
@@ -387,7 +369,7 @@ function fetchStatusMessage(lastFetch, itemsCount) {
     }
 
     if (lastFetch?.status === 'partial') {
-        return lastFetch?.message || 'آخرین دریافت ناقص بود؛ بعضی نمادها ممکن است قدیمی باشند.';
+        return lastFetch?.message || 'آخرین دریافت ناقص بود؛ بعضی نمادها ممکن است قدیمی باشند. لطفاً دوباره تلاش کنید.';
     }
 
     if (lastFetch?.status === 'success' && Number(lastFetch.items_count || 0) === 0) {
@@ -395,6 +377,10 @@ function fetchStatusMessage(lastFetch, itemsCount) {
     }
 
     return '';
+}
+
+function fetchNoticeIsCritical(lastFetch) {
+    return lastFetch?.status === 'failed' || lastFetch?.status === 'partial';
 }
 
 function categoryLabel(category) {
@@ -438,7 +424,7 @@ function seoPriceFingerprint(items) {
     const primaryGold = list.find((item) => item.name?.includes('۱۸') || item.name?.includes('18'))
         || list.find((item) => item.category === 'gold');
     const primaryCoin = list.find((item) => item.category === 'coin');
-    return `${trendDaysFromPath()}|${primaryGold?.current ?? ''}|${primaryCoin?.current ?? ''}`;
+    return `${trendRangeFromPath()}|${primaryGold?.current ?? ''}|${primaryCoin?.current ?? ''}`;
 }
 
 function useElementSize() {
@@ -476,9 +462,16 @@ function useElementSize() {
     return [ref, size];
 }
 
-async function fetchHistory(itemId, range, signal) {
-    const url = `/api/market/items/${itemId}/history?range=${encodeURIComponent(rangeKey(range))}`;
-    const result = await fetchJsonWithEtag(url, {signal, etagKey: `history:${itemId}:${rangeKey(range)}`});
+async function fetchHistory(item, range, signal) {
+    const itemRef = typeof item === 'object' && item !== null
+        ? (item.slug || item.id)
+        : item;
+    const rangeParam = rangeKey(range);
+    if (!itemRef || !rangeParam) {
+        throw new Error('invalid_history_request');
+    }
+    const url = `/api/market/items/${encodeURIComponent(itemRef)}/history?range=${encodeURIComponent(rangeParam)}`;
+    const result = await fetchJsonWithEtag(url, {signal, etagKey: `history:${itemRef}:${rangeParam}`});
     if (result.notModified) return {notModified: true};
     return {notModified: false, data: result.data};
 }
@@ -512,6 +505,7 @@ function App() {
     const refreshTimer = useRef(null);
     const lastFetchKey = useRef(embeddedSummary?.lastFetch?.finished_at || null);
     const summaryFp = useRef(embeddedSummary ? summaryFingerprint(embeddedSummary) : null);
+    const summarySeq = useRef(0);
     const seoFp = useRef(null);
 
     useEffect(() => {
@@ -525,26 +519,6 @@ function App() {
         }
     }, [items.length]);
 
-    // Warm recharts chunk after first paint so the first chart open is cheaper.
-    useEffect(() => {
-        if (items.length === 0) return undefined;
-        let idleId = null;
-        let timerId = null;
-        const warm = () => {
-            import('recharts').catch(() => {
-            });
-        };
-        if ('requestIdleCallback' in window) {
-            idleId = window.requestIdleCallback(warm, {timeout: 3000});
-        } else {
-            timerId = window.setTimeout(warm, 1500);
-        }
-        return () => {
-            if (idleId) window.cancelIdleCallback?.(idleId);
-            if (timerId) window.clearTimeout(timerId);
-        };
-    }, [items.length]);
-
     useEffect(() => {
         if (localStorage.getItem('theme') || config.themeDefault !== 'system' || !window.matchMedia) return undefined;
         const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -554,12 +528,14 @@ function App() {
     }, [config.themeDefault]);
 
     const loadSummary = useCallback(async ({silent = false} = {}) => {
+        const seq = ++summarySeq.current;
         if (!silent && !embeddedSummary) {
             setStatus('loading');
         }
         setError('');
         try {
             const result = await fetchJsonWithEtag('/api/market/summary', {etagKey: 'summary'});
+            if (seq !== summarySeq.current) return;
             if (result.notModified) {
                 if (!silent) setStatus('ready');
                 return;
@@ -603,12 +579,10 @@ function App() {
             setSelectedId((current) => current || normalizeItems(data.items)[0]?.id || null);
             setStatus('ready');
         } catch {
+            if (seq !== summarySeq.current) return;
             setError('در حال حاضر امکان دریافت اطلاعات بازار وجود ندارد. لطفاً کمی بعد دوباره تلاش کنید.');
             setStatus('error');
-            if (!silent) {
-                setItems([]);
-                setHistory([]);
-            }
+            // Keep last good prices/history — a failed refresh must not blank the dashboard.
         }
     }, []);
 
@@ -661,7 +635,7 @@ function App() {
             return () => controller.abort();
         }
 
-        fetchHistory(selected.id, range, controller.signal)
+        fetchHistory(selected, range, controller.signal)
             .then((result) => {
                 if (result.notModified && cached) {
                     setHistoryLoading(false);
@@ -703,24 +677,25 @@ function App() {
         var timerId = null;
 
         const warmHistoryCache = () => {
-            const queue = items
-                .filter((item) => item.id !== selected?.id)
-                .slice(0, 2)
-                .filter((item) => !historyCache.current.has(`${item.id}:${range}`));
+            // One warm fetch max; skip on save-data — shared host rebuilds are costly.
+            if (navigator.connection?.saveData) return;
 
-            queue.forEach((item) => {
-                fetchHistory(item.id, range, controller.signal)
-                    .then((result) => {
-                        if (result.notModified) return;
-                        historyCache.current.set(`${item.id}:${range}`, {
-                            ...result.data,
-                            points: sanitizeHistory(result.data.points),
-                            cachedAt: Date.now(),
-                        });
-                    })
-                    .catch(() => {
+            const warmItem = items
+                .filter((item) => item.id !== selected?.id)
+                .find((item) => !historyCache.current.has(`${item.id}:${range}`));
+            if (!warmItem) return;
+
+            fetchHistory(warmItem, range, controller.signal)
+                .then((result) => {
+                    if (result.notModified) return;
+                    historyCache.current.set(`${warmItem.id}:${range}`, {
+                        ...result.data,
+                        points: sanitizeHistory(result.data.points),
+                        cachedAt: Date.now(),
                     });
-            });
+                })
+                .catch(() => {
+                });
         };
 
         if ('requestIdleCallback' in window) {
@@ -749,6 +724,7 @@ function App() {
     const ranges = config.chartAvailableRanges?.length ? config.chartAvailableRanges : defaultConfig.chartAvailableRanges;
     const activeRange = range || config.chartDefaultRange || defaultConfig.chartDefaultRange;
     const fetchNotice = fetchStatusMessage(lastFetch, items.length);
+    const fetchNoticeCritical = fetchNoticeIsCritical(lastFetch);
 
     useEffect(() => {
         if (items.length === 0) return;
@@ -756,11 +732,17 @@ function App() {
         if (nextSeo === seoFp.current) return;
         seoFp.current = nextSeo;
 
-        const days = trendDaysFromPath();
-        if (days) {
-            document.title = `نمودار ${days} روزه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران`;
-            setMeta('description', `بررسی روند ${days} روزه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران.`);
-            return;
+        const rangeSlug = trendRangeFromPath();
+        if (rangeSlug) {
+            const key = rangeSlug.endsWith('h')
+                ? rangeSlug
+                : (rangeSlug.endsWith('d') ? rangeSlug : `${rangeSlug}d`);
+            const label = seoRangeTitleLabel(key);
+            if (label) {
+                document.title = `نمودار ${label}ه قیمت طلا و سکه | قیمت لحظه‌ای بازار ایران`;
+                setMeta('description', `بررسی روند ${label}ه قیمت طلا و سکه با داده‌های تاریخی، نمودار تعاملی و آخرین قیمت‌های ثبت‌شده بازار ایران.`);
+                return;
+            }
         }
         const primaryGold = items.find((item) => item.name.includes('۱۸') || item.name.includes('18')) || items.find((item) => item.category === 'gold');
         const primaryCoin = items.find((item) => item.category === 'coin');
@@ -808,7 +790,14 @@ function App() {
             {error && <div className="notice noticeWithAction"><span>{error}</span>
                 <button type="button" onClick={() => loadSummary()}><RefreshCw size={16}/>تلاش دوباره</button>
             </div>}
-            {!error && fetchNotice && <div className="notice">{fetchNotice}</div>}
+            {!error && fetchNotice && (
+                <div className={`notice ${fetchNoticeCritical ? 'noticeWithAction' : ''}`}>
+                    <span>{fetchNotice}</span>
+                    {fetchNoticeCritical && (
+                        <button type="button" onClick={() => loadSummary()}><RefreshCw size={16}/>تلاش دوباره</button>
+                    )}
+                </div>
+            )}
 
             <section className="layout">
                 <aside className="marketPanel">
@@ -835,6 +824,7 @@ function App() {
                                                                                   className={rangeKey(activeRange) === rangeKey(nextRange) ? 'active' : ''}
                                                                                   onClick={() => {
                                                                                       const key = rangeKey(nextRange);
+                                                                                      if (!key) return;
                                                                                       setRange(key);
                                                                                       persistChartRange(key);
                                                                                       syncTrendUrl(key);
@@ -873,23 +863,28 @@ function App() {
 }
 
 function PriceChart({history, selected, activeRange, accent, theme}) {
-    const [chartRef, size] = useElementSize();
+    const [wrapRef, size] = useElementSize();
+    const canvasRef = useRef(null);
+    const layoutRef = useRef(null);
+    const [hover, setHover] = useState(null);
     const [colors, setColors] = useState({
         accent: accent || defaultConfig.themeAccent,
         line: '#263241',
         panel: '#111821',
         muted: '#9aa7b4',
+        text: '#e8eef4',
     });
-    const data = useMemo(() => history
-            .map((point) => {
-                const current = Number(point.current);
-                return {
-                    ...point,
-                    current: Number.isFinite(current) && current > 0 ? current : null,
-                };
-            })
-            .filter((point) => point.time),
-        [history]);
+
+    const series = useMemo(() => history
+        .map((point) => {
+            const t = new Date(point.time).getTime();
+            const current = Number(point.current);
+            return {
+                t,
+                v: Number.isFinite(current) && current > 0 ? current : null,
+            };
+        })
+        .filter((point) => Number.isFinite(point.t)), [history]);
 
     useEffect(() => {
         const styles = getComputedStyle(document.documentElement);
@@ -898,17 +893,255 @@ function PriceChart({history, selected, activeRange, accent, theme}) {
             line: styles.getPropertyValue('--line').trim() || '#263241',
             panel: styles.getPropertyValue('--panel').trim() || '#111821',
             muted: styles.getPropertyValue('--muted').trim() || '#9aa7b4',
+            text: styles.getPropertyValue('--text').trim() || '#e8eef4',
         });
     }, [accent, theme]);
 
-    return <div className="chartCanvas" ref={chartRef}>
-        {size.width > 0 && size.height > 0 && data.some((point) => point.current !== null) && (
-            <React.Suspense fallback={<div className="chartSkeleton" aria-hidden="true"/>}>
-                <ChartRenderer width={size.width} height={size.height} data={data} selected={selected}
-                               activeRange={activeRange} colors={colors}/>
-            </React.Suspense>
-        )}
-    </div>;
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || size.width < 2 || size.height < 2) return;
+
+        const usable = series.filter((p) => p.v !== null);
+        if (!usable.length) {
+            layoutRef.current = null;
+            return;
+        }
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(size.width * dpr);
+        canvas.height = Math.floor(size.height * dpr);
+        canvas.style.width = `${size.width}px`;
+        canvas.style.height = `${size.height}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, size.width, size.height);
+
+        const values = usable.map((p) => p.v);
+        const yAxisW = chartYAxisWidth(selected, values);
+        const pad = {top: 12, right: yAxisW + 4, left: 8, bottom: 28};
+        const plotW = Math.max(1, size.width - pad.left - pad.right);
+        const plotH = Math.max(1, size.height - pad.top - pad.bottom);
+        const tMin = series[0].t;
+        const tMax = series[series.length - 1].t;
+        const tSpan = Math.max(1, tMax - tMin);
+        const [yMin, yMax] = chartDomain([Math.min(...values), Math.max(...values)]);
+        const ySpan = Math.max(1e-9, yMax - yMin);
+
+        const xAt = (t) => pad.left + ((t - tMin) / tSpan) * plotW;
+        const yAt = (v) => pad.top + (1 - (v - yMin) / ySpan) * plotH;
+
+        layoutRef.current = {pad, plotW, plotH, tMin, tSpan, xAt, yAt, series};
+
+        // Horizontal grid
+        ctx.strokeStyle = colors.line;
+        ctx.globalAlpha = 0.82;
+        ctx.lineWidth = 1;
+        const tickCount = 5;
+        for (let i = 0; i < tickCount; i += 1) {
+            const ratio = tickCount === 1 ? 0 : i / (tickCount - 1);
+            const y = pad.top + ratio * plotH;
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(pad.left + plotW, y);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // Area + line (gap on nulls)
+        const fillGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+        fillGrad.addColorStop(0, withAlpha(colors.accent, 0.32));
+        fillGrad.addColorStop(1, withAlpha(colors.accent, 0.02));
+
+        let seg = [];
+        const flush = () => {
+            if (seg.length < 1) return;
+            if (seg.length >= 2) {
+                ctx.beginPath();
+                ctx.moveTo(seg[0].x, pad.top + plotH);
+                for (const p of seg) ctx.lineTo(p.x, p.y);
+                ctx.lineTo(seg[seg.length - 1].x, pad.top + plotH);
+                ctx.closePath();
+                ctx.fillStyle = fillGrad;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(seg[0].x, seg[0].y);
+                for (let i = 1; i < seg.length; i += 1) ctx.lineTo(seg[i].x, seg[i].y);
+                ctx.strokeStyle = colors.accent;
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.arc(seg[0].x, seg[0].y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = colors.accent;
+                ctx.fill();
+            }
+            seg = [];
+        };
+
+        for (const point of series) {
+            if (point.v === null) {
+                flush();
+                continue;
+            }
+            seg.push({x: xAt(point.t), y: yAt(point.v)});
+        }
+        flush();
+
+        // Y ticks (right)
+        ctx.font = '11px Vazirmatn, Tahoma, sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        for (let i = 0; i < tickCount; i += 1) {
+            const ratio = tickCount === 1 ? 0 : i / (tickCount - 1);
+            const value = yMax - ratio * ySpan;
+            const label = formatAxisPrice(value, selected);
+            if (label === '—') continue;
+            const y = pad.top + ratio * plotH;
+            const tw = Math.max(48, label.length * 6.8 + 8);
+            ctx.fillStyle = withAlpha(colors.panel, 0.94);
+            roundRect(ctx, pad.left + plotW + 2, y - 10, tw, 20, 4);
+            ctx.fill();
+            ctx.fillStyle = colors.muted;
+            ctx.fillText(label, pad.left + plotW + 6, y);
+        }
+
+        // X ticks
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = colors.muted;
+        const minGap = 56;
+        let lastX = -Infinity;
+        const xTicks = Math.max(2, Math.floor(plotW / minGap));
+        for (let i = 0; i <= xTicks; i += 1) {
+            const t = tMin + (i / xTicks) * tSpan;
+            const x = xAt(t);
+            if (x - lastX < minGap * 0.85 && i !== 0 && i !== xTicks) continue;
+            lastX = x;
+            ctx.fillText(formatChartTick(t, activeRange), x, pad.top + plotH + 8);
+        }
+
+        // Hover crosshair + dot
+        if (hover && Number.isFinite(hover.v)) {
+            const hx = xAt(hover.t);
+            const hy = yAt(hover.v);
+            ctx.save();
+            ctx.setLineDash([3, 3]);
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(hx, pad.top);
+            ctx.lineTo(hx, pad.top + plotH);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = colors.accent;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = colors.panel;
+            ctx.stroke();
+        }
+    }, [series, size, colors, selected, activeRange, hover]);
+
+    const onPointer = (event) => {
+        const layout = layoutRef.current;
+        const canvas = canvasRef.current;
+        if (!layout || !canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        if (x < layout.pad.left || x > layout.pad.left + layout.plotW) {
+            setHover(null);
+            return;
+        }
+        const t = layout.tMin + ((x - layout.pad.left) / layout.plotW) * layout.tSpan;
+        let best = null;
+        let bestDist = Infinity;
+        for (const point of layout.series) {
+            if (point.v === null) continue;
+            const dist = Math.abs(point.t - t);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = point;
+            }
+        }
+        if (!best) {
+            setHover(null);
+            return;
+        }
+        setHover({
+            t: best.t,
+            v: best.v,
+            x: layout.xAt(best.t),
+            y: layout.yAt(best.v),
+        });
+    };
+
+    const tooltip = hover ? formatChartTooltipDate(hover.t) : null;
+    const tipLeft = hover
+        ? Math.min(Math.max(hover.x + 12, 8), Math.max(8, size.width - 140))
+        : 0;
+    const tipTop = hover
+        ? Math.min(Math.max(hover.y - 56, 8), Math.max(8, size.height - 72))
+        : 0;
+
+    return (
+        <div className="chartCanvas" ref={wrapRef}>
+            {size.width > 0 && size.height > 0 && series.some((p) => p.v !== null) ? (
+                <>
+                    <canvas
+                        ref={canvasRef}
+                        onPointerMove={onPointer}
+                        onPointerLeave={() => setHover(null)}
+                        style={{display: 'block', width: '100%', height: '100%', touchAction: 'none'}}
+                    />
+                    {hover && (
+                        <div className="tooltip chartHoverTip" style={{left: tipLeft, top: tipTop}}>
+                            {tooltip ? (
+                                <>
+                                    <span>{tooltip.datePart}</span>
+                                    <span>ساعت {tooltip.timePart}</span>
+                                </>
+                            ) : (
+                                <span>—</span>
+                            )}
+                            <strong>{formatPrice(hover.v, selected)}</strong>
+                        </div>
+                    )}
+                </>
+            ) : null}
+        </div>
+    );
+}
+
+function withAlpha(color, alpha) {
+    const value = String(color || '').trim();
+    if (value.startsWith('#') && (value.length === 7 || value.length === 4)) {
+        const hex = value.length === 4
+            ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`
+            : value;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+    return value;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
 }
 
 function Metric({value, label, compact = false, tone = '', item = null, price = false}) {
@@ -934,22 +1167,6 @@ function MarketItem({item, active, onClick}) {
             </span>
         </button>
     );
-}
-
-function ChartTooltip({active, payload, label, item}) {
-    if (!active || !payload?.length) return null;
-    const formatted = formatChartTooltipDate(label);
-    return <div className="tooltip">
-        {formatted ? (
-            <>
-                <span>{formatted.datePart}</span>
-                <span>ساعت {formatted.timePart}</span>
-            </>
-        ) : (
-            <span>—</span>
-        )}
-        <strong>{formatPrice(payload[0].value, item)}</strong>
-    </div>;
 }
 
 createRoot(document.getElementById('root')).render(<App/>);

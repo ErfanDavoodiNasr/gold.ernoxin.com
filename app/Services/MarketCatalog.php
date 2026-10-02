@@ -135,10 +135,10 @@ class MarketCatalog
             return collect();
         }
 
+        // No current_value > 0 on MAX — zeros rejected at ingest; predicate blocks loose index scan.
         $latest = PricePoint::query()
             ->selectRaw('item_key, MAX(fetched_at) as max_fetched_at')
             ->whereIn('item_key', $keys)
-            ->where('current_value', '>', 0)
             ->groupBy('item_key');
 
         return PricePoint::query()
@@ -159,7 +159,6 @@ class MarketCatalog
                     ->on('price_points.fetched_at', '=', 'latest.max_fetched_at');
             })
             ->whereIn('price_points.item_key', $keys)
-            ->where('price_points.current_value', '>', 0)
             ->get()
             ->keyBy('item_key');
     }

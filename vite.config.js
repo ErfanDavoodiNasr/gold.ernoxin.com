@@ -17,7 +17,6 @@ export default defineConfig({
                 manualChunks(id) {
                     if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';
                     if (id.includes('node_modules/lucide-react')) return 'icons';
-                    if (id.includes('node_modules/recharts')) return 'recharts';
                 },
                 chunkFileNames: 'assets/[name]-[hash].js',
                 entryFileNames: 'assets/[name]-[hash].js',

@@ -18,10 +18,18 @@
       "Database\\Seeders\\": "database/seeders/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
   "scripts": {
     "post-autoload-dump": [
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
       "@php artisan package:discover --ansi"
+    ],
+    "test": [
+      "@php vendor/phpunit/phpunit/phpunit"
     ]
   },
   "config": {
@@ -32,6 +40,10 @@
     "preferred-install": "dist",
     "sort-packages": true
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "require-dev": {
+    "mockery/mockery": "^1.5",
+    "phpunit/phpunit": "^9.6"
+  }
 }

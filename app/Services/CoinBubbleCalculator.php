@@ -88,7 +88,7 @@ class CoinBubbleCalculator
                     'intrinsic' => null,
                     'bubble' => null,
                     'bubble_percent' => null,
-                    'unavailable_reason' => 'داده هم‌زمان نیست',
+                    'unavailable_reason' => $this->syncUnavailableReason($syncThreshold),
                     ...$meta,
                 ];
                 continue;
@@ -119,5 +119,12 @@ class CoinBubbleCalculator
         }
 
         return abs($coinAt->diffInSeconds($referenceAt)) <= $thresholdSeconds;
+    }
+
+    private function syncUnavailableReason(int $thresholdSeconds): string
+    {
+        $minutes = max(1, (int)ceil($thresholdSeconds / 60));
+
+        return "قیمت سکه و طلای ۱۸ عیار در بازهٔ {$minutes} دقیقه‌ای هم‌زمان ثبت نشده؛ برآورد ذاتی قابل محاسبه نیست.";
     }
 }

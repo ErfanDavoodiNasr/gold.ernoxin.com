@@ -21,12 +21,8 @@ class PageCacheHeaders
             return $response;
         }
 
-        if ($request->is('price', 'price/', 'price/trends/*')) {
+        if ($request->is('price', 'price/', 'price/trends/*', 'price/mozaneh', 'price/coin-bubble', 'price/ounce')) {
             $response->headers->set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
-            return $response;
-        }
-
-        if ($request->is('price/mozaneh', 'price/coin-bubble', 'price/ounce')) {
             return $response;
         }
 

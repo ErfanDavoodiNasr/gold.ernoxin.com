@@ -32,6 +32,8 @@
 4. اطلاعات دیتابیس را در `.env.example` وارد کنید.
 5. دامنه را باز کنید؛ برنامه از همان فایل یک `.env` می‌سازد و `APP_KEY` را مقداردهی می‌کند.
 6. جدول‌های دیتابیس را در phpMyAdmin اجرا کنید: `database/schema/mysql.sql`
+   (نصب‌های قدیمی: پچ `database/schema/patches/2026-08-perf-raw-and-hourly.sql` و در صورت وجود ستون،
+   `ALTER TABLE price_points DROP COLUMN raw_payload`)
 7. Cron دریافت قیمت را فعال کنید.
 
 هر tag با فرمت `v*` مثل `v1.0.0` در GitHub Actions بیلد می‌شود و فایل آماده‌ی نصب به همان Release اضافه می‌شود.
@@ -91,9 +93,9 @@ Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
 مسیر `/home/USER/gold/artisan` را با مسیر واقعی پروژه روی هاست جایگزین کنید. اگر مسیر PHP روی هاست متفاوت است، به جای
 `/usr/local/bin/php` همان مسیر را بگذارید.
 
-فاصله دریافت بر اساس ساعت `Asia/Tehran` هم‌تراز می‌شود: با `ESTJT_FETCH_INTERVAL_MINUTES=5` در بازه‌های
-پنج‌دقیقه‌ای (مثلاً ۱۰:۲۰، ۱۰:۲۵، ۱۰:۳۰، …) انجام می‌شود. Cron باید هر دقیقه اجرا شود؛ برنامه خودش زمان‌های نامناسب
-را رد می‌کند. نقاط قدیمی‌تر از `HISTORY_RETENTION_DAYS` روزی یک‌بار پاک می‌شوند.
+فاصله دریافت با `ESTJT_FETCH_INTERVAL_MINUTES` نسبت به آخرین دریافت موفق اندازه‌گیری می‌شود
+(مثلاً با مقدار ۵، حداقل پنج دقیقه بعد از آخرین موفقیت). Cron باید هر دقیقه اجرا شود؛ برنامه خودش اجراهای زودتر را
+رد می‌کند و با قفل فایل از همپوشانی جلوگیری می‌کند. نقاط قدیمی‌تر از `HISTORY_RETENTION_DAYS` روزی یک‌بار پاک می‌شوند.
 
 اگر هاست اجرای هر دقیقه را محدود کرده، Cron را هر پنج دقیقه اجرا کنید. در این حالت حتی اگر
 `ESTJT_FETCH_INTERVAL_MINUTES=1` باشد، دریافت واقعی حداکثر هر پنج دقیقه انجام می‌شود.
@@ -102,16 +104,27 @@ Command: /usr/local/bin/php /home/USER/gold/artisan gold:fetch-prices
 می‌شود (`CACHE_DRIVER=apc`)؛ وگرنه `file`. قفل ضد-stampede همیشه روی فایل است. در cPanel از
 Select PHP Version / Extensions می‌توانید `apcu` را روشن کنید.
 
-## API
+## تست‌ها (توسعه / CI)
 
-```text
-GET  /api/market/summary
-GET  /api/market/items/{id}/history?range=1d
+```bash
+composer install
+vendor/bin/phpunit
+# یا:
+composer test
 ```
+
+تست‌ها روی SQLite حافظه‌ای اجرا می‌شوند و به منبع زنده estjt وابسته نیستند. Fixtureهای HTML در `tests/Fixtures/estjt/`
+هستند.
+
+## امنیت DocumentRoot روی cPanel
+
+اگر کل پروژه داخل `public_html` باشد، ریشهٔ `.htaccess` مسیرهای حساس (`app`, `vendor`, `.env`, `.git`, …) را مسدود
+می‌کند. بدون `mod_rewrite` هم دسترسی به فایل‌های غیر از `index.php` رد می‌شود.
 
 ## توسعه محلی
 
-1. فایل `database/schema/mysql.sql` را در MySQL import کنید.
+1. فایل `database/schema/mysql.sql` را در MySQL import کنید (یا پچ
+   `database/schema/patches/2026-08-perf-raw-and-hourly.sql` روی دیتابیس موجود).
 2. سپس:
 
 ```bash

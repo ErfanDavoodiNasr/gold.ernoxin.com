@@ -281,8 +281,15 @@
         @if($featuredItems->isNotEmpty())
         <section>
             <h2>{{ ($hubKey ?? null) === 'coin-bubble' ? 'قیمت و حباب سکه‌ها' : 'قیمت‌های مرتبط' }}</h2>
+            @if(($hubKey ?? null) === 'coin-bubble')
+            <p class="lead" style="font-size:14px;margin-bottom:12px;color:var(--muted,#888)">
+                ارزش ذاتی و حباب بر اساس وزن × عیار × قیمت طلای ۱۸ عیار محاسبه می‌شود.
+                اجرت ضرب، حباب سیاستی و اختلاف خرید/فروش لحاظ نمی‌شود — این اعداد برآورد آموزشی‌اند، نه قیمت معامله.
+            </p>
+            @else
             <p class="lead" style="font-size:15px;margin-bottom:12px">داده‌های زنده از اتحادیه طلا تهران — {{
                 $featuredItems->count() }} نماد مرتبط با این صفحه.</p>
+            @endif
             <div class="priceGrid">
                 @foreach($featuredItems as $item)
                 @php($bubble = ($bubbles ?? [])[$item->key] ?? null)
@@ -309,7 +316,7 @@
                     </small>
                     @if($bubble)
                     @if(($bubble['bubble'] ?? null) !== null)
-                    <small>ارزش Intrinsic: {{ number_format($bubble['intrinsic'], 0, '.', ',') }} تومان</small>
+                    <small>ارزش ذاتی (برآورد): {{ number_format($bubble['intrinsic'], 0, '.', ',') }} تومان</small>
                     <small>حباب: {{ number_format($bubble['bubble'], 0, '.', ',') }} تومان ({{
                         number_format($bubble['bubble_percent'], 1, '.', ',') }}٪)</small>
                     @else

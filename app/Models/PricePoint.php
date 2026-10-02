@@ -16,12 +16,10 @@ class PricePoint extends Model
         'change_value',
         'change_percent',
         'direction',
-        'raw_payload',
         'fetched_at',
     ];
 
     protected $casts = [
-        'raw_payload' => 'array',
         'fetched_at' => 'datetime',
         'current_value' => 'float',
         'high_value' => 'float',

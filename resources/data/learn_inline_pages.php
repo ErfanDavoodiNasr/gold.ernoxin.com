@@ -44,7 +44,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['18k-gold', 'gold-ounce-mesghal', 'buying-gold-safely'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-price-formulas', 'buying-gold-safely'],
         'market_links' => [
             ['label' => 'قیمت لحظه‌ای طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه قیمت‌ها', 'url' => '/price/trends/30'],
@@ -110,7 +110,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['gold-price-guide', 'gold-ounce-mesghal', 'buying-gold-safely'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-price-formulas', 'buying-gold-safely'],
         'market_links' => [
             ['label' => 'قیمت طلای ۱۸ عیار در صفحه بازار', 'url' => '/price/'],
             ['label' => 'API خلاصه بازار', 'url' => '/api/market/summary'],
@@ -175,7 +175,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['gold-bubble', 'buying-gold-safely', 'gold-price-guide'],
+        'related' => ['gold-bubble', 'buying-gold-safely', 'guide-gold-pricing-iran-market'],
         'market_links' => [
             ['label' => 'قیمت زنده انواع سکه', 'url' => '/price/'],
             ['label' => 'روند ۹۰ روزه قیمت‌ها', 'url' => '/price/trends/90'],
@@ -240,7 +240,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['gold-coin-guide', 'gold-ounce-mesghal', 'buying-gold-safely'],
+        'related' => ['gold-coin-guide', 'guide-gold-price-formulas', 'buying-gold-safely'],
         'market_links' => [
             ['label' => 'قیمت زنده سکه', 'url' => '/price/'],
             ['label' => 'داده خلاصه بازار', 'url' => '/api/market/summary'],
@@ -305,7 +305,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['gold-price-guide', '18k-gold', 'gold-bubble'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-karat-purity-18k-vs-24k', 'gold-bubble'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و مظنه', 'url' => '/price/'],
             ['label' => 'روند ۷ روزه قیمت‌ها', 'url' => '/price/trends/7'],
@@ -370,7 +370,7 @@ return [
                 ],
             ],
         ],
-        'related' => ['gold-price-guide', '18k-gold', 'gold-coin-guide', 'gold-bubble'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-karat-purity-18k-vs-24k', 'gold-coin-guide', 'gold-bubble'],
         'market_links' => [
             ['label' => 'بررسی قیمت‌های زنده', 'url' => '/price/'],
             ['label' => 'API خلاصه بازار', 'url' => '/api/market/summary'],
@@ -454,10 +454,10 @@ return [
             'عیار' => 'مقیاسی برای بیان نسبت طلای خالص در آلیاژ.',
             'آلیاژ' => 'ترکیب طلا با یک یا چند فلز دیگر برای ایجاد ویژگی‌های فیزیکی متفاوت.',
         ],
-        'related' => ['18k-gold', 'gold-karat-difference', 'gold-price-guide'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'guide-gold-pricing-iran-market'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
-            ['label' => 'تفاوت انس، مثقال و گرم', 'url' => '/blog/gold-ounce-mesghal'],
+            ['label' => 'تفاوت انس، مثقال و گرم', 'url' => '/blog/guide-gold-price-formulas'],
         ],
         'faqs' => [
             ['question' => 'آیا طلای ۲۴ عیار همان طلای بدون ناخالصی است؟', 'answer' => 'در زبان بازار، ۲۴ عیار به طلای بسیار خالص اشاره دارد؛ برای ادعای دقیق درباره کالا باید فاکتور و آزمون معتبر بررسی شود.'],
@@ -530,7 +530,7 @@ return [
             'وزن' => 'مقدار جرم کالا، معمولاً بر حسب گرم.',
             'اجرت' => 'هزینه ساخت یا کار انجام‌شده روی مصنوعات طلا.',
         ],
-        'related' => ['18k-gold', '24k-gold', 'gold-making-charge'],
+        'related' => ['guide-gold-karat-purity-18k-vs-24k', 'guide-gold-karat-purity-18k-vs-24k', 'gold-making-charge'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -597,7 +597,7 @@ return [
             'قیمت پایه طلا' => 'ارزش طلای به‌کاررفته بر اساس وزن، عیار و قیمت روز.',
             'فاکتور' => 'سند فروش که باید جزئیات معامله را روشن کند.',
         ],
-        'related' => ['buying-gold-safely', 'gold-vat', 'gold-price-calculation'],
+        'related' => ['buying-gold-safely', 'guide-gold-invoice-tax-1405', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت روز طلا', 'url' => '/price/'],
         ],
@@ -663,7 +663,7 @@ return [
             'ارزش افزوده' => 'نوعی مالیات که قواعد و نرخ آن تابع قانون و مقررات جاری است.',
             'حق‌العمل' => 'مبلغ مربوط به انجام کار یا واسطه‌گری که در برخی متون مالیاتی از آن نام برده می‌شود.',
         ],
-        'related' => ['gold-making-charge', 'buying-gold-safely', 'gold-price-calculation'],
+        'related' => ['gold-making-charge', 'buying-gold-safely', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
         ],
@@ -742,7 +742,7 @@ return [
             'مظنه' => 'اصطلاح رایج بازار ایران که باید با واحد و عیار مشخص خوانده شود.',
             'اختلاف خرید و فروش' => 'فاصله میان قیمتی که بازار می‌خرد و قیمتی که می‌فروشد.',
         ],
-        'related' => ['gold-price-guide', 'gold-price-factors', 'gold-ounce-mesghal', 'gold-price-calculation'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'guide-gold-price-formulas', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
             ['label' => 'روند ۳۰ روزه', 'url' => '/price/trends/30'],
@@ -809,7 +809,7 @@ return [
             'نقدشوندگی' => 'سهولت تبدیل کالا به پول نقد در شرایط بازار.',
             'انتظارات بازار' => 'برداشت فعالان بازار از آینده که ممکن است روی رفتار خرید و فروش اثر بگذارد.',
         ],
-        'related' => ['how-gold-price-is-set', 'gold-price-guide', 'gold-bubble'],
+        'related' => ['guide-gold-pricing-iran-market', 'guide-gold-pricing-iran-market', 'gold-bubble'],
         'market_links' => [
             ['label' => 'قیمت زنده و نمودار', 'url' => '/price/'],
             ['label' => 'روند ۹۰ روزه', 'url' => '/price/trends/90'],
@@ -953,7 +953,7 @@ return [
             'طلای دست دوم' => 'طلایی که قبلاً خرید و استفاده یا معامله شده است.',
             'بازخرید' => 'شرایطی که فروشنده یا بازار برای خرید دوباره کالا اعلام می‌کند.',
         ],
-        'related' => ['buying-gold-safely', 'gold-making-charge', 'gold-vat'],
+        'related' => ['buying-gold-safely', 'gold-making-charge', 'guide-gold-invoice-tax-1405'],
         'market_links' => [
             ['label' => 'قیمت روز طلا', 'url' => '/price/'],
         ],
@@ -1028,7 +1028,7 @@ return [
             'قیمت پایه' => 'محاسبه اولیه ارزش فلزی بر اساس وزن و قیمت واحد.',
             'هزینه‌های فاکتور' => 'مواردی مانند اجرت، سود و هزینه‌های قانونی که باید شفاف باشند.',
         ],
-        'related' => ['gold-making-charge', 'gold-vat', 'how-gold-price-is-set', 'gold-ounce-mesghal'],
+        'related' => ['gold-making-charge', 'guide-gold-invoice-tax-1405', 'guide-gold-pricing-iran-market', 'guide-gold-price-formulas'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا', 'url' => '/price/'],
             ['label' => 'API خلاصه بازار', 'url' => '/api/market/summary'],
@@ -1106,7 +1106,7 @@ return [
             'قیمت تابلو' => 'قیمت اعلامی بازار برای یک واحد مشخص که الزاماً قیمت نهایی کالا نیست.',
             'قیمت نهایی' => 'مبلغی که بعد از محاسبه وزن، عیار، اجرت و هزینه‌های فاکتور پرداخت می‌شود.',
         ],
-        'related' => ['gold-price-calculation', 'gold-making-charge', 'gold-vat', 'gold-invoice-guide'],
+        'related' => ['guide-gold-price-formulas', 'gold-making-charge', 'guide-gold-invoice-tax-1405', 'gold-invoice-guide'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -1241,7 +1241,7 @@ return [
             'اصالت' => 'قابل اتکا بودن ادعای فروشنده درباره ماهیت، عیار و مشخصات کالا.',
             'قابل پیگیری' => 'امکان مراجعه بعدی به فروشنده یا مرجع مربوط برای بررسی معامله.',
         ],
-        'related' => ['gold-invoice-guide', 'used-vs-new-gold', 'online-gold-buying-risks'],
+        'related' => ['gold-invoice-guide', 'guide-second-hand-gold', 'online-gold-buying-risks'],
         'market_links' => [
             ['label' => 'قیمت زنده طلا و سکه', 'url' => '/price/'],
         ],
@@ -1303,7 +1303,7 @@ return [
             'قطعی شدن معامله' => 'زمانی که قیمت، کالا و شرایط خرید به شکل قابل پیگیری ثبت می‌شود.',
             'شرایط مرجوعی' => 'قواعد بازگرداندن کالا که باید قبل از خرید روشن باشد.',
         ],
-        'related' => ['buying-gold-safely', 'gold-coin-guide', 'used-vs-new-gold'],
+        'related' => ['buying-gold-safely', 'gold-coin-guide', 'guide-second-hand-gold'],
         'market_links' => [
             ['label' => 'قیمت زنده بازار', 'url' => '/price/'],
         ],

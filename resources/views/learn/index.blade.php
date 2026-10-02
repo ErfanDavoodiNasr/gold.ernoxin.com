@@ -35,12 +35,12 @@
                 '') hidden @endif>پاک کردن</button>
             </div>
             <noscript>
-                <button type="submit" class="searchSubmit">جستجو</button>
+                <p class="searchMeta">برای جستجو در مقالات، JavaScript را فعال کنید.</p>
             </noscript>
         </form>
         <p class="searchMeta" id="blog-search-meta" data-search-meta data-total="{{ count($allPages) }}">
             @if($searchQuery !== '')
-            {{ $resultCount }} نتیجه مرتبط برای «{{ $searchQuery }}»
+            در حال آماده‌سازی نتایج برای «{{ $searchQuery }}»...
             @else
             عبارت موردنظر را تایپ کنید
             @endif
@@ -182,8 +182,7 @@
                 ['title', searchable.title || normalize(item.title), 30],
                 ['category', searchable.category || normalize(item.category), 12],
                 ['keywords', searchable.keywords || '', 18],
-                ['summary', searchable.summary || normalize([item.summary, item.description].join(' ')), 10],
-                ['body', searchable.body || normalize(item.plainText), 3]
+                ['summary', searchable.summary || normalize([item.summary].join(' ')), 10]
             ];
 
             return fields.reduce(function (sum, field) {
@@ -211,7 +210,7 @@
         }
 
         function excerpt(item, tokens) {
-            var candidates = [item.summary, item.description, item.plainText];
+            var candidates = [item.summary];
             for (var i = 0; i < candidates.length; i += 1) {
                 var plain = stripTags(candidates[i]);
                 var normalized = normalize(plain);
@@ -222,7 +221,7 @@
                 }
             }
 
-            return item.summary || item.description || '';
+            return item.summary || '';
         }
 
         function loadSearchIndex() {
@@ -313,7 +312,7 @@
 
             category.textContent = item.category || 'آموزش طلا و سکه';
             heading.textContent = item.title;
-            summary.textContent = item.searchExcerpt || item.summary || item.description || '';
+            summary.textContent = item.searchExcerpt || item.summary || '';
             metaText.textContent = item.readingTime || '۶ دقیقه';
 
             content.appendChild(category);
@@ -428,7 +427,7 @@
             } else {
                 var fragment = document.createDocumentFragment();
                 items.forEach(function (item) {
-                    fragment.appendChild(createResultCard(item, item.searchExcerpt || item.summary || item.description));
+                    fragment.appendChild(createResultCard(item, item.searchExcerpt || item.summary));
                 });
                 results.appendChild(fragment);
             }
@@ -474,7 +473,7 @@
                     renderLoaded(query);
                 })
                 .catch(function () {
-                    meta.textContent = 'جستجوی سریع در دسترس نیست؛ برای جستجوی سروری Enter بزنید.';
+                    meta.textContent = 'جستجو در دسترس نیست؛ لطفاً بعداً دوباره تلاش کنید.';
                 });
         }
 

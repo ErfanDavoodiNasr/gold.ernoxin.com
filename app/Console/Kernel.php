@@ -8,12 +8,14 @@ class Kernel extends ConsoleKernel
 {
     protected $commands = [
         \App\Console\Commands\FetchEstjtPrices::class,
+        \App\Console\Commands\RepairPriceData::class,
+        \App\Console\Commands\BackfillHourlyRollups::class,
     ];
 
     protected function schedule($schedule)
     {
         $schedule->command('gold:fetch-prices')
-            ->everyMinute()
+            ->everyFiveMinutes()
             ->withoutOverlapping(2);
     }
 }

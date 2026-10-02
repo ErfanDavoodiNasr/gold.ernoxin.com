@@ -21,7 +21,7 @@ class StampedeCache
         }
 
         try {
-            return Cache::store('file')->lock("lock:{$key}", 15)->block(8, function () use ($key, $ttl, $callback) {
+            return Cache::store('file')->lock("lock:{$key}", 30)->block(10, function () use ($key, $ttl, $callback) {
                 $hit = Cache::get($key);
                 if ($hit !== null) {
                     return $hit;
@@ -33,13 +33,17 @@ class StampedeCache
                 return $value;
             });
         } catch (LockTimeoutException $e) {
-            usleep(200_000);
+            usleep(300_000);
             $hit = Cache::get($key);
             if ($hit !== null) {
                 return $hit;
             }
 
-            return Cache::remember($key, $ttl, $callback);
+            // Single waiter rebuilds — never fall back to Cache::remember (stampede).
+            $value = $callback();
+            Cache::put($key, $value, $ttl);
+
+            return $value;
         }
     }
 }

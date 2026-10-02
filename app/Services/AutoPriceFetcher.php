@@ -8,9 +8,6 @@ class AutoPriceFetcher
 {
     // ponytail: single global lock; fine at 1 fetch/min, per-source locks if multiple scrapers
     private const LOCK_KEY = 'gold:fetch-prices';
-    // Keep ≥ schedule withoutOverlapping (2 min) so a slow scrape cannot double-run after lock expiry.
-    private const LOCK_SECONDS = 120;
-    private const RUNNING_STALE_SECONDS = 120;
 
     public function __construct(
         private PriceIngestor    $ingestor,
@@ -21,11 +18,27 @@ class AutoPriceFetcher
 
     public function fetchIfDue(bool $force = false): array
     {
-        if (!$force && !$this->isDue()) {
-            return ['status' => 'skipped'];
+        try {
+            if (!$force && !$this->isDue()) {
+                return ['status' => 'skipped', 'reason' => 'interval'];
+            }
+        } catch (\Throwable $e) {
+            return [
+                'status' => 'failed',
+                'error' => 'بررسی زمان دریافت ناموفق بود: ' . $e->getMessage(),
+            ];
         }
 
-        $lock = Cache::lock(self::LOCK_KEY, self::LOCK_SECONDS);
+        // File store: APC has no LockProvider on this Laravel version (same as StampedeCache).
+        try {
+            $lock = Cache::store('file')->lock(self::LOCK_KEY, $this->lockSeconds());
+        } catch (\Throwable $e) {
+            return [
+                'status' => 'failed',
+                'error' => 'قفل دریافت در دسترس نیست: ' . $e->getMessage(),
+            ];
+        }
+
         if (!$lock->get()) {
             return ['status' => 'skipped', 'reason' => 'locked'];
         }
@@ -46,24 +59,42 @@ class AutoPriceFetcher
 
     public function isDue(): bool
     {
-        if ($this->fetchStatus->isActivelyRunning(self::RUNNING_STALE_SECONDS)) {
+        if ($this->fetchStatus->isActivelyRunning($this->lockSeconds())) {
             return false;
         }
 
-        $interval = max(1, (int)config('gold.fetch_interval_minutes', 5));
-        $now = now();
-
-        if ($now->minute % $interval !== 0) {
-            return false;
+        // Invalid/negative/huge env values: clamp to [1, 1440] minutes.
+        $interval = (int)config('gold.fetch_interval_minutes', 5);
+        if ($interval < 1) {
+            $interval = 1;
+        } elseif ($interval > 1440) {
+            $interval = 1440;
         }
 
-        $slotStart = $now->copy()->second(0);
         $lastSuccess = $this->fetchStatus->lastSuccessStartedAt();
 
-        if ($lastSuccess && $lastSuccess->gte($slotStart)) {
-            return false;
+        if ($lastSuccess === null) {
+            return true;
         }
 
-        return true;
+        return $lastSuccess->copy()->addMinutes($interval)->lte(now());
+    }
+
+    /**
+     * Lock TTL must cover worst-case HTTP time:
+     * (connect + read) * (retry_count + 1) + backoff + DB work.
+     * Floor 120s so cPanel minute cron + withoutOverlapping(2) cannot overlap.
+     */
+    public function lockSeconds(): int
+    {
+        $connect = max(1, (int)config('gold.timeout_connect', 3));
+        $read = max(1, (int)config('gold.timeout_read', 5));
+        $attempts = max(1, (int)config('gold.retry_count', 1) + 1);
+        $backoffMs = max(0, (int)config('gold.retry_backoff_milliseconds', 150));
+        $httpBudget = ($connect + $read) * $attempts;
+        $backoffBudget = (int)ceil(($backoffMs * $attempts * ($attempts + 1) / 2) / 1000);
+        $dbBudget = 30;
+
+        return max(120, $httpBudget + $backoffBudget + $dbBudget + 15);
     }
 }

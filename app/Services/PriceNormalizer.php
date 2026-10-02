@@ -16,32 +16,16 @@ class PriceNormalizer
     public function isUsdItem(?string $currency, ?string $category = null): bool
     {
         $normalized = PersianNumber::label($currency ?? '');
+        if ($normalized === '') {
+            return false;
+        }
 
+        // Intentional USD markers only — do not treat bare "USD" inside unrelated Persian text.
         return $normalized === '$'
+            || $normalized === 'usd'
             || str_contains($normalized, '$')
-            || str_contains($normalized, 'دلار');
-    }
-
-    public function looksLikeRialSpike(float $value, float $referenceToman): bool
-    {
-        if ($referenceToman <= 0) {
-            return false;
-        }
-
-        $ratio = $value / $referenceToman;
-
-        return $ratio >= $this->rialRatioMin && $ratio <= $this->rialRatioMax;
-    }
-
-    public function looksLikeTomanDip(float $value, float $referenceToman): bool
-    {
-        if ($referenceToman <= 0) {
-            return false;
-        }
-
-        $ratio = $value / $referenceToman;
-
-        return $ratio >= (1 / $this->rialRatioMax) && $ratio <= (1 / $this->rialRatioMin);
+            || str_contains($normalized, 'دلار')
+            || preg_match('/\busd\b/i', $normalized) === 1;
     }
 
     /**
@@ -104,12 +88,11 @@ class PriceNormalizer
         }
 
         if ($referenceToman !== null && $referenceToman > 0) {
-            $ratio = $value / $referenceToman;
-            if ($ratio >= $this->rialRatioMin && $ratio <= $this->rialRatioMax) {
-                return round($value / 10, 4);
+            if ($this->looksLikeRialSpike($value, $referenceToman)) {
+                return null;
             }
-            if ($ratio >= (1 / $this->rialRatioMax) && $ratio <= (1 / $this->rialRatioMin)) {
-                return round($value * 10, 4);
+            if ($this->looksLikeTomanDip($value, $referenceToman)) {
+                return null;
             }
         }
 
@@ -123,8 +106,14 @@ class PriceNormalizer
         }
 
         $normalized = PersianNumber::label($currency);
+        if (str_contains($normalized, 'تومان') || str_contains($normalized, 'تومن')) {
+            return false;
+        }
 
-        return str_contains($normalized, 'ریال') && !str_contains($normalized, 'تومان');
+        return str_contains($normalized, 'ریال')
+            || $normalized === 'irr'
+            || preg_match('/\birr\b/i', $normalized) === 1
+            || preg_match('/\brial\b/i', $normalized) === 1;
     }
 
     public function isTomanCurrency(?string $currency): bool
@@ -133,6 +122,48 @@ class PriceNormalizer
             return false;
         }
 
-        return str_contains(PersianNumber::label($currency), 'تومان');
+        $normalized = PersianNumber::label($currency);
+
+        return str_contains($normalized, 'تومان') || str_contains($normalized, 'تومن');
+    }
+
+    public function looksLikeRialSpike(float $value, float $referenceToman): bool
+    {
+        if ($referenceToman <= 0) {
+            return false;
+        }
+
+        $ratio = $value / $referenceToman;
+
+        return $ratio >= $this->rialRatioMin && $ratio <= $this->rialRatioMax;
+    }
+
+    public function looksLikeTomanDip(float $value, float $referenceToman): bool
+    {
+        if ($referenceToman <= 0) {
+            return false;
+        }
+
+        $ratio = $value / $referenceToman;
+
+        return $ratio >= (1 / $this->rialRatioMax) && $ratio <= (1 / $this->rialRatioMin);
+    }
+
+    /** Repair stored rows whose current_value still sits in the rial/toman spike band. */
+    public function repairAgainstReference(float $value, float $referenceToman): float
+    {
+        if ($referenceToman <= 0 || $value <= 0) {
+            return $value;
+        }
+
+        if ($this->looksLikeRialSpike($value, $referenceToman)) {
+            return round($value / 10, 4);
+        }
+
+        if ($this->looksLikeTomanDip($value, $referenceToman)) {
+            return round($value * 10, 4);
+        }
+
+        return $value;
     }
 }
