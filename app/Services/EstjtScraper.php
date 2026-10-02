@@ -14,12 +14,12 @@ class EstjtScraper
     private const COIN_TYPES = ['سکه طرح قدیم', 'سکه طرح جدید', 'نیم سکه', 'ربع سکه', 'سکه یک گرمی'];
 
     private const COLUMN_ALIASES = [
-        'type' => ['نوع طلا', 'نوع سکه', 'نوع'],
-        'current' => ['لحظه‌ای', 'قیمت لحظه‌ای', 'جاری'],
-        'high' => ['بیشترین', 'بیشینه', 'سقف'],
-        'low' => ['کمترین', 'کمینه', 'کف'],
-        'yesterday' => ['دیروز', 'میانگین دیروز'],
-        'change' => ['تغییر', 'درصد تغییر'],
+        'type' => ['نوع طلا', 'نوع سکه', 'نوع', 'نماد', 'عنوان'],
+        'current' => ['نرخ فعلی', 'قیمت فعلی', 'نرخ لحظه‌ای', 'قیمت لحظه‌ای', 'لحظه‌ای', 'فعلی', 'جاری', 'آخرین نرخ'],
+        'high' => ['بالاترین قیمت', 'بالاترین', 'بیشترین قیمت', 'بیشترین', 'بیشینه', 'سقف'],
+        'low' => ['کمترین قیمت', 'کمترین', 'پایین‌ترین قیمت', 'پایین‌ترین', 'کمینه', 'کف'],
+        'yesterday' => ['میانگین دیروز', 'قیمت دیروز', 'نرخ دیروز', 'دیروز', 'میانگین'],
+        'change' => ['تغییر از دیروز', 'درصد تغییر', 'میزان تغییر', 'تغییر', 'نوسان'],
     ];
     /** Soft cap so a hostile/oversized upstream cannot exhaust shared-hosting memory. */
     private const MAX_RESPONSE_BYTES = 2_000_000;
@@ -249,11 +249,31 @@ class EstjtScraper
         }
 
         $map = [];
+        // First pass: try exact match
         foreach (self::COLUMN_ALIASES as $field => $aliases) {
             foreach ($headers as $index => $header) {
                 foreach ($aliases as $alias) {
                     $needle = PersianNumber::label($alias);
-                    if ($header === $needle || str_contains($header, $needle)) {
+                    if ($header === $needle) {
+                        $map[$field] = $index;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // Second pass: fill in remaining fields with contains match, skipping already claimed columns
+        foreach (self::COLUMN_ALIASES as $field => $aliases) {
+            if (isset($map[$field])) {
+                continue;
+            }
+            foreach ($headers as $index => $header) {
+                if (in_array($index, $map, true)) {
+                    continue;
+                }
+                foreach ($aliases as $alias) {
+                    $needle = PersianNumber::label($alias);
+                    if (str_contains($header, $needle)) {
                         $map[$field] = $index;
                         break 2;
                     }
@@ -273,9 +293,9 @@ class EstjtScraper
     private function direction(DOMElement $cell): string
     {
         foreach ([$cell, ...iterator_to_array($cell->getElementsByTagName('*'))] as $element) {
-            $class = $element->getAttribute('class');
-            if (str_contains($class, 'asc')) return 'asc';
-            if (str_contains($class, 'desc')) return 'desc';
+            $class = (string)$element->getAttribute('class');
+            if (str_contains($class, 'asc') || str_contains($class, 'up')) return 'asc';
+            if (str_contains($class, 'desc') || str_contains($class, 'down')) return 'desc';
         }
         $raw = PersianNumber::clean($cell->textContent);
         return str_starts_with($raw, '-') ? 'desc' : (str_starts_with($raw, '+') ? 'asc' : 'none');

@@ -24,6 +24,41 @@ class EstjtScraperParseTest extends TestCase
         $this->assertSame(2450.5, $payload['gold'][0]['current']['value']);
     }
 
+    public function test_parses_live_estjt_header_contract(): void
+    {
+        $html = <<<'HTML'
+<table>
+<thead><tr><th>نوع طلا</th><th>نرخ فعلی</th><th>بالاترین قیمت</th><th>کمترین قیمت</th><th>میانگین دیروز</th><th>تغییر از دیروز</th></tr></thead>
+<tbody>
+<tr><td>انس طلا</td><td>$ ۴۱۳۷</td><td>—</td><td>—</td><td>$ ۴۱۶۹٫۸۴</td><td><span class="desc">۳۲٫۸۴ (۰٫۷۹)</span></td></tr>
+<tr><td>مظنه تهران</td><td>۱۱۲٫۶۷۰٫۰۰۰</td><td>—</td><td>—</td><td>۱۱۰٫۸۷۴٫۶۶۸</td><td><span class="asc">۱٫۷۹۵٫۳۳۲ (۱٫۶۲)</span></td></tr>
+<tr><td>طلای ۱۸ عیار</td><td>۲۶٫۰۱۰٫۰۰۰</td><td>—</td><td>—</td><td>۲۵٫۵۹۵٫۵۷۲</td><td><span class="asc">۴۱۴٫۴۲۸ (۱٫۶۲)</span></td></tr>
+<tr><td>طلای ۲۴ عیار</td><td>۳۴٫۶۷۶٫۰۰۰</td><td>—</td><td>—</td><td>۳۴٫۱۲۳٫۷۰۸</td><td><span class="asc">۵۵۲٫۲۹۲ (۱٫۶۲)</span></td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>نوع سکه</th><th>نرخ فعلی</th><th>بالاترین قیمت</th><th>کمترین قیمت</th><th>میانگین دیروز</th><th>تغییر از دیروز</th></tr></thead>
+<tbody>
+<tr><td>سکه طرح قدیم</td><td>۲۵۶٫۸۰۰٫۰۰۰</td><td>—</td><td>—</td><td>۲۵۱٫۴۸۳٫۸۲۰</td><td><span class="asc">۵٫۳۱۶٫۱۸۰ (۲٫۱۱)</span></td></tr>
+<tr><td>سکه طرح جدید</td><td>۲۶۴٫۰۰۰٫۰۰۰</td><td>—</td><td>—</td><td>۲۵۷٫۵۲۲٫۰۱۶</td><td><span class="asc">۶٫۴۷۷٫۹۸۴ (۲٫۵۲)</span></td></tr>
+<tr><td>نیم سکه</td><td>۱۳۷٫۵۰۰٫۰۰۰</td><td>—</td><td>—</td><td>۱۳۴٫۵۶۴٫۴۵۶</td><td><span class="asc">۲٫۹۳۵٫۵۴۴ (۲٫۱۸)</span></td></tr>
+<tr><td>ربع سکه</td><td>۷۳٫۸۰۰٫۰۰۰</td><td>—</td><td>—</td><td>۷۲٫۶۰۷٫۶۹۲</td><td><span class="asc">۱٫۱۹۲٫۳۰۸ (۱٫۶۴)</span></td></tr>
+<tr><td>سکه یک گرمی</td><td>۳۷٫۰۰۰٫۰۰۰</td><td>—</td><td>—</td><td>۳۷٫۰۰۰٫۰۰۰</td><td>—</td></tr>
+</tbody>
+</table>
+HTML;
+        $payload = $this->scraper->parse($html, now()->toIso8601String());
+        $this->assertCount(4, $payload['gold']);
+        $this->assertCount(5, $payload['coin']);
+        $this->assertSame(4137.0, $payload['gold'][0]['current']['value']);
+        $this->assertSame('$', $payload['gold'][0]['current']['currency']);
+        $this->assertSame('desc', $payload['gold'][0]['change']['direction']);
+        $this->assertSame(26010000.0, $payload['gold'][2]['current']['value']);
+        $this->assertSame('asc', $payload['gold'][2]['change']['direction']);
+        $this->assertSame(264000000.0, $payload['coin'][1]['current']['value']);
+        $this->assertSame('none', $payload['coin'][4]['change']['direction']);
+    }
+
     private function fixture(string $name): string
     {
         return file_get_contents(base_path("tests/Fixtures/estjt/{$name}"));
